@@ -1,0 +1,358 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title - Ashunya</title>
+    @Styles.Render("~/Content/css")
+
+    <!-- NJ -->
+    <link href="/Content/common/toastr/toastr.min.css" rel="stylesheet" />
+    <link href="/Content/common/jsdatatable/jquery.datatables.css" rel="stylesheet" />
+    <link href="/Content/common/sweetalert/sweet-alert.css" rel="stylesheet" />  
+
+
+    <script src="/Scripts/common/jquery-3.3.1.min.js"></script>
+    <script src="/Scripts/common/jquery.validate.js"></script>
+    <script src="/Scripts/common/jquery.validate.unobtrusive.js"></script>
+    <script src="/Scripts/common/jquery.unobtrusive-ajax.min.js"></script>
+
+</head>
+<body>
+    <div class="wrapper">
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <h3 class="logo-sidebar">
+                    <img src="/images/smartdocscan.png" />
+                </h3>
+                <strong>SDS</strong>
+            </div>
+            <ul class="list-unstyled components" id="dashAccordion">
+
+                @{
+                    if (Request.QueryString["id"] != null && Request.QueryString["pid"] != null)
+                    {
+
+
+                        if (ViewBag.Permission.IsAdmin == true)
+                        {
+                            <li>
+                                <a href="/admin/selectcompany?id=@Request.QueryString["id"]&pid=@Request.QueryString["pid"]"><i class="fa fa-building"></i><span>Select Company</span></a>
+                            </li>
+
+                            <li>
+                                <a href="/admin/addcompany?id=@Request.QueryString["id"]&pid=@Request.QueryString["pid"]"><i class="fa fa-plus-square"></i><span>Add Company</span></a>
+                            </li>
+                            <li>
+                                <a href="/admin/findpatient?id=@Request.QueryString["id"]&pid=@Request.QueryString["pid"]"><i class="fa fa-search"></i><span>Find Patient</span></a>
+                            </li>
+                            <li>
+                                <a href="/admin/adduser?id=@Request.QueryString["id"]&pid=@Request.QueryString["pid"]"><i class="fa fa-address-card"></i><span>Add User</span></a>
+                            </li>
+
+                        }
+                        else
+                        {
+                            <li>
+                                <a href="/admin/findpatient?id=@Request.QueryString["id"]&pid=@Request.QueryString["pid"]"><i class="fa fa-search"></i><span>Find Patient</span></a>
+                            </li>
+                        }
+
+                        if (ViewBag.Permission.add_patients == 1)
+                        {
+                            <li>
+                                <a href="/admin/addpatient?id=@Request.QueryString["id"]&pid=@Request.QueryString["pid"]"><i class="fa fa-address-book-o"></i><span>Add Patient</span></a>
+                            </li>
+                        }
+
+                        <li>
+                            <a href="/admin/addbox?id=@Request.QueryString["id"]&pid=@Request.QueryString["pid"]"><i class="fa fa-address-card"></i><span>Add Box</span></a>
+                        </li>
+
+                    }
+                    else if (Request.QueryString["id"] != null)
+                    {
+                        @*<li>
+                    <a href="/admin/selectcompany?id=@Request.QueryString["id"]"><i class="fa fa-building"></i><span>Select Company</span></a>
+                </li>
+
+                <li>
+                    <a href="/admin/addcompany?id=@Request.QueryString["id"]"><i class="fa fa-plus-square"></i><span>Add Company</span></a>
+                </li>
+                <li>
+                    <a href="/admin/findpatient?id=@Request.QueryString["id"]"><i class="fa fa-search"></i><span>Find Patient</span></a>
+                </li>*@
+
+                        //New Display menu if user not admin
+
+                        if (ViewBag.Permission.IsAdmin == false)
+                        {
+                            <li>
+                                <a href="/admin/findpatient?id=@Request.QueryString["id"]"><i class="fa fa-search"></i><span>Find Patient</span></a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li>
+                                <a href="/admin/selectcompany?id=@Request.QueryString["id"]"><i class="fa fa-building"></i><span>Select Company</span></a>
+                            </li>
+
+                            <li>
+                                <a href="/admin/addcompany?id=@Request.QueryString["id"]"><i class="fa fa-plus-square"></i><span>Add Company</span></a>
+                            </li>
+                            <li>
+                                <a href="/admin/findpatient?id=@Request.QueryString["id"]"><i class="fa fa-search"></i><span>Find Patient</span></a>
+                            </li>
+                            <li>
+                                <a href="/admin/adduser?id=@Request.QueryString["id"]"><i class="fa fa-address-card"></i><span>Add User</span></a>
+                            </li>
+                        }
+                        /*change donne*/
+                        if (ViewBag.Permission.add_patients == 1)
+                        {
+                            <li>
+                                <a href="/admin/addpatient?id=@Request.QueryString["id"]"><i class="fa fa-address-book-o"></i><span>Add Patient</span></a>
+                            </li>
+                        }
+
+
+
+                        <li>
+                            <a href="/admin/addbox?id=@Request.QueryString["id"]"><i class="fa fa-address-card"></i><span>Add Box</span></a>
+                        </li>
+
+                    }
+                    else
+                    {
+                        if (ViewBag.Permission.IsAdmin == true)
+                        {
+                            <li>
+                                <a href="/admin/selectcompany"><i class="fa fa-building"></i><span>Select Company</span></a>
+                            </li>
+
+                            <li>
+                                <a href="/admin/addcompany"><i class="fa fa-plus-square"></i><span>Add Company</span></a>
+                            </li>
+                        }
+
+                    }
+
+                }
+
+            </ul>
+        </nav>
+        <div id="content">
+            <nav class="navbar navbar-light bg-light navbar-expand-md">
+                <button type="button" id="sidebarCollapse" class="btn btn-info nav-item"><i class="fa fa-navicon" aria-hidden="true"></i></button>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="expand navbar-expand ml-auto">
+                    <ul class="nav navbar-nav">
+
+                        @{
+                            if (ViewBag.Company != null)
+                            {
+                                <li class="nav-item"><a class="nav-link" style="color:black;font-weight:bold" href="#"><i class="fa fa-building" aria-hidden="true"></i> Selected Company : @ViewBag.Company </a></li>
+                            }
+                        }
+
+
+                        @{
+                            if (ViewBag.PatientName != null)
+                            {
+                                <li class="nav-item"><a class="nav-link" style="color:black;font-weight:bold" href="#"><i class="fa fa-address-book-o" aria-hidden="true"></i> Patient Name : @ViewBag.PatientName </a></li>
+                            }
+                        }
+
+
+                        <li class="nav-item"><a class="nav-link" href="#"><i class="fa fa-support" aria-hidden="true"></i> Help</a></li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fa fa-user" aria-hidden="true"></i> @ViewBag.UserFirstName
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <ul>
+                                    @if (Request.QueryString["id"] != null)
+                                    {
+                                        <li><a href="/admin/changepassword?id=@Request.QueryString["id"]">Change Password</a></li>
+                                    }
+                                    else
+                                    {
+                                        <li><a href="/admin/changepassword">Change Password</a></li>
+                                    }
+
+                                    <li><a href="/admin/logout">Log Out</a></li>
+                                </ul>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+            <div class="content-area">
+                @RenderBody()
+            </div>
+            <script>
+                $(document).ready(function () {
+                    $('[data-toggle="tooltip"]').tooltip();
+                });
+            </script>
+            <div class="modal fade" id="allmaster" data-backdrop="static" data-keyboard="false">
+                <div class="modal-dialog modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h4 class="modal-title">Material Master</h4>
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <form class="form-content">
+                                <div class="form-group">
+                                    <label>Name</label>
+                                    <input type="text" class="form-control" placeholder="Enter Name" />
+                                </div>
+                                <div class="form-group">
+                                    <div class="red-check">
+                                        <input type="checkbox" id="IsActive" name="IsActive" value="Yes" />
+                                        <label for="IsActive">Is Active</label>
+                                        <div class="check"></div>
+                                    </div>
+                                </div>
+                                <div class="btn-panel">
+                                    <button class="btn btn-primary"><i class="fa fa-spinner fa-spin"></i>Add</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <footer>Copyright &copy; 2019 <span>Ashunya</span>. All Rights Reserved.</footer>
+        </div>
+    </div>
+
+
+    <script src="/js/popper.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/custom.js"></script>
+    
+    <script>
+        //$('#basic').multiselect({
+        //    templates: {
+        //        li: '<li><a href="javascript:void(0);"><label class="pl-2"></label></a></li>'
+        //    }
+        //});
+
+        $('#no_checkboxes').multiselect({
+            templates: {
+                li: '<li><a href="javascript:void(0);"><label class="pl-2"></label></a></li>'
+            },
+            nonSelectedText: 'Choose...',
+            selectedClass: 'bg-light',
+            onInitialized: function (select, container) {
+                // hide checkboxes
+                container.find('input').addClass('d-none');
+            }
+        });
+
+        $('#single_select').multiselect({
+            templates: {
+                li: '<li><a href="javascript:void(0);"><label class="pl-2"></label></a></li>'
+            },
+            buttonClass: 'btn btn-outline-primary',
+            selectedClass: 'bg-light',
+            onInitialized: function (select, container) {
+                // hide radio
+                container.find('input[type=radio]').addClass('d-none');
+            }
+        });
+
+        $('#filtering').multiselect({
+            nonSelectedText: 'Select a food...',
+            enableFiltering: true,
+            templates: {
+                li: '<li><a href="javascript:void(0);"><label class="pl-2"></label></a></li>',
+                filter: '<li class="multiselect-item filter"><div class="input-group m-0 mb-1"><input class="form-control multiselect-search" type="text"></div></li>',
+                filterClearBtn: '<div class="input-group-append"><button class="btn btn btn-outline-secondary multiselect-clear-filter" type="button"><i class="fa fa-close"></i></button></div>'
+            },
+            selectedClass: 'bg-light',
+            onInitialized: function (select, container) {
+                // hide checkboxes
+                container.find('input[type=checkbox]').addClass('d-none');
+            }
+        });
+
+        // data source example with filter by label
+        $('#data_source').multiselect({
+            templates: {
+                li: '<li><a href="javascript:void(0);"><label class="pl-2"></label></a></li>'
+            },
+            nonSelectedText: 'Select a name...',
+            enableFiltering: true,
+            filterBehavior: 'text',
+            enableCaseInsensitiveFiltering: true,
+            templates: {
+                li: '<li><a href="javascript:void(0);"><label class="pl-2"></label></a></li>',
+                filter: '<li class="multiselect-item filter"><div class="input-group m-0 mb-1"><input class="form-control multiselect-search" type="text"></div></li>',
+                filterClearBtn: '<div class="input-group-append"><button class="btn btn btn-outline-secondary multiselect-clear-filter" type="button"><i class="fa fa-close"></i></button></div>'
+            },
+        });
+
+        var options = [
+            { label: 'Tony', title: 'Tony', value: '1', selected: true },
+            { label: 'Tammy', title: 'Tammy', value: '2' },
+            { label: 'Bob', title: 'Bob', value: '3' },
+            { label: 'Betty', title: 'Betty', value: '4' },
+            { label: 'Jim', title: 'Jim', value: '5', selected: true },
+            { label: 'James', title: 'James', value: '6' },
+            { label: 'Jerry', title: 'Jerry', value: '7', disabled: true },
+            { label: 'Amy', title: 'Amy', value: '8' },
+            { label: 'Albert', title: 'Albert', value: '9' }
+        ];
+
+        $('#data_source').multiselect('dataprovider', options);
+        // data source single pick with filter by value and text
+
+        var options2 = [
+            { label: 'Rex', value: '1' },
+            { label: 'Ryan', value: '2' },
+            { label: 'Duke', value: '3' },
+            { label: 'Kimo', value: '4' },
+            { label: 'Vince', value: '5' },
+            { label: 'Puggy', value: '6' },
+            { label: 'Boxer', value: '7' }
+        ];
+        $('#data_source_single').multiselect({
+            onInitialized: function (select, container) {
+                container.multiselect('dataprovider', options2);
+                container.multiselect('setOptions', {
+                    nonSelectedText: 'Select a pooch...',
+                    enableFiltering: true,
+                    filterBehavior: 'both',
+                    enableCaseInsensitiveFiltering: true,
+                    templates: {
+                        li: '<li><a href="javascript:void(0);"><label class="pl-2"></label></a></li>',
+                        filter: '<li class="multiselect-item filter"><div class="input-group m-0 mb-1"><input class="form-control multiselect-search" type="text"></div></li>',
+                        filterClearBtn: '<div class="input-group-append"><button class="btn btn btn-outline-secondary multiselect-clear-filter" type="button"><i class="fa fa-close"></i></button></div>'
+                    },
+                    selectedClass: 'bg-light',
+                });
+                container.multiselect('rebuild');
+                $('input[type=radio]').addClass('d-none');
+            }
+        });
+    </script>
+
+    <!-- NJ -->
+    <script src="/Content/common/toastr/toastr.min.js"></script>
+    <script src="/Content/common/common.js"></script>
+    <script src="/Content/common/jsdatatable/jquery.dataTables.js"></script>
+    <script src="/Content/common/sweetalert/sweetalert.js"></script>
+
+    <!-- NJ -->
+    @RenderSection("ScriptSection", false)
+
+    <!-- NJ -->
+    <div class="loading" style="display:none">Loading&#8230;</div>
+</body>
+
+
+</html>

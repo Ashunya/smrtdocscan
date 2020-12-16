@@ -1,0 +1,123 @@
+﻿@model SmartDocScan.Models.BoxViewModel
+@{
+    ViewBag.Title = "AddBox";
+    Layout = "~/Views/Shared/_LayoutDocument.cshtml";
+}
+
+
+    <div class="row">
+        <div class="col-md-6 form-group">
+            <h5>Manage the boxes in the warehouse</h5>
+            <div class="btn-panel">
+                <button class="addBtnNewBox btn btn-warning">Add Box</button>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3" id="addNewBox">
+            <div class="block-center">
+                <h3>New Box</h3>
+                @using (Ajax.BeginForm("BoxPost", "Admin", new AjaxOptions { HttpMethod = "POST", OnSuccess = "onSuccess", OnFailure = "onFailure" }, new { id = "formBox" }))
+                {
+                    @Html.AntiForgeryToken()
+                    @Html.HiddenFor(m => m.comp_id)
+                    @Html.HiddenFor(m => m.box_id)
+                    <div class="form-cart-block">
+                        <div class="brief-block">
+                            <div class="row brief-sub-head1 form-group">
+                                <div class="col-sm-5"><label>Box ID :</label></div>
+                                <div class="col-sm-7">
+                                    @Html.EditorFor(model => model.box_ext_id, new { htmlAttributes = new { @class = "form-control" } })
+                                    @Html.ValidationMessageFor(model => model.box_ext_id, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                            <div class="row brief-sub-head1 form-group">
+                                <div class="col-sm-5"><label>Box Name :</label></div>
+                                <div class="col-sm-7">
+                                    @Html.EditorFor(model => model.box_name, new { htmlAttributes = new { @class = "form-control" } })
+                                    @Html.ValidationMessageFor(model => model.box_name, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                            <div class="row brief-sub-head1 form-group">
+                                <div class="col-sm-5"><label>Aisle :</label></div>
+                                <div class="col-sm-7">
+                                    @Html.EditorFor(model => model.aisle, new { maxlength = "5", htmlAttributes = new { @class = "form-control" } })
+                                    @Html.ValidationMessageFor(model => model.aisle, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                            <div class="row brief-sub-head1 form-group">
+                                <div class="col-sm-5"><label>Section :</label></div>
+                                <div class="col-sm-7">
+                                    @Html.EditorFor(model => model.section, new { maxlength = "5", htmlAttributes = new { @class = "form-control" } })
+                                    @Html.ValidationMessageFor(model => model.section, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                            <div class="row brief-sub-head1 form-group">
+                                <div class="col-sm-5"><label>Row :</label></div>
+                                <div class="col-sm-7">
+                                    @Html.EditorFor(model => model.brow, new { maxlength = "5", htmlAttributes = new { @class = "form-control" } })
+                                    @Html.ValidationMessageFor(model => model.brow, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                            <div class="row brief-sub-head1 form-group">
+                                <div class="col-sm-5"><label>Column :</label></div>
+                                <div class="col-sm-7">
+                                    @Html.EditorFor(model => model.bcolumn, new { maxlength = "5", htmlAttributes = new { @class = "form-control" } })
+                                    @Html.ValidationMessageFor(model => model.bcolumn, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="btn-panel">
+                            <button type="submit" class="btn btn-sm btn-primary">Add Box</button>
+                            &nbsp;
+                            <button type="button" class="CancelBtnNewBox btn btn-sm btn-default">Cancel</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="block-center">
+                <h3>List of Boxes</h3>
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered table-striped table-hover dataTable" id="tblBox" width="100%">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Aisle</th>
+                                <th>Section</th>
+                                <th>Row</th>
+                                <th>Column</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+                </div>
+            </div>
+        <div class="col-md-5 boxId" id="boxId26">
+
+            <div class="block-center">
+
+                <h3>Box ID : <span id="spnBoxId">26</span></h3>
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered table-striped table-hover dataTable" id="tblPatient" width="100%">
+                        <thead>
+                            <tr>
+                                <th>Patient Id</th>
+                                <th>Patient First Name</th>
+                                <th>Patient Last Name</th>
+                            </tr>
+                        </thead>
+                    </table>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+
+@section ScriptSection
+{
+    <script src="/Scripts/add-box.js"></script>
+}

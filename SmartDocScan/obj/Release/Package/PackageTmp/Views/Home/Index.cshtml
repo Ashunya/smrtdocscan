@@ -1,0 +1,60 @@
+﻿@using SmartDocScan.Models
+@model LoginViewModel
+@{
+    ViewBag.Title = "Login";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title - Ashunya</title>
+    @Styles.Render("~/Content/css")
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-panel">
+            <div class="logo"><img src="images/smartdocscan.png" /></div>
+            <div class="login-block">
+                <h2>@ViewBag.Title</h2>
+                <section id="loginForm">
+                    @using (Html.BeginForm("Index", "Home", new { ReturnUrl = ViewBag.ReturnUrl }, FormMethod.Post, new { @class = "form-content login-form", role = "form" }))
+                    {
+                        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+                        <div class="form-group">
+                            @Html.TextBoxFor(m => m.UserName, new { placeholder = "User Name", @class = "form-control" })
+                            @Html.ValidationMessageFor(m => m.UserName, "", new { @class = "text-danger" })
+                            <i class="fa fa-user" aria-hidden="true"></i>
+                        </div>
+                        <div class="form-group">
+                            @Html.PasswordFor(m => m.Password, new { placeholder = "Password", @class = "form-control" })
+                            @Html.ValidationMessageFor(m => m.Password, "", new { @class = "text-danger" })
+                            <i class="fa fa-lock" aria-hidden="true"></i>
+                        </div>
+                        <div class="form-group">
+                            <div class="red-check">
+                                @Html.CheckBoxFor(m => m.RememberMe)
+                                @Html.LabelFor(m => m.RememberMe)
+                                <div class="check"></div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-login">Login</button>
+                    }
+                </section>
+            </div>
+            <div class="copyright">Copyright &copy; 2019 <span>Ashunya</span>. All Rights Reserved.</div>
+        </div>
+    </div>
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/bootstrap")
+
+
+    <ul style="display:none">
+        
+        @*<li>@ViewBag.Data.name</li>
+        <li>@ViewBag.Data.IsAdmin</li>*@
+        
+    </ul>
+</body>
+</html>

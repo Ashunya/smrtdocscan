@@ -1,0 +1,24 @@
+-----------Exception Details on  8/23/2019 1:30:34 PM-----------------
+-------------------------------------------------------------------------------------
+
+
+
+Log Written Date: 8/23/2019 1:30:34 PM
+
+Error Line No : line 36
+
+Error Message: DivideByZeroException
+
+Exception Type: System.DivideByZeroException
+
+Error Location : Attempted to divide by zero.
+
+ Error Page Url: http://localhost:59941/
+
+User Host IP: 
+
+
+--------------------------------*End*------------------------------------------
+
+
+

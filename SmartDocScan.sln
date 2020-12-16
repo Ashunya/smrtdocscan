@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.489
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartDocScan", "SmartDocScan\SmartDocScan.csproj", "{9DF216BB-D3B9-463C-A1FD-E3C8A012DD73}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreLibrary", "CoreLibrary\CoreLibrary.csproj", "{6563611B-BED8-4F36-B978-282B8DB971F8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9DF216BB-D3B9-463C-A1FD-E3C8A012DD73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9DF216BB-D3B9-463C-A1FD-E3C8A012DD73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9DF216BB-D3B9-463C-A1FD-E3C8A012DD73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9DF216BB-D3B9-463C-A1FD-E3C8A012DD73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6563611B-BED8-4F36-B978-282B8DB971F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6563611B-BED8-4F36-B978-282B8DB971F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6563611B-BED8-4F36-B978-282B8DB971F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6563611B-BED8-4F36-B978-282B8DB971F8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {260E4011-E8B5-4A6D-B5D5-938B970206F3}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,125 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Schema Namespace="SmartDocScanModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+  <EntityContainer Name="SmartDocScanEntities" annotation:LazyLoadingEnabled="true">
+    <EntitySet Name="boxes" EntityType="SmartDocScanModel.box" />
+    <EntitySet Name="categories" EntityType="SmartDocScanModel.category" />
+    <EntitySet Name="companies" EntityType="SmartDocScanModel.company" />
+    <EntitySet Name="documents" EntityType="SmartDocScanModel.document" />
+    <EntitySet Name="patients" EntityType="SmartDocScanModel.patient" />
+    <EntitySet Name="users" EntityType="SmartDocScanModel.user" />
+    <EntitySet Name="usersinfoes" EntityType="SmartDocScanModel.usersinfo" />
+  </EntityContainer>
+  <EntityType Name="box">
+    <Key>
+      <PropertyRef Name="box_id" />
+    </Key>
+    <Property Name="box_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+    <Property Name="comp_id" Type="Int32" Nullable="false" />
+    <Property Name="box_ext_id" Type="Int32" Nullable="false" />
+    <Property Name="box_name" Type="String" Nullable="false" MaxLength="30" FixedLength="false" Unicode="false" />
+    <Property Name="aisle" Type="String" Nullable="false" MaxLength="5" FixedLength="false" Unicode="false" />
+    <Property Name="section" Type="String" Nullable="false" MaxLength="5" FixedLength="false" Unicode="false" />
+    <Property Name="brow" Type="String" Nullable="false" MaxLength="5" FixedLength="false" Unicode="false" />
+    <Property Name="bcolumn" Type="String" Nullable="false" MaxLength="5" FixedLength="false" Unicode="false" />
+  </EntityType>
+  <EntityType Name="category">
+    <Key>
+      <PropertyRef Name="cat_id" />
+    </Key>
+    <Property Name="cat_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+    <Property Name="cat_name" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+    <Property Name="comp_id" Type="Int32" Nullable="false" />
+    <Property Name="access" Type="String" MaxLength="300" FixedLength="false" Unicode="false" />
+  </EntityType>
+  <EntityType Name="company">
+    <Key>
+      <PropertyRef Name="comp_id" />
+    </Key>
+    <Property Name="comp_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+    <Property Name="comp_name" Type="String" Nullable="false" MaxLength="60" FixedLength="false" Unicode="false" />
+    <Property Name="owner" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+    <Property Name="address" Type="String" MaxLength="200" FixedLength="false" Unicode="false" />
+    <Property Name="location" Type="String" MaxLength="100" FixedLength="false" Unicode="false" />
+    <Property Name="phone" Type="String" MaxLength="20" FixedLength="false" Unicode="false" />
+    <Property Name="barcode" Type="Byte" Nullable="false" />
+    <Property Name="inactive" Type="Byte" Nullable="false" />
+  </EntityType>
+  <EntityType Name="document">
+    <Key>
+      <PropertyRef Name="doc_id" />
+    </Key>
+    <Property Name="doc_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+    <Property Name="comp_id" Type="Int32" Nullable="false" />
+    <Property Name="patient_id" Type="Int32" />
+    <Property Name="cat_id" Type="Int32" />
+    <Property Name="doc_name" Type="String" Nullable="false" MaxLength="100" FixedLength="false" Unicode="false" />
+    <Property Name="url" Type="String" Nullable="false" MaxLength="100" FixedLength="false" Unicode="false" />
+    <Property Name="num_pages" Type="Int32" Nullable="false" />
+    <Property Name="date" Type="DateTime" Nullable="false" Precision="3" />
+    <Property Name="uploaded_by" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+    <Property Name="deleted" Type="Byte" />
+    <Property Name="deleted_on" Type="DateTime" Precision="0" />
+    <Property Name="deleted_by" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+  </EntityType>
+  <EntityType Name="patient">
+    <Key>
+      <PropertyRef Name="patient_id" />
+    </Key>
+    <Property Name="patient_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+    <Property Name="comp_id" Type="Int32" Nullable="false" />
+    <Property Name="pext_id" Type="String" MaxLength="30" FixedLength="false" Unicode="false" />
+    <Property Name="first_name" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+    <Property Name="last_name" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+    <Property Name="dob" Type="DateTime" Precision="0" />
+    <Property Name="gender" Type="String" MaxLength="1" FixedLength="false" Unicode="false" />
+    <Property Name="physician" Type="String" MaxLength="100" FixedLength="false" Unicode="false" />
+    <Property Name="box" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+    <Property Name="ssn" Type="String" MaxLength="15" FixedLength="false" Unicode="false" />
+  </EntityType>
+  <EntityType Name="user">
+    <Key>
+      <PropertyRef Name="username" />
+    </Key>
+    <Property Name="username" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+    <Property Name="name" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+    <Property Name="password" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
+    <Property Name="comp_id" Type="Int32" Nullable="false" />
+    <Property Name="upload_doc" Type="Byte" Nullable="false" />
+    <Property Name="scan_doc" Type="Byte" Nullable="false" />
+    <Property Name="delete_doc" Type="Byte" Nullable="false" />
+    <Property Name="delete_manage" Type="Byte" Nullable="false" />
+    <Property Name="print_doc" Type="Byte" Nullable="false" />
+    <Property Name="download_doc" Type="Byte" Nullable="false" />
+    <Property Name="add_cat" Type="Byte" Nullable="false" />
+    <Property Name="add_users" Type="Byte" Nullable="false" />
+    <Property Name="add_patients" Type="Byte" Nullable="false" />
+    <Property Name="box" Type="Byte" Nullable="false" />
+    <Property Name="report" Type="Byte" Nullable="false" />
+    <Property Name="su" Type="Byte" />
+    <Property Name="disabled" Type="Byte" Nullable="false" />
+    <Property Name="IsAdmin" Type="Boolean" />
+  </EntityType>
+  <EntityType Name="usersinfo">
+    <Key>
+      <PropertyRef Name="username" />
+    </Key>
+    <Property Name="username" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+    <Property Name="name" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+    <Property Name="password" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
+    <Property Name="comp_id" Type="Int32" Nullable="false" />
+    <Property Name="upload_doc" Type="Byte" Nullable="false" />
+    <Property Name="scan_doc" Type="Byte" Nullable="false" />
+    <Property Name="delete_doc" Type="Byte" Nullable="false" />
+    <Property Name="delete_manage" Type="Byte" Nullable="false" />
+    <Property Name="print_doc" Type="Byte" Nullable="false" />
+    <Property Name="download_doc" Type="Byte" Nullable="false" />
+    <Property Name="add_cat" Type="Byte" Nullable="false" />
+    <Property Name="add_users" Type="Byte" Nullable="false" />
+    <Property Name="add_patients" Type="Byte" Nullable="false" />
+    <Property Name="box" Type="Byte" Nullable="false" />
+    <Property Name="report" Type="Byte" Nullable="false" />
+    <Property Name="su" Type="Byte" />
+    <Property Name="disabled" Type="Byte" Nullable="false" />
+    <Property Name="IsAdmin" Type="Boolean" />
+  </EntityType>
+</Schema>

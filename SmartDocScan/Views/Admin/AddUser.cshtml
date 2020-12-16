@@ -1,0 +1,267 @@
+﻿@model SmartDocScan.Models.UserViewModel
+    @{
+        ViewBag.Title = "AddUser";
+        Layout = "~/Views/Shared/_LayoutDocument.cshtml";
+    }
+
+    <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700" rel="stylesheet">
+    <link href="/css/font-awesome.min.css" rel="stylesheet">
+    <link href="/css/jquery-ui.css" rel="stylesheet">
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/styles.css" rel="stylesheet">
+    @*<script src="/js/jquery-3.2.1.min.js"></script>
+    <script src="/js/jquery-ui.js"></script>*@
+    <script>
+        $(document).ready(function () {         
+            if ('@ViewBag.username' != "") {
+                $("#username").attr("readonly","true");
+                  $("#userInfoAdd").show();
+            }
+            $(".addNewUser").click(function () {
+                if ('@ViewBag.username' != "") {                             
+                   window.location = "/admin/adduser?id=" + '@ViewBag.comp_id';
+                }
+                else {
+                     $("#userInfoAdd").show();
+                }
+
+            });
+
+            $(".catRestrict").click(function () {
+                $("#catRestrictBlock").show();
+            });
+        });
+
+    </script>
+    <div class="userWrapper">
+        <div class="card">
+            <div class="card-body">
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs mb-3">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-toggle="tab" href="#sdUser">Users</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="#sdCategory">Category Management</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab"  href="#sdReport">Doc Report</a>
+                    </li>
+                </ul>
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <div class="tab-pane active" id="sdUser">
+                        <div class="sduser">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="addNewUser mb-3">
+                                        @{
+                                            if (ViewBag.Permission.add_users == 1)
+                                            {
+                                                <button class="addNewUser btn btn-sm btn-primary">Add New User</button>
+                                            }
+                                        }
+
+                                    </div>
+                                    <div class="table-responsive usertable">
+
+                                        <table class="table table-hover table-bordered table-striped dataTable" id="tblUser" width="100%">
+                                            <thead>
+                                                <tr>
+                                                    <th>User Name</th>
+                                                    <th>Name</th>
+                                                    <th>Password</th>@*Add password in table*@
+                                                </tr>
+                                            </thead>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div id="userInfoAdd">
+                                        @using (Ajax.BeginForm("UserPost", "Admin", new AjaxOptions { HttpMethod = "POST", OnSuccess = "onSuccess", OnFailure = "onFailure" }, new { id = "formUser" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            @Html.HiddenFor(m => m.comp_id)
+                                            <div class="form-group">
+                                                <label>User Name <small>(Email Address)</small>:</label>
+                                                @Html.EditorFor(model => model.username, new { htmlAttributes = new { @class = "form-control" } })
+                                                @Html.ValidationMessageFor(model => model.username, "", new { @class = "text-danger" })
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Name: </label>
+                                                @Html.EditorFor(model => model.name, new { htmlAttributes = new { @class = "form-control" } })
+                                                @Html.ValidationMessageFor(model => model.name, "", new { @class = "text-danger" })
+                                            </div>
+                                            //Add Password field
+                                            <div class="form-group">
+                                                <label>Password: </label>
+                                                @Html.EditorFor(model => model.password, new { htmlAttributes = new { @class = "form-control" } })
+                                                @Html.ValidationMessageFor(model => model.password, "", new { @class = "text-danger" })
+                                            </div>
+                                            <div class="permission">
+                                                <h5>Permissions</h5>
+                                                <ul class="">
+                                                    <li>
+                                                        <div class="custom-control custom-checkbox mb-2">
+                                                            @Html.CheckBoxFor(Model => Model.scan_doc)
+                                                            <label for="scan_doc">Scan Documents</label>
+                                                        </div>
+                                                    </li>
+                                                    <li>
+                                                        <div class="custom-control custom-checkbox mb-2">
+                                                            @Html.CheckBoxFor(Model => Model.upload_doc)
+                                                            <label for="upload_doc">Upload Documents</label>
+                                                        </div>
+                                                    </li>
+                                                    <li>
+                                                        <div class="custom-control custom-checkbox mb-2">
+                                                            @Html.CheckBoxFor(Model => Model.delete_doc)
+                                                            <label for="delete_doc">Delete Documents</label>
+                                                        </div>
+                                                    </li>
+                                                    <li>
+                                                        <div class="custom-control custom-checkbox mb-2">
+                                                            @Html.CheckBoxFor(Model => Model.add_cat)
+                                                            <label for="add_cat">Add/Remove Categories</label>
+                                                        </div>
+                                                    </li>
+                                                    <li>
+                                                        <div class="custom-control custom-checkbox mb-2">
+                                                            @Html.CheckBoxFor(Model => Model.add_patients)
+                                                            <label for="add_patients">Add/Modify Patients</label>
+                                                        </div>
+                                                    </li>
+                                                    <li>
+                                                        <div class="custom-control custom-checkbox mb-2">
+                                                            @Html.CheckBoxFor(Model => Model.add_users)
+                                                            <label for="add_users">Add/Modify Users</label>
+                                                        </div>
+                                                    </li>
+                                                    <li>
+                                                        <div class="custom-control custom-checkbox mb-2">
+                                                            @Html.CheckBoxFor(Model => Model.box)
+                                                            <label for="box">Manage Boxes</label>
+                                                        </div>
+                                                    </li>
+                                                    <li>
+                                                        <div class="custom-control custom-checkbox mb-2">
+                                                            @Html.CheckBoxFor(Model => Model.report)
+                                                            <label for="report">View Reports</label>
+                                                        </div>
+                                                    </li>
+                                                    <li>
+                                                        <div class="custom-control custom-checkbox mb-2">
+                                                            @Html.CheckBoxFor(Model => Model.su)
+                                                            <label for="su">Super User</label>
+                                                        </div>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            <div class="text-center">
+                                                <button type="submit" class="btn btn-sm btn-primary">
+                                                    Submit
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="sdCategory">
+                        <div class="sdCategory">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="addCategory mb-3">
+
+                                        @using (Ajax.BeginForm("CategoryPost", "Admin", new AjaxOptions { HttpMethod = "POST", OnSuccess = "onSuccessCategory", OnFailure = "onFailureCategory" }, new { id = "formCategory" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            @Html.HiddenFor(m => m.cat_comp_id)
+                                            <div class="input-group">
+                                                @Html.EditorFor(model => model.cat_name, new { htmlAttributes = new { @class = "form-control" } })
+                                                <div class="input-group-append">
+                                                    @{
+                                                        if (ViewBag.Permission.add_users == 1)
+                                                        {
+                                                            <button type="submit" class="btn">Add Category</button>
+                                                        }
+                                                    }
+                                                    
+                                                </div>
+                                            </div>
+                                        }
+
+                                    </div>
+                                    <h5 class="mb-3">Existing Categories</h5>
+                                    <div class="table-responsive">
+
+                                        <table class="table table-bordered table-striped dataTable" id="tblCategory" width="100%">
+                                            <thead>
+                                                <tr>
+                                                    <th>Category Name</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="col-md-6" id="catRestrictBlock">
+                                    <h5 class="mb-3">Restrict <span id="rCatName">Shipping</span>  To Users:</h5>
+                                    <form action="/action_page.php">
+                                        <small>Use Ctrl to select multiple / unselect</small>
+                                        <select size="5" class="mb-3 form-control" name="selectuser" multiple>
+                                            <option value="Maria Sharapova">Maria Sharapova</option>
+                                            <option value="Alex Johnson">Alex Johnson</option>
+                                            <option value="Matt Harding">Matt Harding</option>
+                                            <option value="Alena Smith">Alena Smith</option>
+                                            <option value="Jennifer">Jennifer</option>
+                                            <option value="Brad Cooper">Brad Cooper</option>
+                                            <option value="Leena">Leena</option>
+                                        </select>
+                                        <div class="text-center">
+                                            <button class="btn btn-sm btn-primary">Restrict</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="sdReport">
+                        <div class="sdReport col-md-10">
+                            <h5 class="mb-3">Document Count Report</h5>
+                            <div class="countReport">
+                                <form class="form-inline mb-3">
+                                    <div class="form-group mr-2">
+                                        <label class="mr-2">From: </label>
+                                        <input type="date" id="txtFromDate" class="form-control" name="">
+                                    </div>
+                                    <div class="form-group mr-2">
+                                        <label class="mr-2">To: </label>
+                                        <input type="date" id="txtToDate" class="form-control" name="">
+                                    </div>
+                                    <button class="btn" type="button" onclick="bindReportGrid()">Get Report</button>
+                                </form>
+                                <div class="table-responsive">
+
+                                    <table class="table table-bordered table-striped dataTable" id="tblDocReport" width="100%">
+                                        <thead>
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Document Name</th>
+                                                <th>No. of Pages</th>
+                                            </tr>
+                                        </thead>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @section ScriptSection
+    {
+        <script src="/Scripts/add-user.js"></script>
+    }

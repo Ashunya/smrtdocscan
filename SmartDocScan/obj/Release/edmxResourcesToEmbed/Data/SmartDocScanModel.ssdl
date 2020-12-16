@@ -1,0 +1,125 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Schema Namespace="SmartDocScanModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+  <EntityType Name="box">
+    <Key>
+      <PropertyRef Name="box_id" />
+    </Key>
+    <Property Name="box_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+    <Property Name="comp_id" Type="int" Nullable="false" />
+    <Property Name="box_ext_id" Type="int" Nullable="false" />
+    <Property Name="box_name" Type="varchar" MaxLength="30" Nullable="false" />
+    <Property Name="aisle" Type="varchar" MaxLength="5" Nullable="false" />
+    <Property Name="section" Type="varchar" MaxLength="5" Nullable="false" />
+    <Property Name="brow" Type="varchar" MaxLength="5" Nullable="false" />
+    <Property Name="bcolumn" Type="varchar" MaxLength="5" Nullable="false" />
+  </EntityType>
+  <EntityType Name="category">
+    <Key>
+      <PropertyRef Name="cat_id" />
+    </Key>
+    <Property Name="cat_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+    <Property Name="cat_name" Type="varchar" MaxLength="60" />
+    <Property Name="comp_id" Type="int" Nullable="false" />
+    <Property Name="access" Type="varchar" MaxLength="300" />
+  </EntityType>
+  <EntityType Name="company">
+    <Key>
+      <PropertyRef Name="comp_id" />
+    </Key>
+    <Property Name="comp_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+    <Property Name="comp_name" Type="varchar" MaxLength="60" Nullable="false" />
+    <Property Name="owner" Type="varchar" MaxLength="60" />
+    <Property Name="address" Type="varchar" MaxLength="200" />
+    <Property Name="location" Type="varchar" MaxLength="100" />
+    <Property Name="phone" Type="varchar" MaxLength="20" />
+    <Property Name="barcode" Type="tinyint" Nullable="false" />
+    <Property Name="inactive" Type="tinyint" Nullable="false" />
+  </EntityType>
+  <EntityType Name="documents">
+    <Key>
+      <PropertyRef Name="doc_id" />
+    </Key>
+    <Property Name="doc_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+    <Property Name="comp_id" Type="int" Nullable="false" />
+    <Property Name="patient_id" Type="int" />
+    <Property Name="cat_id" Type="int" />
+    <Property Name="doc_name" Type="varchar" MaxLength="100" Nullable="false" />
+    <Property Name="url" Type="varchar" MaxLength="100" Nullable="false" />
+    <Property Name="num_pages" Type="int" Nullable="false" />
+    <Property Name="date" Type="datetime" Nullable="false" />
+    <Property Name="uploaded_by" Type="varchar" MaxLength="60" />
+    <Property Name="deleted" Type="tinyint" />
+    <Property Name="deleted_on" Type="date" />
+    <Property Name="deleted_by" Type="varchar" MaxLength="60" />
+  </EntityType>
+  <EntityType Name="patient">
+    <Key>
+      <PropertyRef Name="patient_id" />
+    </Key>
+    <Property Name="patient_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+    <Property Name="comp_id" Type="int" Nullable="false" />
+    <Property Name="pext_id" Type="varchar" MaxLength="30" />
+    <Property Name="first_name" Type="varchar" MaxLength="50" Nullable="false" />
+    <Property Name="last_name" Type="varchar" MaxLength="50" Nullable="false" />
+    <Property Name="dob" Type="date" />
+    <Property Name="gender" Type="varchar" MaxLength="1" />
+    <Property Name="physician" Type="varchar" MaxLength="100" />
+    <Property Name="box" Type="varchar" MaxLength="60" />
+    <Property Name="ssn" Type="varchar" MaxLength="15" />
+  </EntityType>
+  <EntityType Name="users">
+    <Key>
+      <PropertyRef Name="username" />
+    </Key>
+    <Property Name="username" Type="varchar" MaxLength="50" Nullable="false" />
+    <Property Name="name" Type="varchar" MaxLength="60" />
+    <Property Name="password" Type="varchar" MaxLength="255" Nullable="false" />
+    <Property Name="comp_id" Type="int" Nullable="false" />
+    <Property Name="upload_doc" Type="tinyint" Nullable="false" />
+    <Property Name="scan_doc" Type="tinyint" Nullable="false" />
+    <Property Name="delete_doc" Type="tinyint" Nullable="false" />
+    <Property Name="delete_manage" Type="tinyint" Nullable="false" />
+    <Property Name="print_doc" Type="tinyint" Nullable="false" />
+    <Property Name="download_doc" Type="tinyint" Nullable="false" />
+    <Property Name="add_cat" Type="tinyint" Nullable="false" />
+    <Property Name="add_users" Type="tinyint" Nullable="false" />
+    <Property Name="add_patients" Type="tinyint" Nullable="false" />
+    <Property Name="box" Type="tinyint" Nullable="false" />
+    <Property Name="report" Type="tinyint" Nullable="false" />
+    <Property Name="su" Type="tinyint" />
+    <Property Name="disabled" Type="tinyint" Nullable="false" />
+    <Property Name="IsAdmin" Type="bit" />
+  </EntityType>
+  <EntityType Name="usersinfo">
+    <Key>
+      <PropertyRef Name="username" />
+    </Key>
+    <Property Name="username" Type="varchar" MaxLength="50" Nullable="false" />
+    <Property Name="name" Type="varchar" MaxLength="60" />
+    <Property Name="password" Type="varchar" MaxLength="255" Nullable="false" />
+    <Property Name="comp_id" Type="int" Nullable="false" />
+    <Property Name="upload_doc" Type="tinyint" Nullable="false" />
+    <Property Name="scan_doc" Type="tinyint" Nullable="false" />
+    <Property Name="delete_doc" Type="tinyint" Nullable="false" />
+    <Property Name="delete_manage" Type="tinyint" Nullable="false" />
+    <Property Name="print_doc" Type="tinyint" Nullable="false" />
+    <Property Name="download_doc" Type="tinyint" Nullable="false" />
+    <Property Name="add_cat" Type="tinyint" Nullable="false" />
+    <Property Name="add_users" Type="tinyint" Nullable="false" />
+    <Property Name="add_patients" Type="tinyint" Nullable="false" />
+    <Property Name="box" Type="tinyint" Nullable="false" />
+    <Property Name="report" Type="tinyint" Nullable="false" />
+    <Property Name="su" Type="tinyint" />
+    <Property Name="disabled" Type="tinyint" Nullable="false" />
+    <Property Name="IsAdmin" Type="bit" />
+  </EntityType>
+  <EntityContainer Name="SmartDocScanModelStoreContainer">
+    <EntitySet Name="box" EntityType="Self.box" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="category" EntityType="Self.category" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="company" EntityType="Self.company" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="documents" EntityType="Self.documents" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="patient" EntityType="Self.patient" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="users" EntityType="Self.users" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="usersinfo" EntityType="Self.usersinfo" Schema="dbo" store:Type="Tables" />
+  </EntityContainer>
+</Schema>

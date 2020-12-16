@@ -1,0 +1,43 @@
+﻿
+@{
+	/**/
+
+	ViewBag.Title = "ListDocument";
+	Layout = "~/Views/Shared/_LayoutDocument.cshtml";
+}
+<link href="/css/styles.css" rel="stylesheet">
+<script>
+	$(document).ready(function(){
+        $('.item').click(function () {
+            $('.item ~ .sublistview').toggle();
+		});
+
+	});
+</script>
+<div class="row">
+	<div class="col-md-6 offset-md-3">
+
+		@foreach (var dl in ViewBag.DocumentList)
+		{
+			<ul class="listview">
+				<li>
+					<a href="javascript:void()" id="billing" class="item"><i class="fa fa-sort-down"></i><span class="content">@dl.cat_name</span> <span class="count">@dl.counter</span></a>
+
+					@foreach (var dc in ViewBag.Documents)
+					{
+						if (dl.cat_id == dc.cat_id)
+						{
+							<ul class="sublistview">
+								<li><a href="~/store/@dc.url" target="_blank" class="subitem"><span class="content">@dc.doc_name</span><i class="fa fa-print"></i><span class="pages">@dc.num_pages Pages</span></a></li>
+							</ul>
+
+						}
+
+					}
+
+				</li>
+				</ul>
+		}
+		</div>
+</div>
+

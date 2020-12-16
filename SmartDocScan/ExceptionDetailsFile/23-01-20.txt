@@ -1,0 +1,24 @@
+-----------Exception Details on  1/23/2020 11:56:50 AM-----------------
+-------------------------------------------------------------------------------------
+
+
+
+Log Written Date: 1/23/2020 11:56:50 AM
+
+Error Line No : line 95
+
+Error Message: CryptographicException
+
+Exception Type: System.Security.Cryptography.CryptographicException
+
+Error Location : Error occurred during a cryptographic operation.
+
+ Error Page Url: http://localhost:59945/
+
+User Host IP: 
+
+
+--------------------------------*End*------------------------------------------
+
+
+

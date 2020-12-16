@@ -1,0 +1,41 @@
+﻿
+@{
+    ViewBag.Title = "FindPatient";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="block-center">
+            <h3>Find Patient</h3>
+            <form class="form-content">
+                <div class="form-cart-block">
+                    <div class="brief-block">
+                        <div class="row brief-sub-head1 brief-search form-group">
+                            <div class="col-md-12">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-bordered table-striped dataTable" id="tblPatient" width="100%">
+                                        <thead>
+                                            <tr>
+                                                <th>Last Name</th>
+                                                <th>First Name</th>
+                                                <th>DOB</th>
+                                                <th>ID</th>
+                                            </tr>
+                                        </thead>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+@section ScriptSection
+{
+    <script src="/Scripts/find-patient.js"></script>
+}

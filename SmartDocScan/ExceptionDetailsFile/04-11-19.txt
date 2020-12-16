@@ -1,0 +1,24 @@
+-----------Exception Details on  11/4/2019 10:43:57 AM-----------------
+-------------------------------------------------------------------------------------
+
+
+
+Log Written Date: 11/4/2019 10:43:57 AM
+
+Error Line No : line 87
+
+Error Message: TypeInitializationException
+
+Exception Type: System.TypeInitializationException
+
+Error Location : The type initializer for 'System.Data.Entity.Internal.AppConfig' threw an exception.
+
+ Error Page Url: http://localhost:59945/
+
+User Host IP: 
+
+
+--------------------------------*End*------------------------------------------
+
+
+

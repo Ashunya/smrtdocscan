@@ -1,0 +1,405 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+  <!-- EF Runtime content -->
+  <edmx:Runtime>
+    <!-- SSDL content -->
+    <edmx:StorageModels>
+    <Schema Namespace="SmartDocScanModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="box">
+          <Key>
+            <PropertyRef Name="box_id" />
+          </Key>
+          <Property Name="box_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="comp_id" Type="int" Nullable="false" />
+          <Property Name="box_ext_id" Type="int" Nullable="false" />
+          <Property Name="box_name" Type="varchar" MaxLength="30" Nullable="false" />
+          <Property Name="aisle" Type="varchar" MaxLength="5" Nullable="false" />
+          <Property Name="section" Type="varchar" MaxLength="5" Nullable="false" />
+          <Property Name="brow" Type="varchar" MaxLength="5" Nullable="false" />
+          <Property Name="bcolumn" Type="varchar" MaxLength="5" Nullable="false" />
+        </EntityType>
+        <EntityType Name="category">
+          <Key>
+            <PropertyRef Name="cat_id" />
+          </Key>
+          <Property Name="cat_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="cat_name" Type="varchar" MaxLength="60" />
+          <Property Name="comp_id" Type="int" Nullable="false" />
+          <Property Name="access" Type="varchar" MaxLength="300" />
+        </EntityType>
+        <EntityType Name="company">
+          <Key>
+            <PropertyRef Name="comp_id" />
+          </Key>
+          <Property Name="comp_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="comp_name" Type="varchar" MaxLength="60" Nullable="false" />
+          <Property Name="owner" Type="varchar" MaxLength="60" />
+          <Property Name="address" Type="varchar" MaxLength="200" />
+          <Property Name="location" Type="varchar" MaxLength="100" />
+          <Property Name="phone" Type="varchar" MaxLength="20" />
+          <Property Name="barcode" Type="tinyint" Nullable="false" />
+          <Property Name="inactive" Type="tinyint" Nullable="false" />
+        </EntityType>
+        <EntityType Name="documents">
+          <Key>
+            <PropertyRef Name="doc_id" />
+          </Key>
+          <Property Name="doc_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="comp_id" Type="int" Nullable="false" />
+          <Property Name="patient_id" Type="int" />
+          <Property Name="cat_id" Type="int" />
+          <Property Name="doc_name" Type="varchar" MaxLength="100" Nullable="false" />
+          <Property Name="url" Type="varchar" MaxLength="100" Nullable="false" />
+          <Property Name="num_pages" Type="int" Nullable="false" />
+          <Property Name="date" Type="datetime" Nullable="false" />
+          <Property Name="uploaded_by" Type="varchar" MaxLength="60" />
+          <Property Name="deleted" Type="tinyint" />
+          <Property Name="deleted_on" Type="date" />
+          <Property Name="deleted_by" Type="varchar" MaxLength="60" />
+        </EntityType>
+        <EntityType Name="patient">
+          <Key>
+            <PropertyRef Name="patient_id" />
+          </Key>
+          <Property Name="patient_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="comp_id" Type="int" Nullable="false" />
+          <Property Name="pext_id" Type="varchar" MaxLength="30" />
+          <Property Name="first_name" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="last_name" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="dob" Type="date" />
+          <Property Name="gender" Type="varchar" MaxLength="1" />
+          <Property Name="physician" Type="varchar" MaxLength="100" />
+          <Property Name="box" Type="varchar" MaxLength="60" />
+          <Property Name="ssn" Type="varchar" MaxLength="15" />
+        </EntityType>
+        <EntityType Name="users">
+          <Key>
+            <PropertyRef Name="username" />
+          </Key>
+          <Property Name="username" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="name" Type="varchar" MaxLength="60" />
+          <Property Name="password" Type="varchar" MaxLength="255" Nullable="false" />
+          <Property Name="comp_id" Type="int" Nullable="false" />
+          <Property Name="upload_doc" Type="tinyint" Nullable="false" />
+          <Property Name="scan_doc" Type="tinyint" Nullable="false" />
+          <Property Name="delete_doc" Type="tinyint" Nullable="false" />
+          <Property Name="delete_manage" Type="tinyint" Nullable="false" />
+          <Property Name="print_doc" Type="tinyint" Nullable="false" />
+          <Property Name="download_doc" Type="tinyint" Nullable="false" />
+          <Property Name="add_cat" Type="tinyint" Nullable="false" />
+          <Property Name="add_users" Type="tinyint" Nullable="false" />
+          <Property Name="add_patients" Type="tinyint" Nullable="false" />
+          <Property Name="box" Type="tinyint" Nullable="false" />
+          <Property Name="report" Type="tinyint" Nullable="false" />
+          <Property Name="su" Type="tinyint" />
+          <Property Name="disabled" Type="tinyint" Nullable="false" />
+          <Property Name="IsAdmin" Type="bit" />
+        </EntityType>
+        <EntityType Name="usersinfo">
+          <Key>
+            <PropertyRef Name="username" />
+          </Key>
+          <Property Name="username" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="name" Type="varchar" MaxLength="60" />
+          <Property Name="password" Type="varchar" MaxLength="255" Nullable="false" />
+          <Property Name="comp_id" Type="int" Nullable="false" />
+          <Property Name="upload_doc" Type="tinyint" Nullable="false" />
+          <Property Name="scan_doc" Type="tinyint" Nullable="false" />
+          <Property Name="delete_doc" Type="tinyint" Nullable="false" />
+          <Property Name="delete_manage" Type="tinyint" Nullable="false" />
+          <Property Name="print_doc" Type="tinyint" Nullable="false" />
+          <Property Name="download_doc" Type="tinyint" Nullable="false" />
+          <Property Name="add_cat" Type="tinyint" Nullable="false" />
+          <Property Name="add_users" Type="tinyint" Nullable="false" />
+          <Property Name="add_patients" Type="tinyint" Nullable="false" />
+          <Property Name="box" Type="tinyint" Nullable="false" />
+          <Property Name="report" Type="tinyint" Nullable="false" />
+          <Property Name="su" Type="tinyint" />
+          <Property Name="disabled" Type="tinyint" Nullable="false" />
+          <Property Name="IsAdmin" Type="bit" />
+        </EntityType>
+        <EntityContainer Name="SmartDocScanModelStoreContainer">
+          <EntitySet Name="box" EntityType="Self.box" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="category" EntityType="Self.category" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="company" EntityType="Self.company" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="documents" EntityType="Self.documents" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="patient" EntityType="Self.patient" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="users" EntityType="Self.users" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="usersinfo" EntityType="Self.usersinfo" Schema="dbo" store:Type="Tables" />
+        </EntityContainer>
+      </Schema></edmx:StorageModels>
+    <!-- CSDL content -->
+    <edmx:ConceptualModels>
+      <Schema Namespace="SmartDocScanModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+        <EntityContainer Name="SmartDocScanEntities" annotation:LazyLoadingEnabled="true">
+          <EntitySet Name="boxes" EntityType="SmartDocScanModel.box" />
+          <EntitySet Name="categories" EntityType="SmartDocScanModel.category" />
+          <EntitySet Name="companies" EntityType="SmartDocScanModel.company" />
+          <EntitySet Name="documents" EntityType="SmartDocScanModel.document" />
+          <EntitySet Name="patients" EntityType="SmartDocScanModel.patient" />
+          <EntitySet Name="users" EntityType="SmartDocScanModel.user" />
+          <EntitySet Name="usersinfoes" EntityType="SmartDocScanModel.usersinfo" />
+        </EntityContainer>
+        <EntityType Name="box">
+          <Key>
+            <PropertyRef Name="box_id" />
+          </Key>
+          <Property Name="box_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="comp_id" Type="Int32" Nullable="false" />
+          <Property Name="box_ext_id" Type="Int32" Nullable="false" />
+          <Property Name="box_name" Type="String" Nullable="false" MaxLength="30" FixedLength="false" Unicode="false" />
+          <Property Name="aisle" Type="String" Nullable="false" MaxLength="5" FixedLength="false" Unicode="false" />
+          <Property Name="section" Type="String" Nullable="false" MaxLength="5" FixedLength="false" Unicode="false" />
+          <Property Name="brow" Type="String" Nullable="false" MaxLength="5" FixedLength="false" Unicode="false" />
+          <Property Name="bcolumn" Type="String" Nullable="false" MaxLength="5" FixedLength="false" Unicode="false" />
+        </EntityType>
+        <EntityType Name="category">
+          <Key>
+            <PropertyRef Name="cat_id" />
+          </Key>
+          <Property Name="cat_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="cat_name" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+          <Property Name="comp_id" Type="Int32" Nullable="false" />
+          <Property Name="access" Type="String" MaxLength="300" FixedLength="false" Unicode="false" />
+        </EntityType>
+        <EntityType Name="company">
+          <Key>
+            <PropertyRef Name="comp_id" />
+          </Key>
+          <Property Name="comp_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="comp_name" Type="String" Nullable="false" MaxLength="60" FixedLength="false" Unicode="false" />
+          <Property Name="owner" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+          <Property Name="address" Type="String" MaxLength="200" FixedLength="false" Unicode="false" />
+          <Property Name="location" Type="String" MaxLength="100" FixedLength="false" Unicode="false" />
+          <Property Name="phone" Type="String" MaxLength="20" FixedLength="false" Unicode="false" />
+          <Property Name="barcode" Type="Byte" Nullable="false" />
+          <Property Name="inactive" Type="Byte" Nullable="false" />
+        </EntityType>
+        <EntityType Name="document">
+          <Key>
+            <PropertyRef Name="doc_id" />
+          </Key>
+          <Property Name="doc_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="comp_id" Type="Int32" Nullable="false" />
+          <Property Name="patient_id" Type="Int32" />
+          <Property Name="cat_id" Type="Int32" />
+          <Property Name="doc_name" Type="String" Nullable="false" MaxLength="100" FixedLength="false" Unicode="false" />
+          <Property Name="url" Type="String" Nullable="false" MaxLength="100" FixedLength="false" Unicode="false" />
+          <Property Name="num_pages" Type="Int32" Nullable="false" />
+          <Property Name="date" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="uploaded_by" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+          <Property Name="deleted" Type="Byte" />
+          <Property Name="deleted_on" Type="DateTime" Precision="0" />
+          <Property Name="deleted_by" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+        </EntityType>
+        <EntityType Name="patient">
+          <Key>
+            <PropertyRef Name="patient_id" />
+          </Key>
+          <Property Name="patient_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="comp_id" Type="Int32" Nullable="false" />
+          <Property Name="pext_id" Type="String" MaxLength="30" FixedLength="false" Unicode="false" />
+          <Property Name="first_name" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="last_name" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="dob" Type="DateTime" Precision="0" />
+          <Property Name="gender" Type="String" MaxLength="1" FixedLength="false" Unicode="false" />
+          <Property Name="physician" Type="String" MaxLength="100" FixedLength="false" Unicode="false" />
+          <Property Name="box" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+          <Property Name="ssn" Type="String" MaxLength="15" FixedLength="false" Unicode="false" />
+        </EntityType>
+        <EntityType Name="user">
+          <Key>
+            <PropertyRef Name="username" />
+          </Key>
+          <Property Name="username" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="name" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+          <Property Name="password" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="comp_id" Type="Int32" Nullable="false" />
+          <Property Name="upload_doc" Type="Byte" Nullable="false" />
+          <Property Name="scan_doc" Type="Byte" Nullable="false" />
+          <Property Name="delete_doc" Type="Byte" Nullable="false" />
+          <Property Name="delete_manage" Type="Byte" Nullable="false" />
+          <Property Name="print_doc" Type="Byte" Nullable="false" />
+          <Property Name="download_doc" Type="Byte" Nullable="false" />
+          <Property Name="add_cat" Type="Byte" Nullable="false" />
+          <Property Name="add_users" Type="Byte" Nullable="false" />
+          <Property Name="add_patients" Type="Byte" Nullable="false" />
+          <Property Name="box" Type="Byte" Nullable="false" />
+          <Property Name="report" Type="Byte" Nullable="false" />
+          <Property Name="su" Type="Byte" />
+          <Property Name="disabled" Type="Byte" Nullable="false" />
+          <Property Name="IsAdmin" Type="Boolean" />
+        </EntityType>
+        <EntityType Name="usersinfo">
+          <Key>
+            <PropertyRef Name="username" />
+          </Key>
+          <Property Name="username" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="name" Type="String" MaxLength="60" FixedLength="false" Unicode="false" />
+          <Property Name="password" Type="String" Nullable="false" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="comp_id" Type="Int32" Nullable="false" />
+          <Property Name="upload_doc" Type="Byte" Nullable="false" />
+          <Property Name="scan_doc" Type="Byte" Nullable="false" />
+          <Property Name="delete_doc" Type="Byte" Nullable="false" />
+          <Property Name="delete_manage" Type="Byte" Nullable="false" />
+          <Property Name="print_doc" Type="Byte" Nullable="false" />
+          <Property Name="download_doc" Type="Byte" Nullable="false" />
+          <Property Name="add_cat" Type="Byte" Nullable="false" />
+          <Property Name="add_users" Type="Byte" Nullable="false" />
+          <Property Name="add_patients" Type="Byte" Nullable="false" />
+          <Property Name="box" Type="Byte" Nullable="false" />
+          <Property Name="report" Type="Byte" Nullable="false" />
+          <Property Name="su" Type="Byte" />
+          <Property Name="disabled" Type="Byte" Nullable="false" />
+          <Property Name="IsAdmin" Type="Boolean" />
+        </EntityType>
+        </Schema>
+    </edmx:ConceptualModels>
+    <!-- C-S mapping content -->
+    <edmx:Mappings>
+      <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
+        <EntityContainerMapping StorageEntityContainer="SmartDocScanModelStoreContainer" CdmEntityContainer="SmartDocScanEntities">
+          <EntitySetMapping Name="boxes">
+            <EntityTypeMapping TypeName="SmartDocScanModel.box">
+              <MappingFragment StoreEntitySet="box">
+                <ScalarProperty Name="bcolumn" ColumnName="bcolumn" />
+                <ScalarProperty Name="brow" ColumnName="brow" />
+                <ScalarProperty Name="section" ColumnName="section" />
+                <ScalarProperty Name="aisle" ColumnName="aisle" />
+                <ScalarProperty Name="box_name" ColumnName="box_name" />
+                <ScalarProperty Name="box_ext_id" ColumnName="box_ext_id" />
+                <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+                <ScalarProperty Name="box_id" ColumnName="box_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="categories">
+            <EntityTypeMapping TypeName="SmartDocScanModel.category">
+              <MappingFragment StoreEntitySet="category">
+                <ScalarProperty Name="access" ColumnName="access" />
+                <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+                <ScalarProperty Name="cat_name" ColumnName="cat_name" />
+                <ScalarProperty Name="cat_id" ColumnName="cat_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="companies">
+            <EntityTypeMapping TypeName="SmartDocScanModel.company">
+              <MappingFragment StoreEntitySet="company">
+                <ScalarProperty Name="inactive" ColumnName="inactive" />
+                <ScalarProperty Name="barcode" ColumnName="barcode" />
+                <ScalarProperty Name="phone" ColumnName="phone" />
+                <ScalarProperty Name="location" ColumnName="location" />
+                <ScalarProperty Name="address" ColumnName="address" />
+                <ScalarProperty Name="owner" ColumnName="owner" />
+                <ScalarProperty Name="comp_name" ColumnName="comp_name" />
+                <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="documents">
+            <EntityTypeMapping TypeName="SmartDocScanModel.document">
+              <MappingFragment StoreEntitySet="documents">
+                <ScalarProperty Name="deleted_by" ColumnName="deleted_by" />
+                <ScalarProperty Name="deleted_on" ColumnName="deleted_on" />
+                <ScalarProperty Name="deleted" ColumnName="deleted" />
+                <ScalarProperty Name="uploaded_by" ColumnName="uploaded_by" />
+                <ScalarProperty Name="date" ColumnName="date" />
+                <ScalarProperty Name="num_pages" ColumnName="num_pages" />
+                <ScalarProperty Name="url" ColumnName="url" />
+                <ScalarProperty Name="doc_name" ColumnName="doc_name" />
+                <ScalarProperty Name="cat_id" ColumnName="cat_id" />
+                <ScalarProperty Name="patient_id" ColumnName="patient_id" />
+                <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+                <ScalarProperty Name="doc_id" ColumnName="doc_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="patients">
+            <EntityTypeMapping TypeName="SmartDocScanModel.patient">
+              <MappingFragment StoreEntitySet="patient">
+                <ScalarProperty Name="ssn" ColumnName="ssn" />
+                <ScalarProperty Name="box" ColumnName="box" />
+                <ScalarProperty Name="physician" ColumnName="physician" />
+                <ScalarProperty Name="gender" ColumnName="gender" />
+                <ScalarProperty Name="dob" ColumnName="dob" />
+                <ScalarProperty Name="last_name" ColumnName="last_name" />
+                <ScalarProperty Name="first_name" ColumnName="first_name" />
+                <ScalarProperty Name="pext_id" ColumnName="pext_id" />
+                <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+                <ScalarProperty Name="patient_id" ColumnName="patient_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="users">
+            <EntityTypeMapping TypeName="SmartDocScanModel.user">
+              <MappingFragment StoreEntitySet="users">
+                <ScalarProperty Name="IsAdmin" ColumnName="IsAdmin" />
+                <ScalarProperty Name="disabled" ColumnName="disabled" />
+                <ScalarProperty Name="su" ColumnName="su" />
+                <ScalarProperty Name="report" ColumnName="report" />
+                <ScalarProperty Name="box" ColumnName="box" />
+                <ScalarProperty Name="add_patients" ColumnName="add_patients" />
+                <ScalarProperty Name="add_users" ColumnName="add_users" />
+                <ScalarProperty Name="add_cat" ColumnName="add_cat" />
+                <ScalarProperty Name="download_doc" ColumnName="download_doc" />
+                <ScalarProperty Name="print_doc" ColumnName="print_doc" />
+                <ScalarProperty Name="delete_manage" ColumnName="delete_manage" />
+                <ScalarProperty Name="delete_doc" ColumnName="delete_doc" />
+                <ScalarProperty Name="scan_doc" ColumnName="scan_doc" />
+                <ScalarProperty Name="upload_doc" ColumnName="upload_doc" />
+                <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+                <ScalarProperty Name="password" ColumnName="password" />
+                <ScalarProperty Name="name" ColumnName="name" />
+                <ScalarProperty Name="username" ColumnName="username" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="usersinfoes">
+            <EntityTypeMapping TypeName="SmartDocScanModel.usersinfo">
+              <MappingFragment StoreEntitySet="usersinfo">
+                <ScalarProperty Name="IsAdmin" ColumnName="IsAdmin" />
+                <ScalarProperty Name="disabled" ColumnName="disabled" />
+                <ScalarProperty Name="su" ColumnName="su" />
+                <ScalarProperty Name="report" ColumnName="report" />
+                <ScalarProperty Name="box" ColumnName="box" />
+                <ScalarProperty Name="add_patients" ColumnName="add_patients" />
+                <ScalarProperty Name="add_users" ColumnName="add_users" />
+                <ScalarProperty Name="add_cat" ColumnName="add_cat" />
+                <ScalarProperty Name="download_doc" ColumnName="download_doc" />
+                <ScalarProperty Name="print_doc" ColumnName="print_doc" />
+                <ScalarProperty Name="delete_manage" ColumnName="delete_manage" />
+                <ScalarProperty Name="delete_doc" ColumnName="delete_doc" />
+                <ScalarProperty Name="scan_doc" ColumnName="scan_doc" />
+                <ScalarProperty Name="upload_doc" ColumnName="upload_doc" />
+                <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+                <ScalarProperty Name="password" ColumnName="password" />
+                <ScalarProperty Name="name" ColumnName="name" />
+                <ScalarProperty Name="username" ColumnName="username" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+        </EntityContainerMapping>
+      </Mapping>
+    </edmx:Mappings>
+  </edmx:Runtime>
+  <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <Connection>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="MetadataArtifactProcessing" Value="EmbedInOutputAssembly" />
+      </DesignerInfoPropertySet>
+    </Connection>
+    <Options>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="ValidateOnBuild" Value="true" />
+        <DesignerProperty Name="EnablePluralization" Value="true" />
+        <DesignerProperty Name="IncludeForeignKeysInModel" Value="true" />
+        <DesignerProperty Name="UseLegacyProvider" Value="false" />
+        <DesignerProperty Name="CodeGenerationStrategy" Value="None" />
+      </DesignerInfoPropertySet>
+    </Options>
+    <!-- Diagram content (shape and connector positions) -->
+    <Diagrams></Diagrams>
+  </Designer>
+</edmx:Edmx>

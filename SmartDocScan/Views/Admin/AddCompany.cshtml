@@ -1,0 +1,101 @@
+﻿@model SmartDocScan.Models.CompanyViewModel
+@{
+    ViewBag.Title = "AddCompany";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="block-center">
+            <h3>Add Company</h3>
+            @using (Ajax.BeginForm("CompanyPost", "Admin", new AjaxOptions { HttpMethod = "POST", OnSuccess = "onSuccess", OnFailure = "onFailure" }, new { id = "formCompany" }))
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.comp_id)
+                <div class="form-cart-block">
+                    <div class="brief-block">
+                        <div class="row brief-sub-head1 form-group">
+                            <div class="col-sm-4"><label>Company Name <span class="mandatory">*</span> :</label></div>
+                            <div class="col-sm-8">
+                                @Html.EditorFor(model => model.comp_name, new { htmlAttributes = new { @class = "form-control", placeholder = "Company Name" } })
+                                @Html.ValidationMessageFor(model => model.comp_name, "", new { @class = "text-danger" })
+                            </div>
+                        </div>
+                        <div class="row brief-sub-head1 form-group">
+                            <div class="col-sm-4"><label>Owner :</label></div>
+                            <div class="col-sm-8">@Html.EditorFor(model => model.owner, new { htmlAttributes = new { @class = "form-control", placeholder = "Owner" } })</div>
+                        </div>
+                        <div class="row brief-sub-head1 form-group">
+                            <div class="col-sm-4"><label>Address :</label></div>
+                            <div class="col-sm-8">
+                                @Html.EditorFor(model => model.address, new { htmlAttributes = new { @class = "form-control", placeholder = "Address" } })
+                            </div>
+                        </div>
+                        <div class="row brief-sub-head1 form-group">
+                            <div class="col-sm-4"><label>Location :</label></div>
+                            <div class="col-sm-8">
+                                @Html.EditorFor(model => model.location, new { htmlAttributes = new { @class = "form-control", placeholder = "Location" } })
+                            </div>
+                        </div>
+                        <div class="row brief-sub-head1 form-group">
+                            <div class="col-sm-4"><label>Phone Number :</label></div>
+                            <div class="col-sm-8">
+                                @Html.EditorFor(model => model.phone, new { htmlAttributes = new { @class = "form-control", placeholder = "Phone Number" } })
+                            </div>
+                        </div>
+                    </div>
+                    <hr />
+                    <div class="btn-panel">
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+@section ScriptSection
+{
+    <script type="text/javascript">
+       
+
+        function onSuccess(data) {
+            showToasterMsg(data.Message, 1);
+
+            setTimeout(
+                function () {
+                    window.location = '/admin/selectcompany';
+                }, 2000);
+           
+        }
+
+        function onFailure(data) {
+            showToasterMsg(data.Message, 2);
+        }
+        $(function () {
+            $('#formCompany').submit(function (e) {
+                if ($(this).valid()) {
+                    var form = e.target;
+                        if (form.dataset.ajax) {
+                            e.preventDefault();
+                            e.stopImmediatePropagation();
+                            var xhr = new XMLHttpRequest();
+                            xhr.open(form.method, form.action);
+                            xhr.onreadystatechange = function () {
+                                if (xhr.readyState === 4 && xhr.status === 200) {
+                                    if (form.dataset.ajaxUpdate) {
+                                        var updateTarget = document.querySelector(form.dataset.ajaxUpdate);
+                                        if (updateTarget) {
+                                            updateTarget.innerHTML = xhr.responseText;
+                                        }
+                                    }
+                                    var res = $.parseJSON(xhr.responseText);
+                                    onSuccess(res);
+                                }
+                            };
+                            xhr.send(new FormData(form));
+                        }
+                }
+            });
+        });
+    </script>
+}

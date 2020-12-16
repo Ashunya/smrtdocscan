@@ -1,0 +1,125 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
+  <EntityContainerMapping StorageEntityContainer="SmartDocScanModelStoreContainer" CdmEntityContainer="SmartDocScanEntities">
+    <EntitySetMapping Name="boxes">
+      <EntityTypeMapping TypeName="SmartDocScanModel.box">
+        <MappingFragment StoreEntitySet="box">
+          <ScalarProperty Name="bcolumn" ColumnName="bcolumn" />
+          <ScalarProperty Name="brow" ColumnName="brow" />
+          <ScalarProperty Name="section" ColumnName="section" />
+          <ScalarProperty Name="aisle" ColumnName="aisle" />
+          <ScalarProperty Name="box_name" ColumnName="box_name" />
+          <ScalarProperty Name="box_ext_id" ColumnName="box_ext_id" />
+          <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+          <ScalarProperty Name="box_id" ColumnName="box_id" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="categories">
+      <EntityTypeMapping TypeName="SmartDocScanModel.category">
+        <MappingFragment StoreEntitySet="category">
+          <ScalarProperty Name="access" ColumnName="access" />
+          <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+          <ScalarProperty Name="cat_name" ColumnName="cat_name" />
+          <ScalarProperty Name="cat_id" ColumnName="cat_id" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="companies">
+      <EntityTypeMapping TypeName="SmartDocScanModel.company">
+        <MappingFragment StoreEntitySet="company">
+          <ScalarProperty Name="inactive" ColumnName="inactive" />
+          <ScalarProperty Name="barcode" ColumnName="barcode" />
+          <ScalarProperty Name="phone" ColumnName="phone" />
+          <ScalarProperty Name="location" ColumnName="location" />
+          <ScalarProperty Name="address" ColumnName="address" />
+          <ScalarProperty Name="owner" ColumnName="owner" />
+          <ScalarProperty Name="comp_name" ColumnName="comp_name" />
+          <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="documents">
+      <EntityTypeMapping TypeName="SmartDocScanModel.document">
+        <MappingFragment StoreEntitySet="documents">
+          <ScalarProperty Name="deleted_by" ColumnName="deleted_by" />
+          <ScalarProperty Name="deleted_on" ColumnName="deleted_on" />
+          <ScalarProperty Name="deleted" ColumnName="deleted" />
+          <ScalarProperty Name="uploaded_by" ColumnName="uploaded_by" />
+          <ScalarProperty Name="date" ColumnName="date" />
+          <ScalarProperty Name="num_pages" ColumnName="num_pages" />
+          <ScalarProperty Name="url" ColumnName="url" />
+          <ScalarProperty Name="doc_name" ColumnName="doc_name" />
+          <ScalarProperty Name="cat_id" ColumnName="cat_id" />
+          <ScalarProperty Name="patient_id" ColumnName="patient_id" />
+          <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+          <ScalarProperty Name="doc_id" ColumnName="doc_id" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="patients">
+      <EntityTypeMapping TypeName="SmartDocScanModel.patient">
+        <MappingFragment StoreEntitySet="patient">
+          <ScalarProperty Name="ssn" ColumnName="ssn" />
+          <ScalarProperty Name="box" ColumnName="box" />
+          <ScalarProperty Name="physician" ColumnName="physician" />
+          <ScalarProperty Name="gender" ColumnName="gender" />
+          <ScalarProperty Name="dob" ColumnName="dob" />
+          <ScalarProperty Name="last_name" ColumnName="last_name" />
+          <ScalarProperty Name="first_name" ColumnName="first_name" />
+          <ScalarProperty Name="pext_id" ColumnName="pext_id" />
+          <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+          <ScalarProperty Name="patient_id" ColumnName="patient_id" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="users">
+      <EntityTypeMapping TypeName="SmartDocScanModel.user">
+        <MappingFragment StoreEntitySet="users">
+          <ScalarProperty Name="IsAdmin" ColumnName="IsAdmin" />
+          <ScalarProperty Name="disabled" ColumnName="disabled" />
+          <ScalarProperty Name="su" ColumnName="su" />
+          <ScalarProperty Name="report" ColumnName="report" />
+          <ScalarProperty Name="box" ColumnName="box" />
+          <ScalarProperty Name="add_patients" ColumnName="add_patients" />
+          <ScalarProperty Name="add_users" ColumnName="add_users" />
+          <ScalarProperty Name="add_cat" ColumnName="add_cat" />
+          <ScalarProperty Name="download_doc" ColumnName="download_doc" />
+          <ScalarProperty Name="print_doc" ColumnName="print_doc" />
+          <ScalarProperty Name="delete_manage" ColumnName="delete_manage" />
+          <ScalarProperty Name="delete_doc" ColumnName="delete_doc" />
+          <ScalarProperty Name="scan_doc" ColumnName="scan_doc" />
+          <ScalarProperty Name="upload_doc" ColumnName="upload_doc" />
+          <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+          <ScalarProperty Name="password" ColumnName="password" />
+          <ScalarProperty Name="name" ColumnName="name" />
+          <ScalarProperty Name="username" ColumnName="username" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="usersinfoes">
+      <EntityTypeMapping TypeName="SmartDocScanModel.usersinfo">
+        <MappingFragment StoreEntitySet="usersinfo">
+          <ScalarProperty Name="IsAdmin" ColumnName="IsAdmin" />
+          <ScalarProperty Name="disabled" ColumnName="disabled" />
+          <ScalarProperty Name="su" ColumnName="su" />
+          <ScalarProperty Name="report" ColumnName="report" />
+          <ScalarProperty Name="box" ColumnName="box" />
+          <ScalarProperty Name="add_patients" ColumnName="add_patients" />
+          <ScalarProperty Name="add_users" ColumnName="add_users" />
+          <ScalarProperty Name="add_cat" ColumnName="add_cat" />
+          <ScalarProperty Name="download_doc" ColumnName="download_doc" />
+          <ScalarProperty Name="print_doc" ColumnName="print_doc" />
+          <ScalarProperty Name="delete_manage" ColumnName="delete_manage" />
+          <ScalarProperty Name="delete_doc" ColumnName="delete_doc" />
+          <ScalarProperty Name="scan_doc" ColumnName="scan_doc" />
+          <ScalarProperty Name="upload_doc" ColumnName="upload_doc" />
+          <ScalarProperty Name="comp_id" ColumnName="comp_id" />
+          <ScalarProperty Name="password" ColumnName="password" />
+          <ScalarProperty Name="name" ColumnName="name" />
+          <ScalarProperty Name="username" ColumnName="username" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+  </EntityContainerMapping>
+</Mapping>

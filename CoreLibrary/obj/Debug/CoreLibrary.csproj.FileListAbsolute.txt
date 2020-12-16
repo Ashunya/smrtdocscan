@@ -1,0 +1,77 @@
+D:\Projects\Crudepost\CoreLibrary\bin\Debug\CoreLibrary.dll
+D:\Projects\Crudepost\CoreLibrary\bin\Debug\CoreLibrary.pdb
+D:\Projects\Crudepost\CoreLibrary\bin\Debug\Newtonsoft.Json.dll
+D:\Projects\Crudepost\CoreLibrary\bin\Debug\Newtonsoft.Json.xml
+D:\Projects\Crudepost\CoreLibrary\obj\Debug\CoreLibrary.csprojResolveAssemblyReference.cache
+D:\Projects\Crudepost\CoreLibrary\obj\Debug\CoreLibrary.csproj.CoreCompileInputs.cache
+D:\Projects\Crudepost\CoreLibrary\obj\Debug\CoreLibrary.dll
+D:\Projects\Crudepost\CoreLibrary\obj\Debug\CoreLibrary.pdb
+E:\Projects\Rahul\ODTasker\CoreLibrary\bin\Debug\CoreLibrary.dll
+E:\Projects\Rahul\ODTasker\CoreLibrary\bin\Debug\CoreLibrary.pdb
+E:\Projects\Rahul\ODTasker\CoreLibrary\bin\Debug\Newtonsoft.Json.dll
+E:\Projects\Rahul\ODTasker\CoreLibrary\obj\Debug\CoreLibrary.csprojAssemblyReference.cache
+E:\Projects\Rahul\ODTasker\CoreLibrary\obj\Debug\CoreLibrary.csproj.CoreCompileInputs.cache
+E:\Projects\Rahul\ODTasker\CoreLibrary\obj\Debug\CoreLibrary.csproj.CopyComplete
+E:\Projects\Rahul\ODTasker\CoreLibrary\obj\Debug\CoreLibrary.dll
+E:\Projects\Rahul\ODTasker\CoreLibrary\obj\Debug\CoreLibrary.pdb
+E:\Projects\Rahul\ODTaskerWeb\CoreLibrary\bin\Debug\CoreLibrary.dll
+E:\Projects\Rahul\ODTaskerWeb\CoreLibrary\bin\Debug\CoreLibrary.pdb
+E:\Projects\Rahul\ODTaskerWeb\CoreLibrary\bin\Debug\Newtonsoft.Json.dll
+E:\Projects\Rahul\ODTaskerWeb\CoreLibrary\obj\Debug\CoreLibrary.csprojAssemblyReference.cache
+E:\Projects\Rahul\ODTaskerWeb\CoreLibrary\obj\Debug\CoreLibrary.csproj.CoreCompileInputs.cache
+E:\Projects\Rahul\ODTaskerWeb\CoreLibrary\obj\Debug\CoreLibrary.csproj.CopyComplete
+E:\Projects\Rahul\ODTaskerWeb\CoreLibrary\obj\Debug\CoreLibrary.dll
+E:\Projects\Rahul\ODTaskerWeb\CoreLibrary\obj\Debug\CoreLibrary.pdb
+E:\Working Project Folders With NJ\ODTasker\ODTaskerWeb\CoreLibrary\bin\Debug\CoreLibrary.dll
+E:\Working Project Folders With NJ\ODTasker\ODTaskerWeb\CoreLibrary\bin\Debug\CoreLibrary.pdb
+E:\Working Project Folders With NJ\ODTasker\ODTaskerWeb\CoreLibrary\bin\Debug\Newtonsoft.Json.dll
+E:\Working Project Folders With NJ\ODTasker\ODTaskerWeb\CoreLibrary\obj\Debug\CoreLibrary.csproj.CoreCompileInputs.cache
+E:\Working Project Folders With NJ\ODTasker\ODTaskerWeb\CoreLibrary\obj\Debug\CoreLibrary.csproj.CopyComplete
+E:\Working Project Folders With NJ\ODTasker\ODTaskerWeb\CoreLibrary\obj\Debug\CoreLibrary.dll
+E:\Working Project Folders With NJ\ODTasker\ODTaskerWeb\CoreLibrary\obj\Debug\CoreLibrary.pdb
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\CoreLibrary\bin\Debug\CoreLibrary.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\CoreLibrary\bin\Debug\CoreLibrary.pdb
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\CoreLibrary\bin\Debug\Newtonsoft.Json.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csproj.CoreCompileInputs.cache
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csproj.CopyComplete
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.pdb
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csprojAssemblyReference.cache
+D:\SmartDocScan\CoreLibrary\bin\Debug\CoreLibrary.dll
+D:\SmartDocScan\CoreLibrary\bin\Debug\CoreLibrary.pdb
+D:\SmartDocScan\CoreLibrary\bin\Debug\Newtonsoft.Json.dll
+D:\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csproj.CoreCompileInputs.cache
+D:\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csproj.CopyComplete
+D:\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.dll
+D:\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.pdb
+D:\SmartDoc\SmartDocScan\CoreLibrary\bin\Debug\CoreLibrary.dll
+D:\SmartDoc\SmartDocScan\CoreLibrary\bin\Debug\CoreLibrary.pdb
+D:\SmartDoc\SmartDocScan\CoreLibrary\bin\Debug\Newtonsoft.Json.dll
+D:\SmartDoc\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csproj.CoreCompileInputs.cache
+D:\SmartDoc\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csproj.CopyComplete
+D:\SmartDoc\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.dll
+D:\SmartDoc\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.pdb
+D:\SmartDoc\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csprojAssemblyReference.cache
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\CoreLibrary\bin\Debug\CoreLibrary.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\CoreLibrary\bin\Debug\CoreLibrary.pdb
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\CoreLibrary\bin\Debug\Newtonsoft.Json.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csprojAssemblyReference.cache
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csproj.CopyComplete
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\CoreLibrary\bin\Debug\CoreLibrary.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\CoreLibrary\bin\Debug\CoreLibrary.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\CoreLibrary\bin\Debug\Newtonsoft.Json.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csproj.CoreCompileInputs.cache
+D:\SmartDoc\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csproj.CopyComplete
+D:\SmartDoc\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csprojAssemblyReference.cache
+D:\New folder (2)\SmartDocScan\SmartDocScan\CoreLibrary\bin\Debug\CoreLibrary.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\CoreLibrary\bin\Debug\CoreLibrary.pdb
+D:\New folder (2)\SmartDocScan\SmartDocScan\CoreLibrary\bin\Debug\Newtonsoft.Json.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csprojAssemblyReference.cache
+D:\New folder (2)\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csproj.CoreCompileInputs.cache
+D:\New folder (2)\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.csproj.CopyComplete
+D:\New folder (2)\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\CoreLibrary\obj\Debug\CoreLibrary.pdb

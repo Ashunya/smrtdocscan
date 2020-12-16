@@ -1,0 +1,51 @@
+﻿@model SmartDocScan.Data.document
+@{
+    ViewBag.Title = "UploadDocument";
+    Layout = "~/Views/Shared/_LayoutDocument.cshtml";
+}
+
+<div class="row">
+
+
+    <div class="col-md-6 offset-md-3">
+
+        <div class="block-center">
+
+            <h3>Upload File(s)</h3>
+
+
+            @using (Ajax.BeginForm("UploadDocumentPost", "Admin", new AjaxOptions { HttpMethod = "POST", OnSuccess = "onSuccess", OnFailure = "onFailure" }, new { id = "formUploadDocument" , @enctype = "multipart/form-data" }))
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.comp_id)
+                @Html.HiddenFor(m => m.patient_id)
+                <div class="form-cart-block">
+                    <div class="brief-block">
+                        <div class="row brief-sub-head1 form-group">
+                            <div class="col-sm-4"><label>Category :</label></div>
+                            <div class="col-sm-8">
+                                @Html.DropDownList("cat_id", new SelectList(ViewBag.CategoryList, "cat_id", "cat_name"), "--Select Category--", new { @class = "form-control" })
+                                @Html.ValidationMessageFor(model => model.cat_id, "", new { @class = "text-danger" })
+                            </div>
+                        </div>
+                        <div class="row brief-sub-head1 form-group">
+                            <div class="col-sm-4"><label>Document to Upload :</label></div>
+                            <div class="col-sm-8"> @Html.TextBoxFor(m => m.doc_name, new { id = "file", name = "file", type = "file" })</div>
+                        </div>
+                    </div>
+                    <hr />
+                    <div class="btn-panel">
+                        <button class="btn btn-primary">Submit</button>
+                    </div>
+                </div>
+
+            }
+
+        </div>
+    </div>
+</div>
+
+@section ScriptSection
+{
+    <script src="/Scripts/upload-document.js"></script>
+}

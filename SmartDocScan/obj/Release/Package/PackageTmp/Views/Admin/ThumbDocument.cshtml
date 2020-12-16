@@ -1,0 +1,153 @@
+﻿
+@{
+    ViewBag.Title = "ThumbDocument";
+    Layout = "~/Views/Shared/_LayoutDocument.cshtml";
+}
+
+<div>
+    @ViewBag.PatientName
+    @Html.ActionLink("EditPatient", "EditPatient", new { id = @ViewBag.PatientId })
+
+
+</div>
+<div class="content-area">
+
+
+    <div class="userWrapper">
+
+        <div class="card">
+
+            <div class="card-body">
+
+                <!-- Nav tabs -->
+
+                <ul class="nav nav-tabs mb-3">
+
+                    <li class="nav-item">
+
+                        <a class="nav-link active" data-toggle="tab" href="#allDocument">All</a>
+
+                    </li>
+
+                    @foreach (var dl in ViewBag.DocumentList)
+                    {
+
+                        <li class="nav-item">
+
+                            <a class="nav-link" data-toggle="tab" href="#@dl.cat_id">@dl.cat_name</a>
+
+                        </li>
+
+                    }
+
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <div class="tab-pane active" id="allDocument">
+                        <div class="row">
+
+                            @foreach (var dc in ViewBag.Documents)
+                            {
+                                if (ViewBag.Permission.delete_doc == 1)
+                                {
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="@dc.comp_id/@dc.patient_id/@(dc.cat_id)_@(dc.doc_name)">
+                                <input type="hidden" id="hdnDoc_id" value="@dc.url" />
+                                <label class="custom-control-label" for="@dc.comp_id/@dc.patient_id/@(dc.cat_id)_@(dc.doc_name)"></label>                            
+                            </div>
+                                }
+                                <div class="col-lg-2 col-md-4 col-sm-6">
+                                    @*<div class="docThumbBlock">*@
+                                    <a class="docThumbBlock" href="~/store/@dc.url" target="_blank">
+                                        <img src="~/images/BlankImage.png" alt="thumbdoc1" />
+
+                                        <p>@dc.doc_name</p>
+                                    </a>                                 
+                                    @*</div>*@
+                                </div>
+                            }
+                        </div>
+                        @if (ViewBag.Permission.delete_doc == 1)
+                        {
+                        <a href="#" class="btn btn-dark btn-md" onclick="deleteDocument()">
+                            <span class="glyphicon glyphicon-trash"></span> Delete
+                        </a>
+                        }
+                    </div>
+
+                    @foreach (var dl in ViewBag.DocumentList)
+                    {
+                        <div class="tab-pane fade" id="@dl.cat_id">
+
+                            <div class="row">
+
+                                @foreach (var dc in ViewBag.Documents)
+                                {
+                                    if (dl.cat_id == dc.cat_id)
+                                    {
+                                        
+                                <div class="col-lg-2 col-md-4 col-sm-6">
+
+                                    @*<div class="docThumbBlock">*@
+                                    <a class="docThumbBlock" href="~/store/@dc.url" target="_blank">
+                                        <img src="~/images/BlankImage.png" alt="thumbdoc1" />
+
+                                        <p>@dc.doc_name</p>
+                                        </a>
+                                        @*</div>*@
+
+                                </div>
+                                    }
+                                }
+                            </div>
+
+                        </div>
+                    }
+                  
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+@section ScriptSection
+{
+    <script>
+        var array = new Array();
+         var arraydownload = new Array();
+        $(".tab-content").on("click", "input[type=checkbox]", function () {
+            debugger;
+            var checkId = $(this).attr("id");
+            if ($(this).is(":checked")) {     
+                var nextSibling = $(this).next().val();              
+                var docname = {'doc_name':$(this).attr("id"),'url':nextSibling };             
+                array.push(docname);
+            }
+        });         
+        function deleteDocument() {
+            $.ajax({
+                type: 'POST',
+                url: '/Admin/DeleteDocuments',
+                data: JSON.stringify(array),
+                contentType: 'application/json; charset=utf-8',
+                datatype: 'json',
+                success: function (result) {
+                    showToasterMsg(result.Message, 1);
+                    setTimeout(
+                        function () {
+                            window.location.reload();
+                        }, 2000);
+                },
+                error: function (result) {
+                    showToasterMsg("Error", 2);
+                }
+            });
+            array = [];
+        }    
+
+    </script>
+}

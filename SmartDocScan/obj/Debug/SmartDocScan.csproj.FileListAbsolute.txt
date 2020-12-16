@@ -1,0 +1,615 @@
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\SmartDocScan.dll.config
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\SmartDocScan.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\SmartDocScan.pdb
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\csc.exe
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\csc.exe.config
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\csc.rsp
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\csi.exe
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\csi.exe.config
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\csi.rsp
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.Build.Tasks.CodeAnalysis.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.CSharp.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.CSharp.Scripting.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.Scripting.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.VisualBasic.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CSharp.Core.targets
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.DiaSymReader.Native.amd64.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.DiaSymReader.Native.x86.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.Managed.Core.targets
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.VisualBasic.Core.targets
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.AppContext.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Collections.Immutable.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Console.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Diagnostics.FileVersionInfo.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Diagnostics.StackTrace.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Compression.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.FileSystem.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.FileSystem.Primitives.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Pipes.AccessControl.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Pipes.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Reflection.Metadata.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.AccessControl.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Claims.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Algorithms.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Encoding.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Primitives.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.X509Certificates.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Principal.Windows.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Text.Encoding.CodePages.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.ValueTuple.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.ReaderWriter.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XmlDocument.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XPath.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XPath.XDocument.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\vbc.exe
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\vbc.exe.config
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\vbc.rsp
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\VBCSCompiler.exe
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\VBCSCompiler.exe.config
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Antlr3.Runtime.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\AutoMapper.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\CoreLibrary.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\EntityFramework.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\EntityFramework.SqlServer.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.AspNet.TelemetryCorrelation.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.JsonWebTokens.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Logging.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Tokens.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.Web.Infrastructure.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Newtonsoft.Json.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Diagnostics.DiagnosticSource.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.IdentityModel.Tokens.Jwt.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Net.Http.Formatting.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Helpers.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Http.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Mvc.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Optimization.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Razor.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Deployment.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Razor.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\WebGrease.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\CoreLibrary.pdb
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\AutoMapper.pdb
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\AutoMapper.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\EntityFramework.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\EntityFramework.SqlServer.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.JsonWebTokens.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Logging.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Tokens.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Newtonsoft.Json.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.IdentityModel.Tokens.Jwt.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Net.Http.Formatting.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Http.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Helpers.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Mvc.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Optimization.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Razor.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Deployment.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Razor.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Antlr3.Runtime.pdb
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Diagnostics.DiagnosticSource.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.AspNet.TelemetryCorrelation.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.xml
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csprojAssemblyReference.cache
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csproj.CoreCompileInputs.cache
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csproj.CopyComplete
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.dll
+E:\Working Project Folders With NJ\SmartDocScan\SmartDoc\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.pdb
+D:\SmartDocScan\SmartDocScan\bin\SmartDocScan.dll.config
+D:\SmartDocScan\SmartDocScan\bin\SmartDocScan.dll
+D:\SmartDocScan\SmartDocScan\bin\SmartDocScan.pdb
+D:\SmartDocScan\SmartDocScan\bin\roslyn\csc.exe
+D:\SmartDocScan\SmartDocScan\bin\roslyn\csc.exe.config
+D:\SmartDocScan\SmartDocScan\bin\roslyn\csc.rsp
+D:\SmartDocScan\SmartDocScan\bin\roslyn\csi.exe
+D:\SmartDocScan\SmartDocScan\bin\roslyn\csi.exe.config
+D:\SmartDocScan\SmartDocScan\bin\roslyn\csi.rsp
+D:\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.Build.Tasks.CodeAnalysis.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.CSharp.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.CSharp.Scripting.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.Scripting.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.VisualBasic.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CSharp.Core.targets
+D:\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.DiaSymReader.Native.amd64.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.DiaSymReader.Native.x86.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.Managed.Core.targets
+D:\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.VisualBasic.Core.targets
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.AppContext.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Collections.Immutable.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Console.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Diagnostics.FileVersionInfo.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Diagnostics.StackTrace.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Compression.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.FileSystem.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.FileSystem.Primitives.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Pipes.AccessControl.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Pipes.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Reflection.Metadata.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.AccessControl.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Claims.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Algorithms.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Encoding.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Primitives.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.X509Certificates.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Principal.Windows.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Text.Encoding.CodePages.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.ValueTuple.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.ReaderWriter.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XmlDocument.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XPath.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XPath.XDocument.dll
+D:\SmartDocScan\SmartDocScan\bin\roslyn\vbc.exe
+D:\SmartDocScan\SmartDocScan\bin\roslyn\vbc.exe.config
+D:\SmartDocScan\SmartDocScan\bin\roslyn\vbc.rsp
+D:\SmartDocScan\SmartDocScan\bin\roslyn\VBCSCompiler.exe
+D:\SmartDocScan\SmartDocScan\bin\roslyn\VBCSCompiler.exe.config
+D:\SmartDocScan\SmartDocScan\bin\Antlr3.Runtime.dll
+D:\SmartDocScan\SmartDocScan\bin\AutoMapper.dll
+D:\SmartDocScan\SmartDocScan\bin\CoreLibrary.dll
+D:\SmartDocScan\SmartDocScan\bin\EntityFramework.dll
+D:\SmartDocScan\SmartDocScan\bin\EntityFramework.SqlServer.dll
+D:\SmartDocScan\SmartDocScan\bin\itextsharp.dll
+D:\SmartDocScan\SmartDocScan\bin\Microsoft.AspNet.TelemetryCorrelation.dll
+D:\SmartDocScan\SmartDocScan\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.dll
+D:\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.JsonWebTokens.dll
+D:\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Logging.dll
+D:\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Tokens.dll
+D:\SmartDocScan\SmartDocScan\bin\Microsoft.Web.Infrastructure.dll
+D:\SmartDocScan\SmartDocScan\bin\Newtonsoft.Json.dll
+D:\SmartDocScan\SmartDocScan\bin\System.Diagnostics.DiagnosticSource.dll
+D:\SmartDocScan\SmartDocScan\bin\System.IdentityModel.Tokens.Jwt.dll
+D:\SmartDocScan\SmartDocScan\bin\System.Net.Http.Formatting.dll
+D:\SmartDocScan\SmartDocScan\bin\System.Web.Helpers.dll
+D:\SmartDocScan\SmartDocScan\bin\System.Web.Http.dll
+D:\SmartDocScan\SmartDocScan\bin\System.Web.Mvc.dll
+D:\SmartDocScan\SmartDocScan\bin\System.Web.Optimization.dll
+D:\SmartDocScan\SmartDocScan\bin\System.Web.Razor.dll
+D:\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Deployment.dll
+D:\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.dll
+D:\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Razor.dll
+D:\SmartDocScan\SmartDocScan\bin\WebGrease.dll
+D:\SmartDocScan\SmartDocScan\bin\CoreLibrary.pdb
+D:\SmartDocScan\SmartDocScan\bin\AutoMapper.pdb
+D:\SmartDocScan\SmartDocScan\bin\AutoMapper.xml
+D:\SmartDocScan\SmartDocScan\bin\EntityFramework.xml
+D:\SmartDocScan\SmartDocScan\bin\EntityFramework.SqlServer.xml
+D:\SmartDocScan\SmartDocScan\bin\itextsharp.xml
+D:\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.JsonWebTokens.xml
+D:\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Logging.xml
+D:\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Tokens.xml
+D:\SmartDocScan\SmartDocScan\bin\Newtonsoft.Json.xml
+D:\SmartDocScan\SmartDocScan\bin\System.IdentityModel.Tokens.Jwt.xml
+D:\SmartDocScan\SmartDocScan\bin\System.Net.Http.Formatting.xml
+D:\SmartDocScan\SmartDocScan\bin\System.Web.Http.xml
+D:\SmartDocScan\SmartDocScan\bin\System.Web.Helpers.xml
+D:\SmartDocScan\SmartDocScan\bin\System.Web.Mvc.xml
+D:\SmartDocScan\SmartDocScan\bin\System.Web.Optimization.xml
+D:\SmartDocScan\SmartDocScan\bin\System.Web.Razor.xml
+D:\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.xml
+D:\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Deployment.xml
+D:\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Razor.xml
+D:\SmartDocScan\SmartDocScan\bin\Antlr3.Runtime.pdb
+D:\SmartDocScan\SmartDocScan\bin\System.Diagnostics.DiagnosticSource.xml
+D:\SmartDocScan\SmartDocScan\bin\Microsoft.AspNet.TelemetryCorrelation.xml
+D:\SmartDocScan\SmartDocScan\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.xml
+D:\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csprojAssemblyReference.cache
+D:\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csproj.CoreCompileInputs.cache
+D:\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csproj.CopyComplete
+D:\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.dll
+D:\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\SmartDocScan.dll.config
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\SmartDocScan.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\SmartDocScan.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\csc.exe
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\csc.exe.config
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\csc.rsp
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\csi.exe
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\csi.exe.config
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\csi.rsp
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.Build.Tasks.CodeAnalysis.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.CSharp.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.CSharp.Scripting.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.Scripting.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.VisualBasic.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CSharp.Core.targets
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.DiaSymReader.Native.amd64.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.DiaSymReader.Native.x86.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.Managed.Core.targets
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.VisualBasic.Core.targets
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.AppContext.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Collections.Immutable.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Console.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Diagnostics.FileVersionInfo.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Diagnostics.StackTrace.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Compression.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.FileSystem.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.FileSystem.Primitives.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Pipes.AccessControl.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Pipes.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Reflection.Metadata.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.AccessControl.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Claims.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Algorithms.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Encoding.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Primitives.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.X509Certificates.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Principal.Windows.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Text.Encoding.CodePages.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.ValueTuple.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.ReaderWriter.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XmlDocument.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XPath.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XPath.XDocument.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\vbc.exe
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\vbc.exe.config
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\vbc.rsp
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\VBCSCompiler.exe
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\roslyn\VBCSCompiler.exe.config
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Antlr3.Runtime.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\AutoMapper.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\CoreLibrary.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\EntityFramework.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\EntityFramework.SqlServer.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\itextsharp.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.AspNet.TelemetryCorrelation.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.JsonWebTokens.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Logging.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Tokens.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.Web.Infrastructure.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Newtonsoft.Json.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Diagnostics.DiagnosticSource.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.IdentityModel.Tokens.Jwt.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Net.Http.Formatting.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Helpers.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Http.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Mvc.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Optimization.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Razor.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Deployment.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Razor.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\WebGrease.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\CoreLibrary.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\AutoMapper.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\AutoMapper.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\EntityFramework.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\EntityFramework.SqlServer.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\itextsharp.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.JsonWebTokens.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Logging.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Tokens.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Newtonsoft.Json.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.IdentityModel.Tokens.Jwt.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Net.Http.Formatting.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Http.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Helpers.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Mvc.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Optimization.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.Razor.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Deployment.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Razor.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Antlr3.Runtime.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\System.Diagnostics.DiagnosticSource.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.AspNet.TelemetryCorrelation.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csprojAssemblyReference.cache
+D:\SmartDoc\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csproj.CoreCompileInputs.cache
+D:\SmartDoc\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csproj.CopyComplete
+D:\SmartDoc\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.pdb
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\SmartDocScan.dll.config
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\SmartDocScan.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\SmartDocScan.pdb
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csc.exe
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csc.exe.config
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csc.rsp
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csi.exe
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csi.exe.config
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csi.rsp
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.Build.Tasks.CodeAnalysis.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.CSharp.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.CSharp.Scripting.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.Scripting.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.VisualBasic.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CSharp.Core.targets
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.DiaSymReader.Native.amd64.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.DiaSymReader.Native.x86.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.Managed.Core.targets
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.VisualBasic.Core.targets
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.AppContext.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Collections.Immutable.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Console.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Diagnostics.FileVersionInfo.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Diagnostics.StackTrace.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Compression.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.FileSystem.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.FileSystem.Primitives.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Pipes.AccessControl.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Pipes.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Reflection.Metadata.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.AccessControl.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Claims.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Algorithms.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Encoding.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Primitives.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.X509Certificates.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Principal.Windows.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Text.Encoding.CodePages.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.ValueTuple.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.ReaderWriter.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XmlDocument.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XPath.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XPath.XDocument.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\vbc.exe
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\vbc.exe.config
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\vbc.rsp
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\VBCSCompiler.exe
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\VBCSCompiler.exe.config
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Antlr3.Runtime.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\AutoMapper.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\CoreLibrary.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\EntityFramework.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\EntityFramework.SqlServer.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\itextsharp.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.AspNet.TelemetryCorrelation.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.JsonWebTokens.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Logging.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Tokens.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.Web.Infrastructure.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Newtonsoft.Json.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Diagnostics.DiagnosticSource.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Net.Http.Formatting.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Helpers.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Http.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Mvc.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Optimization.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Razor.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Deployment.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Razor.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\WebGrease.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\CoreLibrary.pdb
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\AutoMapper.pdb
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\AutoMapper.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\EntityFramework.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\EntityFramework.SqlServer.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\itextsharp.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.JsonWebTokens.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Logging.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Tokens.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Newtonsoft.Json.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.IdentityModel.Tokens.Jwt.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Net.Http.Formatting.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Http.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Helpers.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Mvc.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Optimization.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Razor.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Deployment.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Razor.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Antlr3.Runtime.pdb
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Diagnostics.DiagnosticSource.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.AspNet.TelemetryCorrelation.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.xml
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csprojAssemblyReference.cache
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csproj.CopyComplete
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.dll
+C:\Users\Admin\Desktop\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\SmartDocScan.dll.config
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\SmartDocScan.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\SmartDocScan.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csc.exe
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csc.exe.config
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csc.rsp
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csi.exe
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csi.exe.config
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csi.rsp
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.Build.Tasks.CodeAnalysis.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.CSharp.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.CSharp.Scripting.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.Scripting.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.VisualBasic.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CSharp.Core.targets
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.DiaSymReader.Native.amd64.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.DiaSymReader.Native.x86.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.Managed.Core.targets
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.VisualBasic.Core.targets
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.AppContext.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Collections.Immutable.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Console.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Diagnostics.FileVersionInfo.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Diagnostics.StackTrace.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Compression.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.FileSystem.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.FileSystem.Primitives.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Pipes.AccessControl.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Pipes.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Reflection.Metadata.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.AccessControl.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Claims.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Algorithms.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Encoding.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Primitives.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.X509Certificates.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Principal.Windows.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Text.Encoding.CodePages.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.ValueTuple.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.ReaderWriter.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XmlDocument.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XPath.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XPath.XDocument.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\vbc.exe
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\vbc.exe.config
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\vbc.rsp
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\VBCSCompiler.exe
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\VBCSCompiler.exe.config
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Antlr3.Runtime.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\AutoMapper.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\CoreLibrary.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\EntityFramework.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\EntityFramework.SqlServer.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\itextsharp.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.AspNet.TelemetryCorrelation.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.JsonWebTokens.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Logging.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Tokens.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.Web.Infrastructure.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Newtonsoft.Json.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Diagnostics.DiagnosticSource.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.IdentityModel.Tokens.Jwt.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Net.Http.Formatting.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Helpers.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Http.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Mvc.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Optimization.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Razor.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Deployment.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Razor.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\WebGrease.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\CoreLibrary.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\AutoMapper.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\AutoMapper.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\EntityFramework.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\EntityFramework.SqlServer.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\itextsharp.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.JsonWebTokens.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Logging.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Tokens.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Newtonsoft.Json.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.IdentityModel.Tokens.Jwt.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Net.Http.Formatting.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Http.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Helpers.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Mvc.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Optimization.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Razor.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Deployment.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Razor.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Antlr3.Runtime.pdb
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Diagnostics.DiagnosticSource.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.AspNet.TelemetryCorrelation.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.xml
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csprojAssemblyReference.cache
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csproj.CoreCompileInputs.cache
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csproj.CopyComplete
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.dll
+D:\SmartDoc\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.pdb
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\SmartDocScan.dll.config
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\SmartDocScan.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\SmartDocScan.pdb
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csc.exe
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csc.exe.config
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csc.rsp
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csi.exe
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csi.exe.config
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\csi.rsp
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.Build.Tasks.CodeAnalysis.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.CSharp.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.CSharp.Scripting.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.Scripting.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CodeAnalysis.VisualBasic.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.CSharp.Core.targets
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.DiaSymReader.Native.amd64.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.DiaSymReader.Native.x86.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.Managed.Core.targets
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\Microsoft.VisualBasic.Core.targets
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.AppContext.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Collections.Immutable.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Console.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Diagnostics.FileVersionInfo.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Diagnostics.StackTrace.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Compression.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.FileSystem.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.FileSystem.Primitives.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Pipes.AccessControl.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.IO.Pipes.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Reflection.Metadata.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.AccessControl.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Claims.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Algorithms.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Encoding.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.Primitives.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Cryptography.X509Certificates.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Security.Principal.Windows.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Text.Encoding.CodePages.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.ValueTuple.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.ReaderWriter.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XmlDocument.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XPath.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\System.Xml.XPath.XDocument.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\vbc.exe
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\vbc.exe.config
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\vbc.rsp
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\VBCSCompiler.exe
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\roslyn\VBCSCompiler.exe.config
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Antlr3.Runtime.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\AutoMapper.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\CoreLibrary.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\EntityFramework.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\EntityFramework.SqlServer.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\itextsharp.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.AspNet.TelemetryCorrelation.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.JsonWebTokens.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Logging.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Tokens.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.Web.Infrastructure.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Newtonsoft.Json.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Diagnostics.DiagnosticSource.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.IdentityModel.Tokens.Jwt.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Net.Http.Formatting.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Helpers.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Http.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Mvc.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Optimization.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Razor.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Deployment.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Razor.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\WebGrease.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\CoreLibrary.pdb
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\AutoMapper.pdb
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\AutoMapper.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\EntityFramework.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\EntityFramework.SqlServer.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\itextsharp.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.JsonWebTokens.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Logging.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.IdentityModel.Tokens.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Newtonsoft.Json.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.IdentityModel.Tokens.Jwt.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Net.Http.Formatting.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Http.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Helpers.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Mvc.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Optimization.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.Razor.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Deployment.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Web.WebPages.Razor.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Antlr3.Runtime.pdb
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\System.Diagnostics.DiagnosticSource.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.AspNet.TelemetryCorrelation.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\bin\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.xml
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csprojAssemblyReference.cache
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csproj.CoreCompileInputs.cache
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.csproj.CopyComplete
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.dll
+D:\New folder (2)\SmartDocScan\SmartDocScan\SmartDocScan\obj\Debug\SmartDocScan.pdb

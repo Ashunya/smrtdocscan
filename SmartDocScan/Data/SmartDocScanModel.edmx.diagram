@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+  <edmx:Designer>
+    <edmx:Diagrams>
+      <edmx:Diagram DiagramId="f2e54ada9932496f986130836b69a49d" Name="Diagram1">
+        <edmx:EntityTypeShape EntityType="SmartDocScanModel.box" Width="1.5" PointX="0.75" PointY="0.75" />
+        <edmx:EntityTypeShape EntityType="SmartDocScanModel.category" Width="1.5" PointX="2.75" PointY="0.75" />
+        <edmx:EntityTypeShape EntityType="SmartDocScanModel.company" Width="1.5" PointX="2.75" PointY="3.75" />
+        <edmx:EntityTypeShape EntityType="SmartDocScanModel.document" Width="1.5" PointX="4.75" PointY="0.75" />
+        <edmx:EntityTypeShape EntityType="SmartDocScanModel.patient" Width="1.5" PointX="4.75" PointY="5.75" />
+        <edmx:EntityTypeShape EntityType="SmartDocScanModel.user" Width="1.5" PointX="6.75" PointY="0.75" />
+        <edmx:EntityTypeShape EntityType="SmartDocScanModel.usersinfo" Width="1.5" PointX="6.75" PointY="6.75" />
+      </edmx:Diagram>
+    </edmx:Diagrams>
+  </edmx:Designer>
+</edmx:Edmx>

@@ -1,0 +1,101 @@
+﻿@model SmartDocScan.Data.document
+@{
+                /**/
+
+                ViewBag.Title = "Barcode";
+                Layout = "~/Views/Shared/_LayoutDocument.cshtml";
+}
+<div class="row">
+
+
+    <div class="col-md-12 offset-md-0">
+
+        <div class="block-center">
+
+            <h3>Barcodes</h3>
+
+
+
+            <form class="form-content">
+
+
+                <div class="form-cart-block">
+
+
+                    <div class="brief-block">
+
+
+
+
+
+                        <div class="row brief-sub-head1 form-group">
+
+
+                            <div class="col-sm-3"><label>Category :</label></div>
+
+
+                            <div class="col-sm-9">
+
+                                <div class="input-group add-on">
+
+                                    <div class="col-sm-8">
+                                        @Html.DropDownList("cat_id", new SelectList(ViewBag.CategoryList, "cat_id", "cat_name"), "--Select Category--", new { @class = "form-control" })
+                                    </div>
+
+                                    <div class="input-group-btn">
+
+                                        <span id="scanSepPrint" class="btn btn-primary" style="padding:5px;width:80px">Print</span>
+                                    </div>
+
+                                </div>
+
+
+
+                            </div>
+
+
+                        </div>
+
+
+                        <div class="row brief-sub-head1 form-group">
+                            <iframe id="scanSepFrame" height="400px" width="1050px" src=""></iframe>
+                        </div>
+                    </div>
+
+                    <hr />
+
+
+
+
+                    
+
+
+                </div>
+
+
+
+
+
+            </form>
+
+
+
+
+        </div>
+
+
+
+
+
+
+
+    </div>
+
+
+</div>
+
+@section ScriptSection
+{
+    <script src="/Scripts/barcode.js"></script>
+}
+
