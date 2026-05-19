@@ -406,6 +406,10 @@ namespace SmartDocScan.Controllers
                 {
                     using (var client = new PatientRepository())
                     {
+                        if (client.IsExternalPatientIdExists(model.comp_id, model.pext_id))
+                        {
+                            return Json(CoreResponseServices.ReturnExist(false, "Patient ID already exists.", CoreCommonServices.EmptyJson));
+                        }
                         client.Create(model);
                         return Json(CoreResponseServices.ReturnSuccess(CoreMessageModel.COMMON_INSERTED, model));
                     }
@@ -430,6 +434,10 @@ namespace SmartDocScan.Controllers
                 {
                     using (var client = new PatientRepository())
                     {
+                        if (client.IsExternalPatientIdExists(model.comp_id, model.pext_id, model.patient_id))
+                        {
+                            return Json(CoreResponseServices.ReturnExist(false, "Patient ID already exists.", CoreCommonServices.EmptyJson));
+                        }
                         client.Edit(model);
                         return Json(CoreResponseServices.ReturnSuccess(CoreMessageModel.COMMON_INSERTED, model));
                     }
@@ -573,12 +581,17 @@ namespace SmartDocScan.Controllers
         public JsonResult FindPatientBindGrid()
         {
             int companyId = Int32.Parse(Request.Params["companyId"]);
+            string searchText = Request.Params["searchText"];
+            if (string.IsNullOrWhiteSpace(searchText))
+            {
+                searchText = Request.Params["sSearch"];
+            }
 
             List<patient> list;
 
             using (var client = new PatientRepository())
             {
-                list = client.GetAllByCompanyId(companyId);
+                list = client.GetAllByCompanyId(companyId, searchText);
             }
 
             var jsonData = new

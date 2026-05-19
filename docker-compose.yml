@@ -1,0 +1,39 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: SmartDocScan.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__SmartDocScan: ${SMARTDOCSCAN_CONNECTION_STRING}
+      Cors__AllowedOrigins__0: http://localhost:8088
+      Store__RootPath: /data/store
+      Authentication__Microsoft__TenantId: ${SMARTDOCSCAN_MICROSOFT_TENANT_ID:-}
+      Authentication__Microsoft__ClientId: ${SMARTDOCSCAN_MICROSOFT_CLIENT_ID}
+      Authentication__Microsoft__ClientSecret: ${SMARTDOCSCAN_MICROSOFT_CLIENT_SECRET}
+      Authentication__Microsoft__CallbackPath: /api/auth/microsoft/callback
+      Smtp__Host: ${SMARTDOCSCAN_SMTP_HOST:-}
+      Smtp__Port: ${SMARTDOCSCAN_SMTP_PORT:-587}
+      Smtp__EnableSsl: ${SMARTDOCSCAN_SMTP_ENABLE_SSL:-true}
+      Smtp__From: ${SMARTDOCSCAN_SMTP_FROM:-no-reply@ashunya.com}
+      Smtp__Username: ${SMARTDOCSCAN_SMTP_USERNAME:-}
+      Smtp__Password: ${SMARTDOCSCAN_SMTP_PASSWORD:-}
+    ports:
+      - "5080:8080"
+    volumes:
+      - ./Store:/data/store
+      - ./DataProtection-Keys:/root/.aspnet/DataProtection-Keys
+
+  web:
+    build:
+      context: .
+      dockerfile: SmartDocScan.Web/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_DEFAULT_COMPANY_ID: ${SMARTDOCSCAN_DEFAULT_COMPANY_ID:-7}
+    depends_on:
+      - api
+    ports:
+      - "8088:80"
+    volumes:
+      - ./SmartDocScan/Resources:/usr/share/nginx/html/Resources:ro

@@ -195,6 +195,17 @@
             <script>
                 $(document).ready(function () {
                     $('[data-toggle="tooltip"]').tooltip();
+                    var currentPath = (window.location.pathname || '').toLowerCase().replace(/\/$/, '');
+                    $('#sidebar .components li').removeClass('active');
+                    $('#sidebar .components a').each(function () {
+                        var parser = document.createElement('a');
+                        parser.href = this.href;
+                        var linkPath = (parser.pathname || '').toLowerCase().replace(/\/$/, '');
+                        if (linkPath && currentPath === linkPath) {
+                            $(this).closest('li').addClass('active');
+                            return false;
+                        }
+                    });
                 });
             </script>
             <div class="modal fade" id="allmaster" data-backdrop="static" data-keyboard="false">

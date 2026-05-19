@@ -6,17 +6,21 @@ $(document).ready(function () {
     });
 
         function onSuccess(data) {
+        if (!data || data.Status === false || data.StatusCode == 300 || data.StatusCode == 400) {
+            showToasterMsg(data && data.Message ? data.Message : 'Patient could not be saved.', 2);
+            return;
+        }
         showToasterMsg(data.Message, 1);
 
     setTimeout(
         function () {           
-        window.location = '/admin/findpatient?id=1';
+        window.location = '/admin/findpatient?id=' + getParameterByName('id');
     }, 2000);
 
 }
 
         function onFailure(data) {
-        showToasterMsg(data.Message, 2);
+        showToasterMsg(data && data.Message ? data.Message : 'Patient could not be saved.', 2);
     }
         $(function () {
         $('#formPatient').submit(function (e) {

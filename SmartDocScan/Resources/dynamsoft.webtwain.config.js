@@ -1,19 +1,18 @@
-﻿//
-// Dynamsoft JavaScript Library for Basic Initiation of Dynamic Web TWAIN
-// More info on DWT: http://www.dynamsoft.com/Products/WebTWAIN_Overview.aspx
 //
-// Copyright 2019, Dynamsoft Corporation 
+// Dynamsoft JavaScript Library for Basic Initiation of Dynamic Web TWAIN
+// More info on Dynamic Web TWAIN: http://www.dynamsoft.com/Products/WebTWAIN_Overview.aspx
+//
+// Copyright 2026, Dynamsoft Corporation 
 // Author: Dynamsoft Team
-// Version: 15.1
+// Version: 19.3.3
 //
 /// <reference path="dynamsoft.webtwain.initiate.js" />
-var Dynamsoft = Dynamsoft || { WebTwainEnv: {} };
+var Dynamsoft = Dynamsoft || { DWT: {} };if(!Dynamsoft.DWT) Dynamsoft.DWT = {};
 
 ///
-Dynamsoft.WebTwainEnv.AutoLoad = true;
-
+Dynamsoft.DWT.AutoLoad = true;
 ///
-Dynamsoft.WebTwainEnv.Containers = [{ContainerId:'dwtcontrolContainer', Width:270, Height:350}];
+Dynamsoft.DWT.Containers = [{ WebTwainId: '', ContainerId: 'dwtcontrolContainer', Width: 350, Height: 380 }];
 
 /////////////////////////////////////////////////////////////////////////////////////
 //  WARNING:  The productKey in this file is protected by copyright law            //
@@ -24,23 +23,21 @@ Dynamsoft.WebTwainEnv.Containers = [{ContainerId:'dwtcontrolContainer', Width:27
 //  decompile, disassemble, or modify the productKey .                             //
 /////////////////////////////////////////////////////////////////////////////////////
 /// If you need to use multiple keys on the same server, you can combine keys and write like this 
-
-//Dynamsoft.WebTwainEnv.ProductKey = 't0068WQAAAJa4zA81kM7cZfILeACbmpmA9u0PeVmxxT0ccgM+Fm9WDnGJnAjwsEIdt/z1JMPMdvcznoNX/woTzMubG3lzi3E=';
-Dynamsoft.WebTwainEnv.ProductKey = 'f0068NQAAACDqg45fl5LDZJcFIh/XLqs/Be3A3kRR8JmJUHiWQ4dAot6IBFUBdH2JleZ5Vd2QFJ1lLM0OZy8NVIHHkqofhfI=';
-
-///
-Dynamsoft.WebTwainEnv.Trial = false;
+/// Dynamsoft.DWT.ProductKey = 'key1;key2;key3';
+/// To get a free trial, please visit https://www.dynamsoft.com/customer/license/trialLicense?product=dwt&utm_source=installer.
+Dynamsoft.DWT.ProductKey = 't0200EQYAAC1xQLPTv39Pd5bhkcXy5Wbnpzr3TE2X/V2KrM90ST3+jcyBxAX9eP2Pz5fZ+5ZmwQAZc04zXMqaYySMs9qj+/VLed052cCp9Z0q9Z1o4OQjp0i/dv1+22ZdtyzgDAwroMdzOACkwL6XEzDabfbOEAEsAVoAtLQHlIDsKULwmQZvGV5j+t+F5pxs4NT6zjRB6jjRwMlHzpAgzov5hNNOe4IgfTkRwBKgWQC/j+ySIHIGWAI0C4ynLGYESOddTxj3BY5fPok=';
+Dynamsoft.DWT.productKeys = Dynamsoft.DWT.ProductKey;
 
 ///
-// Dynamsoft.WebTwainEnv.ResourcesPath = 'Resources';
+//Dynamsoft.DWT.ResourcesPath = 'Resources';
 
 ///
-Dynamsoft.WebTwainEnv.IfAddMD5InUploadHeader = false;
-///
-Dynamsoft.WebTwainEnv.IfConfineMaskWithinTheViewer = false;
+Dynamsoft.DWT.IfAddMD5InUploadHeader = false;
 
 ///
-/*Dynamsoft.WebTwainEnv.CustomizableDisplayInfo = {
+///true will make our processing icons align with the initiated div container, otherwise align with the whole page instead
+Dynamsoft.DWT.IfConfineMaskWithinTheViewer = true;
+/*Dynamsoft.DWT.CustomizableDisplayInfo = {
 
     errorMessages: {
 
@@ -66,7 +63,7 @@ Dynamsoft.WebTwainEnv.IfConfineMaskWithinTheViewer = false;
     // launch
     generalMessages: {
         checkingDWTVersion: 'Checking WebTwain version ...',
-        updatingDService: 'Dynamsoft Service is updating ...',
+        updatingDService: 'Dynamic Web TWAIN Service is updating ...',
         downloadingDWTModule: 'Downloading the Dynamic Web TWAIN module.',
         refreshNeeded: 'Please REFRESH your browser.',
         downloadNeeded: 'Please download and install the Dynamic Web TWAIN.',
@@ -76,16 +73,17 @@ Dynamsoft.WebTwainEnv.IfConfineMaskWithinTheViewer = false;
     customProgressText: {
 
         // html5 event
-        upload: 'uploading...',
+        upload: 'Uploading...',
         download: 'Downloading...',
         load: 'Loading...',
-        decode: 'Decoding...',
-        decodeTIFF: 'Decoding tiff...',
-        decodePDF: 'Decoding pdf...',
-        encode: 'Encoding...',
-        encodeTIFF: 'Encoding tiff...',
-        encodePDF: 'Encoding pdf...',
+        decode: 'Processing...',
+        decodeTIFF: 'Processing tiff...',
+        decodePDF: 'Processing pdf...',
+        encode: 'Processing...',
+        encodeTIFF: 'Processing tiff...',
+        encodePDF: 'Processing pdf...',
 
+        transfer: 'Transferring...',
         // image control
         canvasLoading: 'Loading ...'
     },
@@ -103,7 +101,7 @@ Dynamsoft.WebTwainEnv.IfConfineMaskWithinTheViewer = false;
             'rotateright': 'Rotate Right',
             'deskew': 'Deskew',
             'crop': 'Crop Selected Area',
-            'erase': 'Erase Selected Area',
+            'cut': 'Cut Selected Area',
             'changeimagesize': 'Change Image Size',
             'flip': 'Flip Image',
             'mirror': 'Mirror Image',
@@ -122,23 +120,12 @@ Dynamsoft.WebTwainEnv.IfConfineMaskWithinTheViewer = false;
             'close': 'Close the Editor',
             'removeall': 'Remove All Images',
             'removeselected': 'Remove All Selected Images'
-        },
-        bShowAllButtons: true,
-        visibility: {
-            //only valid when bShowAllButtons is true, otherwise changing visibility does nothing
-            'scan': true, 'load': true, 'print': true,
-            'removeall': true, 'removeselected': true,
-            'rotateleft': true, 'rotate': true, 'rotateright': true, 'deskew': true,
-            'crop': true, 'erase': true, 'changeimagesize': true, 'flip': true, 'mirror': true,
-            'zoomin': true, 'originalsize': true, 'zoomout': true, 'stretch': true,
-            'fit': true, 'fitw': true, 'fith': true,
-            'hand': true, 'rectselect': true, 'zoom': true
         }
-	},
-	
+    },
+
     dialogText: {
         dlgRotateAnyAngle: ['Angle :', 'Interpolation:', 'Keep size', '  OK  ', 'Cancel'],
-        dlgChangeImageSize: ['New Height :', 'New Width :', 'Interpolation method:', '  OK  ', 'Cancel'],
+        dlgChangeImageSize: ['New Height :', 'New Width :', 'Interpolation:', '  OK  ', 'Cancel'],
         saveChangedImage: ['You have changed the image, do you want to keep the change(s)?', '  Yes  ', '  No  '],
         selectSource: ['Select Source:', 'Select', 'Cancel', 'There is no source available!']
     }
@@ -146,7 +133,7 @@ Dynamsoft.WebTwainEnv.IfConfineMaskWithinTheViewer = false;
 
 
 /// All callbacks are defined in the dynamsoft.webtwain.install.js file, you can customize them.
-// Dynamsoft.WebTwainEnv.RegisterEvent('OnWebTwainReady', function(){
+// Dynamsoft.DWT.RegisterEvent('OnWebTwainReady', function(){
 // 		// webtwain has been inited
 // });
 

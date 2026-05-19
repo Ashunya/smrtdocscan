@@ -12,23 +12,36 @@
     <title>@ViewBag.Title - Ashunya</title>
     @Styles.Render("~/Content/css")
 </head>
-<body>
+<body class="login-shell">
     <div class="login-page">
-        <div class="login-panel">
-            <div class="logo"><img src="images/smartdocscan.png" /></div>
+        <div class="login-panel login-panel--enhanced">
+            <div class="login-aside">
+                <div class="logo"><img src="images/smartdocscan.png" alt="SmartDocScan" /></div>
+                <span class="login-kicker">Secure document workflow</span>
+                <h1>SmartDocScan</h1>
+                <p>Scan, upload, and retrieve patient documents from one secure workspace built for day-to-day operations.</p>
+                <ul class="login-highlights">
+                    <li><i class="fa fa-file-text-o" aria-hidden="true"></i><span>Centralized document capture</span></li>
+                    <li><i class="fa fa-shield" aria-hidden="true"></i><span>Protected patient record access</span></li>
+                    <li><i class="fa fa-search" aria-hidden="true"></i><span>Faster search and retrieval</span></li>
+                </ul>
+            </div>
             <div class="login-block">
-                <h2>@ViewBag.Title</h2>
+                <div class="login-block-header">
+                    <h2>Sign In</h2>
+                    <p>Use the username and password assigned by your administrator.</p>
+                </div>
                 <section id="loginForm">
                     @using (Html.BeginForm("Index", "Home", new { ReturnUrl = ViewBag.ReturnUrl }, FormMethod.Post, new { @class = "form-content login-form", role = "form" }))
                     {
                         @Html.ValidationSummary(true, "", new { @class = "text-danger" })
                         <div class="form-group">
-                            @Html.TextBoxFor(m => m.UserName, new { placeholder = "User Name", @class = "form-control" })
+                            @Html.TextBoxFor(m => m.UserName, new { placeholder = "User Name", @class = "form-control", autocomplete = "username" })
                             @Html.ValidationMessageFor(m => m.UserName, "", new { @class = "text-danger" })
                             <i class="fa fa-user" aria-hidden="true"></i>
                         </div>
                         <div class="form-group">
-                            @Html.PasswordFor(m => m.Password, new { placeholder = "Password", @class = "form-control" })
+                            @Html.PasswordFor(m => m.Password, new { placeholder = "Password", @class = "form-control", autocomplete = "current-password" })
                             @Html.ValidationMessageFor(m => m.Password, "", new { @class = "text-danger" })
                             <i class="fa fa-lock" aria-hidden="true"></i>
                         </div>
@@ -42,6 +55,7 @@
                         <button type="submit" class="btn btn-primary btn-login">Login</button>
                     }
                 </section>
+                <div class="login-meta">Need help signing in? Contact your company administrator.</div>
             </div>
             <div class="copyright">Copyright &copy; 2019 <span>Ashunya</span>. All Rights Reserved.</div>
         </div>

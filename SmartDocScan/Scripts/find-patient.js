@@ -17,6 +17,7 @@ $(document).ready(function () {
         },
         "fnServerParams": function (aoData) {
             aoData.push({ "name": "companyId", "value": getParameterByName('id') });
+            aoData.push({ "name": "searchText", "value": getPatientSearchText() });
         },
         aoColumns: [
             { "data": "last_name", "sClass": "text-center" },
@@ -38,7 +39,7 @@ $(document).ready(function () {
         ]
     });
 
-
+    bindPatientSearch();
 
     $('#tblPatient tbody').on('click', 'tr', function () {
         var id = dTable.row(this).data().patient_id;
@@ -47,4 +48,19 @@ $(document).ready(function () {
 
 });
 
+function getPatientSearchText() {
+    var $searchInput = $('#tblPatient_filter input');
+    return $searchInput.length ? $searchInput.val() : "";
+}
 
+function bindPatientSearch() {
+    var searchTimer;
+    $('#tblPatient_filter input').off('.DT').on('keyup search input paste cut', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+            if (dTable && dTable.ajax && dTable.ajax.reload) {
+                dTable.ajax.reload(null, false);
+            }
+        }, 300);
+    });
+}

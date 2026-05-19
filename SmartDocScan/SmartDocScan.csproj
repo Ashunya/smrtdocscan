@@ -283,7 +283,9 @@
     <Content Include="js\moment.min.js" />
     <Content Include="js\popper.min.js" />
     <Content Include="Resources\addon\dynamsoft.upload.js" />
+    <Content Include="Resources\addon\dynamsoft.webtwain.addon.barcodereader.js" />
     <Content Include="Resources\addon\dynamsoft.webtwain.addon.pdf.js" />
+    <Content Include="Resources\addon\dynamsoft.webtwain.addon.webcam.js" />
     <Content Include="Resources\dynamsoft.webtwain.config.js" />
     <Content Include="Resources\dynamsoft.webtwain.css" />
     <Content Include="Resources\dynamsoft.webtwain.initiate.js" />
@@ -315,11 +317,16 @@
     <Content Include="Scripts\jquery-3.2.1.min.js" />
     <Content Include="Scripts\jquery-ui.js" />
     <Content Include="Scripts\jquery.navScroll.min.js" />
-    <Content Include="Resources\dist\DynamsoftServiceSetupTrial.deb" />
-    <Content Include="Resources\dist\DynamsoftServiceSetupTrial.msi" />
-    <Content Include="Resources\dist\DynamsoftServiceSetupTrial.pkg" />
-    <Content Include="Resources\dist\DynamsoftServiceSetupTrial.rpm" />
+    <Content Include="Resources\dist\DynamicWebTWAINServiceSetup-arm64.deb" />
+    <Content Include="Resources\dist\DynamicWebTWAINServiceSetup.deb" />
+    <Content Include="Resources\dist\DynamicWebTWAINServiceSetup.msi" />
+    <Content Include="Resources\dist\DynamicWebTWAINServiceSetup.pkg" />
+    <Content Include="Resources\dist\DynamicWebTWAINServiceSetup.rpm" />
     <Content Include="Resources\dist\LICENSE" />
+    <Content Include="Resources\src\dynamsoft.lts.js" />
+    <Content Include="Resources\src\dynamsoft.webtwain.css" />
+    <Content Include="Resources\src\dynamsoft.webtwain.viewer.css" />
+    <Content Include="Resources\src\dynamsoft.webtwain.viewer.js" />
     <Content Include="Data\SmartDocScanModel.edmx.diagram">
       <DependentUpon>SmartDocScanModel.edmx</DependentUpon>
     </Content>
