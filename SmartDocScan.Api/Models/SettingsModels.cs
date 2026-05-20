@@ -9,7 +9,6 @@ public sealed class SecuritySettingsDto
 
 public sealed class MicrosoftSsoSettingsDto
 {
-    public string? TenantId { get; set; }
     public string? ClientId { get; set; }
     public string? ClientSecret { get; set; }
     public bool HasClientSecret { get; set; }

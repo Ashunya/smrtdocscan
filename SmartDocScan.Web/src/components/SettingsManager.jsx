@@ -3,7 +3,6 @@ import { getSecuritySettings, saveSecuritySettings } from "../api/client";
 
 const blankSettings = {
   microsoft: {
-    tenantId: "",
     clientId: "",
     clientSecret: "",
     callbackPath: "/api/auth/microsoft/callback",
@@ -118,10 +117,6 @@ export function SettingsManager({ onNotice, onBrandingChange }) {
           <fieldset>
             <legend>Microsoft SSO</legend>
             <label>
-              Tenant ID
-              <input value={settings.microsoft.tenantId || ""} onChange={(event) => update("microsoft", "tenantId", event.target.value)} placeholder="Your Entra tenant GUID" />
-            </label>
-            <label>
               Client ID
               <input value={settings.microsoft.clientId || ""} onChange={(event) => update("microsoft", "clientId", event.target.value)} />
             </label>
@@ -138,7 +133,7 @@ export function SettingsManager({ onNotice, onBrandingChange }) {
               Callback Path
               <input value={settings.microsoft.callbackPath || ""} onChange={(event) => update("microsoft", "callbackPath", event.target.value)} />
             </label>
-            <p className="field-help">Use your Entra tenant ID for the app registration. Redirect URI should be https://your-domain/api/auth/microsoft/callback.</p>
+            <p className="field-help">Use a multitenant Entra app registration. Customer tenant IDs belong on each company record, not in this global SSO setup. Redirect URI should be https://your-domain/api/auth/microsoft/callback.</p>
           </fieldset>
 
           <fieldset>

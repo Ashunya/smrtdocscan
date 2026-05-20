@@ -62,8 +62,7 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["Authentication:Microsoft:C
 {
     authBuilder.AddOpenIdConnect(options =>
     {
-        var tenantId = builder.Configuration["Authentication:Microsoft:TenantId"];
-        options.Authority = $"https://login.microsoftonline.com/{(string.IsNullOrWhiteSpace(tenantId) ? "organizations" : tenantId.Trim())}/v2.0";
+        options.Authority = "https://login.microsoftonline.com/organizations/v2.0";
         options.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"];
         options.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"];
         options.CallbackPath = builder.Configuration["Authentication:Microsoft:CallbackPath"] ?? "/api/auth/microsoft/callback";

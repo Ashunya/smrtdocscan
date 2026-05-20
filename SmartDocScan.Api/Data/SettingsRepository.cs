@@ -24,7 +24,6 @@ public sealed class SettingsRepository
         {
             Microsoft = new MicrosoftSsoSettingsDto
             {
-                TenantId = Get(values, "Authentication:Microsoft:TenantId", configuration["Authentication:Microsoft:TenantId"]),
                 ClientId = Get(values, "Authentication:Microsoft:ClientId", configuration["Authentication:Microsoft:ClientId"]),
                 ClientSecret = "",
                 HasClientSecret = !string.IsNullOrWhiteSpace(Get(values, "Authentication:Microsoft:ClientSecret", configuration["Authentication:Microsoft:ClientSecret"])),
@@ -65,7 +64,6 @@ public sealed class SettingsRepository
         await connection.OpenAsync(cancellationToken);
         await EnsureTableAsync(connection, cancellationToken);
 
-        await UpsertAsync(connection, "Authentication:Microsoft:TenantId", settings.Microsoft.TenantId, cancellationToken);
         await UpsertAsync(connection, "Authentication:Microsoft:ClientId", settings.Microsoft.ClientId, cancellationToken);
         await UpsertSecretAsync(connection, "Authentication:Microsoft:ClientSecret", settings.Microsoft.ClientSecret, cancellationToken);
         await UpsertAsync(connection, "Authentication:Microsoft:CallbackPath", settings.Microsoft.CallbackPath, cancellationToken);

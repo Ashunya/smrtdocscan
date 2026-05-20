@@ -9,7 +9,6 @@ services:
       Cors__AllowedOrigins__0: http://localhost:8088
       Store__RootPath: /data/store
       Authentication__CookieDomain: ${SMARTDOCSCAN_COOKIE_DOMAIN:-}
-      Authentication__Microsoft__TenantId: ${SMARTDOCSCAN_MICROSOFT_TENANT_ID:-}
       Authentication__Microsoft__ClientId: ${SMARTDOCSCAN_MICROSOFT_CLIENT_ID}
       Authentication__Microsoft__ClientSecret: ${SMARTDOCSCAN_MICROSOFT_CLIENT_SECRET}
       Authentication__Microsoft__CallbackPath: /api/auth/microsoft/callback
