@@ -74,11 +74,9 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["Authentication:Microsoft:C
             var authRepository = context.HttpContext.RequestServices.GetRequiredService<AuthRepository>();
             var cancellationToken = context.HttpContext.RequestAborted;
             var principal = context.Principal;
-            var tenantId = principal?.FindFirst("tid")?.Value;
-            var objectId = principal?.FindFirst("oid")?.Value;
-            var email = principal?.FindFirst("preferred_username")?.Value
-                ?? principal?.FindFirst(ClaimTypes.Email)?.Value
-                ?? principal?.FindFirst("email")?.Value;
+            var tenantId = FindClaimValue(principal, "tid", "http://schemas.microsoft.com/identity/claims/tenantid");
+            var objectId = FindClaimValue(principal, "oid", "http://schemas.microsoft.com/identity/claims/objectidentifier", ClaimTypes.NameIdentifier);
+            var email = FindClaimValue(principal, "preferred_username", ClaimTypes.Email, "email", "upn");
 
             if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(objectId))
             {
@@ -653,6 +651,25 @@ static UserDto UserFromClaims(ClaimsPrincipal principal)
 static bool ReadBoolClaim(ClaimsPrincipal principal, string type)
 {
     return bool.TryParse(principal.FindFirst(type)?.Value, out var value) && value;
+}
+
+static string? FindClaimValue(ClaimsPrincipal? principal, params string[] claimTypes)
+{
+    if (principal is null)
+    {
+        return null;
+    }
+
+    foreach (var claimType in claimTypes)
+    {
+        var value = principal.FindFirst(claimType)?.Value;
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+    }
+
+    return null;
 }
 
 static bool CanAccessCompany(ClaimsPrincipal principal, int companyId)
