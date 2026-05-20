@@ -75,8 +75,10 @@ var authBuilder = builder.Services
 authBuilder.AddOpenIdConnect(options =>
 {
     options.Authority = "https://login.microsoftonline.com/organizations/v2.0";
-    options.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"] ?? "smartdocscan-db-configured";
-    options.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ?? "";
+    options.ClientId = string.IsNullOrWhiteSpace(builder.Configuration["Authentication:Microsoft:ClientId"])
+        ? "smartdocscan-db-configured"
+        : builder.Configuration["Authentication:Microsoft:ClientId"];
+    options.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ?? "smartdocscan-db-configured";
     options.CallbackPath = builder.Configuration["Authentication:Microsoft:CallbackPath"] ?? "/api/auth/microsoft/callback";
     options.ResponseType = OpenIdConnectResponseType.Code;
     options.SaveTokens = false;
@@ -547,7 +549,7 @@ app.MapPost("/api/settings/security", async (SecuritySettingsDto request, Claims
     }
 
     await repository.SaveSecuritySettingsAsync(request, cancellationToken);
-    return Results.Ok(new { message = "Settings saved. Restart the API container for SSO client changes to take effect." });
+    return Results.Ok(new { message = "Settings saved." });
 }).RequireAuthorization();
 
 app.MapGet("/api/settings/branding", async (SettingsRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
