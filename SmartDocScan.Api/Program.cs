@@ -358,7 +358,7 @@ app.MapGet("/api/documents/{documentId:int}/download", async (int documentId, Do
     return Results.File(fullPath, "application/octet-stream", document.DocumentName);
 }).RequireAuthorization();
 
-app.MapGet("/api/documents/{documentId:int}/preview", async (int documentId, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapGet("/api/documents/{documentId:int}/preview", async (int documentId, HttpContext httpContext, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
     var document = await repository.GetDocumentAsync(documentId, cancellationToken);
     if (document?.Url is null)
@@ -374,7 +374,9 @@ app.MapGet("/api/documents/{documentId:int}/preview", async (int documentId, Doc
         return Results.NotFound(new { message = "Document file not found." });
     }
 
-    return Results.File(fullPath, GetContentType(document.DocumentName ?? fullPath), enableRangeProcessing: true);
+    var fileName = Path.GetFileName(document.Url);
+    httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(fileName)}\"";
+    return Results.File(fullPath, GetContentType(document.Url ?? document.DocumentName ?? fullPath), enableRangeProcessing: true);
 }).RequireAuthorization();
 
 app.MapDelete("/api/documents/{documentId:int}", async (int documentId, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
@@ -724,4 +726,11 @@ static string GetContentType(string fileName)
         ".txt" => "text/plain",
         _ => "application/octet-stream"
     };
+}
+
+static string SanitizeHeaderFileName(string? fileName)
+{
+    return string.IsNullOrWhiteSpace(fileName)
+        ? "document"
+        : fileName.Replace("\\", "_").Replace("/", "_").Replace("\"", "'");
 }

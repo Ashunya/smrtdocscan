@@ -276,7 +276,7 @@ function handleOpenKey(event, document, openDocument) {
 
 function DocumentThumbnail({ document }) {
   const previewUrl = getDocumentPreviewUrl(document.documentId);
-  const extension = getExtension(document.documentName || document.url);
+  const extension = getExtension(document.url) || getExtension(document.documentName);
 
   if (["png", "jpg", "jpeg", "gif", "webp"].includes(extension)) {
     return (
