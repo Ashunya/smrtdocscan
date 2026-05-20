@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SmartDocScan.Api.Data;
 using SmartDocScan.Api.Models;
 using SmartDocScan.Api.Services;
@@ -795,7 +797,7 @@ static async Task<IResult> PreviewDocumentAsync(int documentId, string? routeFil
     var displayFileName = string.IsNullOrWhiteSpace(routeFileName) ? storedFileName : routeFileName;
     if (IsTiffFile(storedFileName))
     {
-        return PreviewTiffAsPng(fullPath, displayFileName, httpContext);
+        return PreviewTiffAsPdf(fullPath, displayFileName, httpContext);
     }
 
     var contentType = GetContentType(storedFileName);
@@ -804,17 +806,113 @@ static async Task<IResult> PreviewDocumentAsync(int documentId, string? routeFil
     return Results.File(fullPath, contentType, enableRangeProcessing: true);
 }
 
-static IResult PreviewTiffAsPng(string fullPath, string displayFileName, HttpContext httpContext)
+static IResult PreviewTiffAsPdf(string fullPath, string displayFileName, HttpContext httpContext)
 {
     using var image = Image.Load(fullPath);
-    using var stream = new MemoryStream();
-    image.SaveAsPng(stream);
-    stream.Position = 0;
+    var frames = new List<PdfImagePage>();
+    for (var index = 0; index < image.Frames.Count; index++)
+    {
+        using var frame = image.Frames.CloneFrame(index);
+        using var stream = new MemoryStream();
+        frame.SaveAsJpeg(stream, new JpegEncoder { Quality = 85 });
+        frames.Add(new PdfImagePage(stream.ToArray(), frame.Width, frame.Height));
+    }
 
-    var previewName = Path.ChangeExtension(displayFileName, ".png") ?? "preview.png";
+    var pdf = BuildImagePdf(frames);
+    var previewName = Path.ChangeExtension(displayFileName, ".pdf") ?? "preview.pdf";
     httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(previewName)}\"";
     httpContext.Response.Headers.XContentTypeOptions = "nosniff";
-    return Results.File(stream.ToArray(), "image/png", enableRangeProcessing: false);
+    return Results.File(pdf, "application/pdf", enableRangeProcessing: false);
+}
+
+static byte[] BuildImagePdf(IReadOnlyList<PdfImagePage> images)
+{
+    using var output = new MemoryStream();
+    var offsets = new List<long> { 0 };
+    WriteAscii(output, "%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n");
+
+    var pageCount = images.Count;
+    var pagesObjectId = 2;
+    var firstPageObjectId = 3;
+    var pageObjectIds = Enumerable.Range(0, pageCount).Select(i => firstPageObjectId + (i * 3)).ToArray();
+    var imageObjectIds = Enumerable.Range(0, pageCount).Select(i => firstPageObjectId + (i * 3) + 1).ToArray();
+    var contentObjectIds = Enumerable.Range(0, pageCount).Select(i => firstPageObjectId + (i * 3) + 2).ToArray();
+
+    WriteObject(output, offsets, 1, "<< /Type /Catalog /Pages 2 0 R >>");
+    WriteObject(output, offsets, pagesObjectId, $"<< /Type /Pages /Count {pageCount} /Kids [{string.Join(" ", pageObjectIds.Select(id => $"{id} 0 R"))}] >>");
+
+    for (var i = 0; i < pageCount; i++)
+    {
+        var layout = FitImageToPage(images[i]);
+        var content = FormattableString.Invariant($"q {layout.Width:0.###} 0 0 {layout.Height:0.###} {layout.X:0.###} {layout.Y:0.###} cm /Im{i + 1} Do Q");
+        var contentBytes = Encoding.ASCII.GetBytes(content);
+
+        WriteAscii(output, $"{pageObjectIds[i]} 0 obj\n");
+        offsets.Add(output.Position);
+        WriteAscii(output, FormattableString.Invariant(
+            $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {layout.PageWidth:0.###} {layout.PageHeight:0.###}] /Resources << /XObject << /Im{i + 1} {imageObjectIds[i]} 0 R >> >> /Contents {contentObjectIds[i]} 0 R >>\nendobj\n"));
+
+        WriteAscii(output, $"{imageObjectIds[i]} 0 obj\n");
+        offsets.Add(output.Position);
+        WriteAscii(output, $"<< /Type /XObject /Subtype /Image /Width {images[i].Width} /Height {images[i].Height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length {images[i].JpegBytes.Length} >>\nstream\n");
+        output.Write(images[i].JpegBytes);
+        WriteAscii(output, "\nendstream\nendobj\n");
+
+        WriteAscii(output, $"{contentObjectIds[i]} 0 obj\n");
+        offsets.Add(output.Position);
+        WriteAscii(output, $"<< /Length {contentBytes.Length} >>\nstream\n");
+        output.Write(contentBytes);
+        WriteAscii(output, "\nendstream\nendobj\n");
+    }
+
+    var xrefOffset = output.Position;
+    var highestObjectId = contentObjectIds.Last();
+    WriteAscii(output, $"xref\n0 {highestObjectId + 1}\n0000000000 65535 f \n");
+    for (var objectId = 1; objectId <= highestObjectId; objectId++)
+    {
+        WriteAscii(output, $"{offsets[objectId]:0000000000} 00000 n \n");
+    }
+    WriteAscii(output, $"trailer\n<< /Size {highestObjectId + 1} /Root 1 0 R >>\nstartxref\n{xrefOffset}\n%%EOF\n");
+    return output.ToArray();
+}
+
+static void WriteObject(Stream stream, IList<long> offsets, int objectId, string body)
+{
+    while (offsets.Count <= objectId)
+    {
+        offsets.Add(0);
+    }
+    offsets[objectId] = stream.Position;
+    WriteAscii(stream, $"{objectId} 0 obj\n{body}\nendobj\n");
+}
+
+static PdfPageLayout FitImageToPage(PdfImagePage image)
+{
+    const double portraitWidth = 612;
+    const double portraitHeight = 792;
+    const double margin = 18;
+    var landscape = image.Width > image.Height;
+    var pageWidth = landscape ? portraitHeight : portraitWidth;
+    var pageHeight = landscape ? portraitWidth : portraitHeight;
+    var maxWidth = pageWidth - (margin * 2);
+    var maxHeight = pageHeight - (margin * 2);
+    var scale = Math.Min(maxWidth / image.Width, maxHeight / image.Height);
+    var width = image.Width * scale;
+    var height = image.Height * scale;
+
+    return new PdfPageLayout(
+        pageWidth,
+        pageHeight,
+        (pageWidth - width) / 2,
+        (pageHeight - height) / 2,
+        width,
+        height);
+}
+
+static void WriteAscii(Stream stream, string value)
+{
+    var bytes = Encoding.ASCII.GetBytes(value);
+    stream.Write(bytes);
 }
 
 static string GetContentType(string fileName)
@@ -876,3 +974,7 @@ static string BuildStoredDocumentName(string? requestedName, string originalFile
 
     return safeName;
 }
+
+sealed record PdfImagePage(byte[] JpegBytes, int Width, int Height);
+
+sealed record PdfPageLayout(double PageWidth, double PageHeight, double X, double Y, double Width, double Height);
