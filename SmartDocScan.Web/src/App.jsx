@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Building2, Key, LogOut, Menu as MenuIcon, Moon, Sun } from "lucide-react";
 import { AppBar, Avatar, Box, CssBaseline, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Menu as MuiMenu, MenuItem, Stack, ThemeProvider, Toolbar, Typography, createTheme } from "@mui/material";
 import { changePassword, createPatient, deletePatient, getBrandingSettings, getCurrentUser, listCompanies, logout, searchPatients, updatePatient } from "./api/client";
@@ -71,6 +71,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isHistoryPopRef = useRef(false);
 
   const debouncedSearch = useDebouncedValue(search, 300);
   const muiTheme = useMemo(() => createSmartDocTheme(colorMode), [colorMode]);
@@ -168,6 +169,35 @@ export default function App() {
     window.localStorage.setItem("smartdocscan-theme", colorMode);
     document.documentElement.dataset.theme = colorMode;
   }, [colorMode]);
+
+  useEffect(() => {
+    if (!window.history.state?.smartdocscan) {
+      window.history.replaceState({ smartdocscan: true, activeView }, "", window.location.href);
+    }
+
+    const handlePopState = (event) => {
+      isHistoryPopRef.current = true;
+      setActiveView(event.state?.smartdocscan ? event.state.activeView || "find" : "find");
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    if (isHistoryPopRef.current) {
+      isHistoryPopRef.current = false;
+      return;
+    }
+
+    if (window.history.state?.activeView !== activeView) {
+      window.history.pushState({ smartdocscan: true, activeView }, "", window.location.href);
+    }
+  }, [activeView, currentUser]);
 
   async function savePatient(form) {
     setSaving(true);
@@ -439,7 +469,7 @@ export default function App() {
         ) : activeView === "settings" && currentUser.superUser ? (
           <SettingsManager onNotice={setNotice} onBrandingChange={(branding) => setLogoUrl(branding.logoDataUrl || "/smartdocscan-logo.svg")} />
         ) : activeView === "scan" ? (
-          <ScannerManager companyId={companyId} patient={documentPatient} onNotice={setNotice} />
+          <ScannerManager companyId={companyId} patient={documentPatient} onNotice={setNotice} onSaved={() => setActiveView("documents")} />
         ) : activeView === "barcode" && documentPatient ? (
           <BarcodeManager companyId={companyId} patient={documentPatient} onNotice={setNotice} onBack={() => setActiveView("documents")} />
         ) : activeView === "documents" && documentPatient ? (

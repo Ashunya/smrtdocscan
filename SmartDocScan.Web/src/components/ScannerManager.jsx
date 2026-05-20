@@ -2,7 +2,7 @@ import { ScanLine, Trash2, Upload, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { listCategories } from "../api/client";
 
-export function ScannerManager({ companyId, patient, onNotice }) {
+export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
   const webTwainRef = useRef(null);
   const productKeyRef = useRef("");
   const [categories, setCategories] = useState([]);
@@ -166,11 +166,15 @@ export function ScannerManager({ companyId, patient, onNotice }) {
       uploadUrl.hostname,
       `${uploadUrl.pathname}${uploadUrl.search}`,
       uploadName,
-      () => onNotice({ type: "success", text: "Scanned document saved successfully." }),
+      () => {
+        onNotice({ type: "success", text: "Scanned document saved successfully." });
+        onSaved?.();
+      },
       (_code, message) => {
         const msg = message || "";
         if (msg.includes("OK (200)") || msg.includes("OK (201)")) {
           onNotice({ type: "success", text: `Scanned document saved as ${isTiff ? "TIF" : "PDF"}.` });
+          onSaved?.();
         } else {
           onNotice({ type: "error", text: msg || "Scan upload failed." });
         }
