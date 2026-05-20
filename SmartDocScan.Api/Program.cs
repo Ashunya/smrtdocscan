@@ -851,19 +851,19 @@ static byte[] BuildImagePdf(IReadOnlyList<PdfImagePage> images)
         var content = FormattableString.Invariant($"q {layout.Width:0.###} 0 0 {layout.Height:0.###} {layout.X:0.###} {layout.Y:0.###} cm /Im{i + 1} Do Q");
         var contentBytes = Encoding.ASCII.GetBytes(content);
 
+        SetObjectOffset(output, offsets, pageObjectIds[i]);
         WriteAscii(output, $"{pageObjectIds[i]} 0 obj\n");
-        offsets.Add(output.Position);
         WriteAscii(output, FormattableString.Invariant(
             $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {layout.PageWidth:0.###} {layout.PageHeight:0.###}] /Resources << /XObject << /Im{i + 1} {imageObjectIds[i]} 0 R >> >> /Contents {contentObjectIds[i]} 0 R >>\nendobj\n"));
 
+        SetObjectOffset(output, offsets, imageObjectIds[i]);
         WriteAscii(output, $"{imageObjectIds[i]} 0 obj\n");
-        offsets.Add(output.Position);
         WriteAscii(output, $"<< /Type /XObject /Subtype /Image /Width {images[i].Width} /Height {images[i].Height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length {images[i].JpegBytes.Length} >>\nstream\n");
         output.Write(images[i].JpegBytes);
         WriteAscii(output, "\nendstream\nendobj\n");
 
+        SetObjectOffset(output, offsets, contentObjectIds[i]);
         WriteAscii(output, $"{contentObjectIds[i]} 0 obj\n");
-        offsets.Add(output.Position);
         WriteAscii(output, $"<< /Length {contentBytes.Length} >>\nstream\n");
         output.Write(contentBytes);
         WriteAscii(output, "\nendstream\nendobj\n");
@@ -882,12 +882,17 @@ static byte[] BuildImagePdf(IReadOnlyList<PdfImagePage> images)
 
 static void WriteObject(Stream stream, IList<long> offsets, int objectId, string body)
 {
+    SetObjectOffset(stream, offsets, objectId);
+    WriteAscii(stream, $"{objectId} 0 obj\n{body}\nendobj\n");
+}
+
+static void SetObjectOffset(Stream stream, IList<long> offsets, int objectId)
+{
     while (offsets.Count <= objectId)
     {
         offsets.Add(0);
     }
     offsets[objectId] = stream.Position;
-    WriteAscii(stream, $"{objectId} 0 obj\n{body}\nendobj\n");
 }
 
 static PdfPageLayout FitImageToPage(PdfImagePage image)
