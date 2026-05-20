@@ -53,7 +53,7 @@ async function requestForm(path, formData) {
   return response.json();
 }
 
-export function searchPatients({ companyId, search, take = 1000 }) {
+export function searchPatients({ companyId, search, take = 100 }) {
   const params = new URLSearchParams({
     companyId: String(companyId),
     take: String(take),

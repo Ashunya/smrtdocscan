@@ -13,7 +13,7 @@ public sealed class PatientRepository
             ?? throw new InvalidOperationException("Connection string 'SmartDocScan' is missing.");
     }
 
-    public async Task<IReadOnlyList<PatientDto>> SearchAsync(int companyId, string? search, int take = 1000, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PatientDto>> SearchAsync(int companyId, string? search, int take = 100, CancellationToken cancellationToken = default)
     {
         var patients = new List<PatientDto>();
         await using var connection = new SqlConnection(_connectionString);
@@ -22,7 +22,7 @@ public sealed class PatientRepository
         await using var command = connection.CreateCommand();
         command.CommandText = BuildSearchSql(search);
         command.Parameters.AddWithValue("@companyId", companyId);
-        command.Parameters.AddWithValue("@take", Math.Clamp(take, 1, 1000));
+        command.Parameters.AddWithValue("@take", Math.Clamp(take, 1, 250));
 
         var terms = SplitSearch(search);
         for (var i = 0; i < terms.Count; i++)
@@ -228,12 +228,14 @@ public sealed class PatientRepository
         SELECT TOP (@take) p.patient_id, p.comp_id, p.pext_id, p.first_name, p.last_name, p.dob, p.gender, p.physician, p.box, p.ssn,
                latest.last_document_date
         FROM patient p
-        OUTER APPLY (
-            SELECT MAX(d.date) AS last_document_date
+        LEFT JOIN (
+            SELECT d.patient_id, d.comp_id, MAX(d.date) AS last_document_date
             FROM documents d
-            WHERE d.patient_id = p.patient_id
-              AND d.comp_id = p.comp_id
+            WHERE d.comp_id = @companyId
               AND ISNULL(d.deleted, 0) = 0
+            GROUP BY d.patient_id, d.comp_id
         ) latest
+          ON latest.patient_id = p.patient_id
+         AND latest.comp_id = p.comp_id
         """;
 }

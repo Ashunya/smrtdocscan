@@ -112,7 +112,7 @@ app.MapGet("/api/patients", async (int companyId, string? search, int? take, Cla
         return Results.Forbid();
     }
 
-    var patients = await repository.SearchAsync(companyId, search, take ?? 1000, cancellationToken);
+    var patients = await repository.SearchAsync(companyId, search, take ?? 100, cancellationToken);
     return Results.Ok(patients);
 }).RequireAuthorization();
 

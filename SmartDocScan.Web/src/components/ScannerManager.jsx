@@ -119,7 +119,7 @@ export function ScannerManager({ companyId, patient, onNotice }) {
     );
   }
 
-  function uploadPdf() {
+  function uploadScannedDocument(format) {
     if (!categoryId) {
       onNotice({ type: "error", text: "Choose a category first." });
       return;
@@ -132,11 +132,21 @@ export function ScannerManager({ companyId, patient, onNotice }) {
     }
 
     const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
-    const uploadName = `ScanImage_${stamp}.pdf`;
+    const isTiff = format === "tif";
+    const uploadName = `ScanImage_${stamp}.${isTiff ? "tif" : "pdf"}`;
     const uploadUrl = new URL(`${getApiBaseUrl()}/documents/scan?Id=${companyId}&pid=${patient.patientId}&Cat_id=${categoryId}`, window.location.origin);
     webTwain.IfSSL = uploadUrl.protocol === "https:";
     webTwain.HTTPPort = uploadUrl.port ? Number(uploadUrl.port) : (webTwain.IfSSL ? 443 : 80);
-    webTwain.HTTPUploadAllThroughPostAsPDF(
+    const uploadMethod = isTiff
+      ? (webTwain.HTTPUploadAllThroughPostAsMultiPageTIFF || webTwain.HTTPUploadAllThroughPostAsTIFF)
+      : webTwain.HTTPUploadAllThroughPostAsPDF;
+    if (!uploadMethod) {
+      onNotice({ type: "error", text: `Save as ${isTiff ? "TIF" : "PDF"} is not supported by this scanner component.` });
+      return;
+    }
+
+    uploadMethod.call(
+      webTwain,
       uploadUrl.hostname,
       `${uploadUrl.pathname}${uploadUrl.search}`,
       uploadName,
@@ -144,7 +154,7 @@ export function ScannerManager({ companyId, patient, onNotice }) {
       (_code, message) => {
         const msg = message || "";
         if (msg.includes("OK (200)") || msg.includes("OK (201)")) {
-          onNotice({ type: "success", text: "Scanned document saved successfully." });
+          onNotice({ type: "success", text: `Scanned document saved as ${isTiff ? "TIF" : "PDF"}.` });
         } else {
           onNotice({ type: "error", text: msg || "Scan upload failed." });
         }
@@ -173,9 +183,13 @@ export function ScannerManager({ companyId, patient, onNotice }) {
           <ScanLine size={18} />
           Scan
         </button>
-        <button className="secondary-button" type="button" onClick={uploadPdf} disabled={!ready || !patient}>
+        <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("pdf")} disabled={!ready || !patient}>
           <Upload size={18} />
           Save as PDF
+        </button>
+        <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("tif")} disabled={!ready || !patient}>
+          <Upload size={18} />
+          Save as TIF
         </button>
       </div>
       <div className="scanner-frame" id="dwtcontrolContainer" />
