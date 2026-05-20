@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using SmartDocScan.Api.Data;
@@ -10,6 +11,18 @@ using SmartDocScan.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 SettingsRepository.LoadIntoConfiguration(builder.Configuration);
+
+var maxDocumentUploadBytes = builder.Configuration.GetValue<long?>("Uploads:MaxDocumentBytes") ?? 200L * 1024L * 1024L;
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = maxDocumentUploadBytes;
+});
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = maxDocumentUploadBytes;
+    options.ValueLengthLimit = int.MaxValue;
+    options.MultipartHeadersLengthLimit = 64 * 1024;
+});
 
 builder.Services.AddSingleton<PatientRepository>();
 builder.Services.AddSingleton<BoxRepository>();
