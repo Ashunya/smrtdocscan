@@ -1,4 +1,4 @@
-import { ScanLine, Upload } from "lucide-react";
+import { ScanLine, Trash2, Upload, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { listCategories } from "../api/client";
 
@@ -8,6 +8,9 @@ export function ScannerManager({ companyId, patient, onNotice }) {
   const [categories, setCategories] = useState([]);
   const [categoryId, setCategoryId] = useState("");
   const [ready, setReady] = useState(false);
+  const [pageCount, setPageCount] = useState(0);
+  const [documentName, setDocumentName] = useState("");
+  const [dateOfService, setDateOfService] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -44,6 +47,7 @@ export function ScannerManager({ companyId, patient, onNotice }) {
       webTwainRef.current = existing;
       registerScanEvents(existing);
       showViewer(existing);
+      updatePageCount(existing);
       setReady(true);
       return;
     }
@@ -62,6 +66,7 @@ export function ScannerManager({ companyId, patient, onNotice }) {
       if (webTwain.HowManyImagesInBuffer > 0) {
         webTwain.Viewer.gotoPage?.(webTwain.HowManyImagesInBuffer - 1);
       }
+      updatePageCount(webTwain);
     }
   }
 
@@ -73,6 +78,7 @@ export function ScannerManager({ companyId, patient, onNotice }) {
     webTwain.RegisterEvent?.("OnPostTransfer", () => {
       showViewer(webTwain);
       webTwain.Viewer?.gotoPage?.(webTwain.HowManyImagesInBuffer - 1);
+      updatePageCount(webTwain);
       setReady(true);
       onNotice({ type: "success", text: `${webTwain.HowManyImagesInBuffer} scanned page(s) in buffer.` });
     });
@@ -80,6 +86,7 @@ export function ScannerManager({ companyId, patient, onNotice }) {
     webTwain.RegisterEvent?.("OnPostAllTransfers", () => {
       showViewer(webTwain);
       webTwain.Viewer?.gotoPage?.(webTwain.HowManyImagesInBuffer - 1);
+      updatePageCount(webTwain);
     });
 
     webTwain.__smartDocScanEventsRegistered = true;
@@ -104,6 +111,7 @@ export function ScannerManager({ companyId, patient, onNotice }) {
         .then(() => {
           showViewer(webTwain);
           webTwain.Viewer?.gotoPage?.(Math.max(webTwain.HowManyImagesInBuffer - 1, 0));
+          updatePageCount(webTwain);
         })
         .catch((error) => onNotice({ type: "error", text: error?.message || "Scanner acquisition failed." }));
       return;
@@ -113,7 +121,10 @@ export function ScannerManager({ companyId, patient, onNotice }) {
       () => {
         webTwain.OpenSource();
         webTwain.IfDisableSourceAfterAcquire = true;
-        webTwain.AcquireImage(() => showViewer(webTwain), onFailure);
+        webTwain.AcquireImage(() => {
+          showViewer(webTwain);
+          updatePageCount(webTwain);
+        }, onFailure);
       },
       () => onNotice({ type: "error", text: "Scanner source selection failed." })
     );
@@ -133,8 +144,13 @@ export function ScannerManager({ companyId, patient, onNotice }) {
 
     const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
     const isTiff = format === "tif";
-    const uploadName = `ScanImage_${stamp}.${isTiff ? "tif" : "pdf"}`;
+    const uploadName = buildDocumentFileName(documentName, `ScanImage_${stamp}`, isTiff ? "tif" : "pdf");
     const uploadUrl = new URL(`/api/documents/scan?Id=${companyId}&pid=${patient.patientId}&Cat_id=${categoryId}`, window.location.origin);
+    uploadUrl.searchParams.set("documentName", uploadName);
+    uploadUrl.searchParams.set("pages", String(webTwain.HowManyImagesInBuffer));
+    if (dateOfService) {
+      uploadUrl.searchParams.set("dateOfService", dateOfService);
+    }
     webTwain.IfSSL = uploadUrl.protocol === "https:";
     webTwain.HTTPPort = uploadUrl.port ? Number(uploadUrl.port) : (webTwain.IfSSL ? 443 : 80);
     const uploadMethod = isTiff
@@ -162,6 +178,37 @@ export function ScannerManager({ companyId, patient, onNotice }) {
     );
   }
 
+  function deleteCurrentPage() {
+    const webTwain = getWebTwain();
+    if (!webTwain || webTwain.HowManyImagesInBuffer === 0) {
+      onNotice({ type: "error", text: "No scanned pages are available." });
+      return;
+    }
+
+    const index = Number.isInteger(webTwain.CurrentImageIndexInBuffer)
+      ? webTwain.CurrentImageIndexInBuffer
+      : Math.max(webTwain.HowManyImagesInBuffer - 1, 0);
+    webTwain.RemoveImage?.(index);
+    updatePageCount(webTwain);
+    if (webTwain.HowManyImagesInBuffer > 0) {
+      webTwain.Viewer?.gotoPage?.(Math.min(index, webTwain.HowManyImagesInBuffer - 1));
+    }
+  }
+
+  function clearPages() {
+    const webTwain = getWebTwain();
+    if (!webTwain || webTwain.HowManyImagesInBuffer === 0) {
+      return;
+    }
+
+    webTwain.RemoveAllImages?.();
+    updatePageCount(webTwain);
+  }
+
+  function updatePageCount(webTwain) {
+    setPageCount(webTwain?.HowManyImagesInBuffer || 0);
+  }
+
   return (
     <section className="panel">
       <div className="panel-header">
@@ -179,22 +226,48 @@ export function ScannerManager({ companyId, patient, onNotice }) {
             ))}
           </select>
         </label>
+        <label>
+          Document Name
+          <input type="text" value={documentName} onChange={(event) => setDocumentName(event.target.value)} placeholder="Optional name" />
+        </label>
+        <label>
+          Date of Service
+          <input type="date" value={dateOfService} onChange={(event) => setDateOfService(event.target.value)} />
+        </label>
         <button className="primary-button" type="button" onClick={acquireImage} disabled={!ready || !patient}>
           <ScanLine size={18} />
           Scan
         </button>
-        <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("pdf")} disabled={!ready || !patient}>
+        <button className="secondary-button danger-text" type="button" onClick={deleteCurrentPage} disabled={!ready || !patient || pageCount === 0}>
+          <Trash2 size={18} />
+          Delete Page
+        </button>
+        <button className="secondary-button" type="button" onClick={clearPages} disabled={!ready || !patient || pageCount === 0}>
+          <XCircle size={18} />
+          Clear
+        </button>
+        <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("pdf")} disabled={!ready || !patient || pageCount === 0}>
           <Upload size={18} />
           Save as PDF
         </button>
-        <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("tif")} disabled={!ready || !patient}>
+        <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("tif")} disabled={!ready || !patient || pageCount === 0}>
           <Upload size={18} />
           Save as TIF
         </button>
       </div>
+      <div className="scan-review-note">
+        {pageCount > 0 ? `${pageCount} page(s) ready for review. Delete unwanted pages before saving.` : "Scan pages will appear below for review before saving."}
+      </div>
       <div className="scanner-frame" id="dwtcontrolContainer" />
     </section>
   );
+}
+
+function buildDocumentFileName(name, fallback, extension) {
+  const base = (name || fallback).trim() || fallback;
+  const withoutPath = base.split(/[\\/]/).pop() || fallback;
+  const withoutExtension = withoutPath.replace(/\.[^.]+$/, "");
+  return `${withoutExtension}.${extension}`;
 }
 
 function loadScript(src) {

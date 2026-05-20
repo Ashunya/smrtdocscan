@@ -126,12 +126,18 @@ export function listDocuments({ companyId, patientId }) {
   return request(`/documents?${params.toString()}`);
 }
 
-export function uploadDocument({ companyId, patientId, categoryId, file, uploadedBy = "Miranda" }) {
+export function uploadDocument({ companyId, patientId, categoryId, file, documentName, dateOfService, uploadedBy = "Miranda" }) {
   const formData = new FormData();
   formData.set("companyId", String(companyId));
   formData.set("patientId", String(patientId));
   formData.set("categoryId", String(categoryId));
   formData.set("uploadedBy", uploadedBy);
+  if (documentName) {
+    formData.set("documentName", documentName);
+  }
+  if (dateOfService) {
+    formData.set("dateOfService", dateOfService);
+  }
   formData.set("file", file);
   return requestForm("/documents", formData);
 }

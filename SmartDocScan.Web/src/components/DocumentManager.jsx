@@ -7,6 +7,8 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
   const [documents, setDocuments] = useState([]);
   const [categoryId, setCategoryId] = useState("");
   const [file, setFile] = useState(null);
+  const [documentName, setDocumentName] = useState("");
+  const [dateOfService, setDateOfService] = useState("");
   const [fileInputKey, setFileInputKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -70,9 +72,13 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
         patientId: patient.patientId,
         categoryId: Number(categoryId),
         file,
+        documentName,
+        dateOfService,
       });
       setDocuments((current) => [document, ...current]);
       setFile(null);
+      setDocumentName("");
+      setDateOfService("");
       setFileInputKey((current) => current + 1);
       onNotice({ type: "success", text: "Document uploaded." });
     } catch (error) {
@@ -146,6 +152,14 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
           Document
           <input key={fileInputKey} type="file" onChange={(event) => setFile(event.target.files?.[0] || null)} />
         </label>
+        <label>
+          Document Name
+          <input type="text" value={documentName} onChange={(event) => setDocumentName(event.target.value)} placeholder={file?.name || "Optional name"} />
+        </label>
+        <label>
+          Date of Service
+          <input type="date" value={dateOfService} onChange={(event) => setDateOfService(event.target.value)} />
+        </label>
         <button className="primary-button" type="submit" disabled={uploading || !file || !categoryId}>
           <Upload size={18} />
           {uploading ? "Uploading..." : "Upload"}
@@ -176,7 +190,8 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
                 <div className="document-thumb-body">
                   <h3>{document.documentName}</h3>
                   <p>{document.categoryName || "Uncategorized"}</p>
-                  <p>{document.numberOfPages} pages | {formatDate(document.date)}</p>
+                  <p>{document.numberOfPages} pages | Uploaded {formatDate(document.date)}</p>
+                  {document.dateOfService && <p>DOS {formatShortDate(document.dateOfService)}</p>}
                   <div className="document-thumb-actions">
                     {canDownload && (
                       <a className="icon-button" href={getDocumentDownloadUrl(document.documentId)} onClick={(event) => event.stopPropagation()} aria-label="Download document">
@@ -199,7 +214,8 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
               <article className="document-card clickable-card" key={document.documentId} onClick={() => openDocument(document)} role="button" tabIndex={0} onKeyDown={(event) => handleOpenKey(event, document, openDocument)}>
                 <h3>{document.documentName}</h3>
                 <p>{document.categoryName || "Uncategorized"}</p>
-                <p>{document.numberOfPages} pages | {formatDate(document.date)}</p>
+                <p>{document.numberOfPages} pages | Uploaded {formatDate(document.date)}</p>
+                {document.dateOfService && <p>DOS {formatShortDate(document.dateOfService)}</p>}
                 <div className="document-card-actions">
                   {canDownload && (
                     <a className="icon-button" href={getDocumentDownloadUrl(document.documentId)} onClick={(event) => event.stopPropagation()} aria-label="Download document">
@@ -224,6 +240,7 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
                   <tr>
                     <th>Document Name</th>
                     <th>Pages</th>
+                    <th>Date of Service</th>
                     <th>Uploaded</th>
                     <th>Path</th>
                     <th />
@@ -234,6 +251,7 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
                     <tr className="clickable-row" key={document.documentId} onClick={() => openDocument(document)}>
                       <td>{document.documentName}</td>
                       <td>{document.numberOfPages}</td>
+                      <td>{formatShortDate(document.dateOfService)}</td>
                       <td>{formatDate(document.date)}</td>
                       <td>{document.url}</td>
                       <td className="row-actions">
@@ -265,6 +283,13 @@ function formatDate(value) {
     return "";
   }
   return new Date(value).toLocaleString();
+}
+
+function formatShortDate(value) {
+  if (!value) {
+    return "";
+  }
+  return new Date(value).toLocaleDateString();
 }
 
 function handleOpenKey(event, document, openDocument) {

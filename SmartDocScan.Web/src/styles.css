@@ -438,7 +438,7 @@ tbody tr:nth-child(odd) {
 
 .document-upload {
   display: grid;
-  grid-template-columns: minmax(180px, 260px) 1fr auto;
+  grid-template-columns: minmax(170px, 230px) minmax(220px, 1fr) minmax(180px, 260px) minmax(150px, 180px) auto;
   gap: 14px;
   align-items: end;
   padding: 22px;
@@ -713,7 +713,7 @@ tbody tr:nth-child(odd) {
 
 .scanner-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto auto auto;
+  grid-template-columns: minmax(180px, 260px) minmax(220px, 1fr) minmax(150px, 180px) auto auto auto auto auto;
   gap: 14px;
   align-items: end;
   padding: 22px;
@@ -728,11 +728,23 @@ tbody tr:nth-child(odd) {
   font-weight: 700;
 }
 
+.scanner-toolbar input,
 .scanner-toolbar select {
   height: 40px;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 10px;
+}
+
+.scan-review-note {
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.danger-text {
+  color: var(--danger);
 }
 
 .scanner-frame {
@@ -1067,6 +1079,7 @@ tbody tr:nth-child(odd) {
 .company-form input,
 .category-form input,
 .report-form input,
+.scanner-toolbar input,
 .scanner-toolbar select {
   border-color: #d8cec6;
   box-shadow: 0 1px 0 rgba(26, 26, 26, 0.03);
@@ -1083,6 +1096,7 @@ tbody tr:nth-child(odd) {
 .company-form input:focus,
 .category-form input:focus,
 .report-form input:focus,
+.scanner-toolbar input:focus,
 .scanner-toolbar select:focus {
   outline: 0;
   border-color: var(--primary);

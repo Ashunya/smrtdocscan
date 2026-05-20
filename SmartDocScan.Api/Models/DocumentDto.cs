@@ -11,5 +11,6 @@ public sealed class DocumentDto
     public string? Url { get; set; }
     public int NumberOfPages { get; set; }
     public DateTime Date { get; set; }
+    public DateTime? DateOfService { get; set; }
     public string? UploadedBy { get; set; }
 }

@@ -305,7 +305,7 @@ app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal pr
         return Results.Forbid();
     }
 
-    var safeName = Path.GetFileName(file.FileName);
+    var safeName = BuildStoredDocumentName(form["documentName"], file.FileName);
     var relativeUrl = Path.Combine(companyId.ToString(), patientId.ToString(), categoryId + "_" + safeName).Replace('\\', '/');
     var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
     var targetDirectory = Path.Combine(storeRoot, companyId.ToString(), patientId.ToString());
@@ -317,7 +317,9 @@ app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal pr
         await file.CopyToAsync(stream, cancellationToken);
     }
 
-    var document = await repository.CreateAsync(companyId, patientId, categoryId, safeName, relativeUrl, 1, form["uploadedBy"], cancellationToken);
+    var pages = int.TryParse(form["pages"], out var parsedPages) ? Math.Max(parsedPages, 1) : 1;
+    var dateOfService = ParseDateOnly(form["dateOfService"]);
+    var document = await repository.CreateAsync(companyId, patientId, categoryId, safeName, relativeUrl, pages, form["uploadedBy"], dateOfService, cancellationToken);
     return Results.Created($"/api/documents/{document.DocumentId}", document);
 }).RequireAuthorization();
 
@@ -340,7 +342,7 @@ app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincip
         return Results.Forbid();
     }
 
-    var safeName = Path.GetFileName(file.FileName);
+    var safeName = BuildStoredDocumentName(httpRequest.Query["documentName"], file.FileName);
     var relativeUrl = Path.Combine(companyId.ToString(), patientId.ToString(), categoryId + "_" + safeName).Replace('\\', '/');
     var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
     var targetDirectory = Path.Combine(storeRoot, companyId.ToString(), patientId.ToString());
@@ -352,7 +354,9 @@ app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincip
         await file.CopyToAsync(stream, cancellationToken);
     }
 
-    var document = await repository.CreateAsync(companyId, patientId, categoryId, safeName, relativeUrl, 1, "Scanner", cancellationToken);
+    var pages = int.TryParse(httpRequest.Query["pages"], out var parsedPages) ? Math.Max(parsedPages, 1) : 1;
+    var dateOfService = ParseDateOnly(httpRequest.Query["dateOfService"]);
+    var document = await repository.CreateAsync(companyId, patientId, categoryId, safeName, relativeUrl, pages, "Scanner", dateOfService, cancellationToken);
     return Results.Ok(document);
 }).RequireAuthorization();
 
@@ -758,4 +762,35 @@ static string SanitizeHeaderFileName(string? fileName)
     return string.IsNullOrWhiteSpace(fileName)
         ? "document"
         : fileName.Replace("\\", "_").Replace("/", "_").Replace("\"", "'");
+}
+
+static DateTime? ParseDateOnly(string? value)
+{
+    return DateTime.TryParse(value, out var parsed) ? parsed.Date : null;
+}
+
+static string BuildStoredDocumentName(string? requestedName, string originalFileName)
+{
+    var originalSafeName = Path.GetFileName(originalFileName);
+    var extension = Path.GetExtension(originalSafeName);
+    var rawName = string.IsNullOrWhiteSpace(requestedName) ? originalSafeName : requestedName.Trim();
+    var safeName = Path.GetFileName(rawName);
+
+    foreach (var invalidChar in Path.GetInvalidFileNameChars())
+    {
+        safeName = safeName.Replace(invalidChar, '_');
+    }
+
+    safeName = safeName.Trim();
+    if (string.IsNullOrWhiteSpace(safeName))
+    {
+        safeName = "document";
+    }
+
+    if (string.IsNullOrWhiteSpace(Path.GetExtension(safeName)) && !string.IsNullOrWhiteSpace(extension))
+    {
+        safeName += extension;
+    }
+
+    return safeName;
 }
