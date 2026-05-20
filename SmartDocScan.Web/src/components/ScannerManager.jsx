@@ -1,6 +1,6 @@
 import { ScanLine, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { listCategories } from "../api/client";
+import { getApiBaseUrl, listCategories } from "../api/client";
 
 export function ScannerManager({ companyId, patient, onNotice }) {
   const webTwainRef = useRef(null);
@@ -133,11 +133,12 @@ export function ScannerManager({ companyId, patient, onNotice }) {
 
     const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
     const uploadName = `ScanImage_${stamp}.pdf`;
-    const actionPage = `/api/documents/scan?Id=${companyId}&pid=${patient.patientId}&Cat_id=${categoryId}`;
-    webTwain.HTTPPort = window.location.port || 80;
+    const uploadUrl = new URL(`${getApiBaseUrl()}/documents/scan?Id=${companyId}&pid=${patient.patientId}&Cat_id=${categoryId}`, window.location.origin);
+    webTwain.IfSSL = uploadUrl.protocol === "https:";
+    webTwain.HTTPPort = uploadUrl.port ? Number(uploadUrl.port) : (webTwain.IfSSL ? 443 : 80);
     webTwain.HTTPUploadAllThroughPostAsPDF(
-      window.location.hostname,
-      actionPage,
+      uploadUrl.hostname,
+      `${uploadUrl.pathname}${uploadUrl.search}`,
       uploadName,
       () => onNotice({ type: "success", text: "Scanned document saved successfully." }),
       (_code, message) => {
