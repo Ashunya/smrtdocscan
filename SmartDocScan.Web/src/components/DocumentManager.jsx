@@ -303,7 +303,7 @@ function DocumentThumbnail({ document }) {
   const previewUrl = getDocumentPreviewUrl(document);
   const extension = getExtension(document.url) || getExtension(document.documentName);
 
-  if (["png", "jpg", "jpeg", "gif", "webp"].includes(extension)) {
+  if (["png", "jpg", "jpeg", "gif", "webp", "tif", "tiff"].includes(extension)) {
     return (
       <a className="document-thumb-preview" href={previewUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} aria-label={`Open ${document.documentName}`}>
         <img src={previewUrl} alt="" loading="lazy" />

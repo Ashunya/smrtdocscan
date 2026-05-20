@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using SixLabors.ImageSharp;
 using SmartDocScan.Api.Data;
 using SmartDocScan.Api.Models;
 using SmartDocScan.Api.Services;
@@ -792,10 +793,28 @@ static async Task<IResult> PreviewDocumentAsync(int documentId, string? routeFil
 
     var storedFileName = Path.GetFileName(document.Url);
     var displayFileName = string.IsNullOrWhiteSpace(routeFileName) ? storedFileName : routeFileName;
+    if (IsTiffFile(storedFileName))
+    {
+        return PreviewTiffAsPng(fullPath, displayFileName, httpContext);
+    }
+
     var contentType = GetContentType(storedFileName);
     httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(displayFileName)}\"";
     httpContext.Response.Headers.XContentTypeOptions = "nosniff";
     return Results.File(fullPath, contentType, enableRangeProcessing: true);
+}
+
+static IResult PreviewTiffAsPng(string fullPath, string displayFileName, HttpContext httpContext)
+{
+    using var image = Image.Load(fullPath);
+    using var stream = new MemoryStream();
+    image.SaveAsPng(stream);
+    stream.Position = 0;
+
+    var previewName = Path.ChangeExtension(displayFileName, ".png") ?? "preview.png";
+    httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(previewName)}\"";
+    httpContext.Response.Headers.XContentTypeOptions = "nosniff";
+    return Results.File(stream.ToArray(), "image/png", enableRangeProcessing: false);
 }
 
 static string GetContentType(string fileName)
@@ -812,6 +831,12 @@ static string GetContentType(string fileName)
         ".txt" => "text/plain",
         _ => "application/octet-stream"
     };
+}
+
+static bool IsTiffFile(string fileName)
+{
+    var extension = Path.GetExtension(fileName).ToLowerInvariant();
+    return extension is ".tif" or ".tiff";
 }
 
 static string SanitizeHeaderFileName(string? fileName)
