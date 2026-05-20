@@ -6,8 +6,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
+using ImageMagick;
 using SmartDocScan.Api.Data;
 using SmartDocScan.Api.Models;
 using SmartDocScan.Api.Services;
@@ -808,14 +807,19 @@ static async Task<IResult> PreviewDocumentAsync(int documentId, string? routeFil
 
 static IResult PreviewTiffAsPdf(string fullPath, string displayFileName, HttpContext httpContext)
 {
-    using var image = Image.Load(fullPath);
     var frames = new List<PdfImagePage>();
-    for (var index = 0; index < image.Frames.Count; index++)
+    using var images = new MagickImageCollection(fullPath);
+    foreach (var image in images)
     {
-        using var frame = image.Frames.CloneFrame(index);
-        using var stream = new MemoryStream();
-        frame.SaveAsJpeg(stream, new JpegEncoder { Quality = 85 });
-        frames.Add(new PdfImagePage(stream.ToArray(), frame.Width, frame.Height));
+        image.AutoOrient();
+        image.Format = MagickFormat.Jpeg;
+        image.Quality = 85;
+        frames.Add(new PdfImagePage(image.ToByteArray(), checked((int)image.Width), checked((int)image.Height)));
+    }
+
+    if (frames.Count == 0)
+    {
+        return Results.Problem("The TIFF file does not contain any readable pages.", statusCode: StatusCodes.Status422UnprocessableEntity);
     }
 
     var pdf = BuildImagePdf(frames);
