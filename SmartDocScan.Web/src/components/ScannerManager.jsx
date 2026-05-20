@@ -222,42 +222,46 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
         </div>
       </div>
       <div className="scanner-toolbar">
-        <label>
-          Category
-          <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-            {categories.map((category) => (
-              <option key={category.categoryId} value={category.categoryId}>{category.categoryName}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Document Name
-          <input type="text" value={documentName} onChange={(event) => setDocumentName(event.target.value)} placeholder="Optional name" />
-        </label>
-        <label>
-          Date of Service
-          <input type="date" value={dateOfService} onChange={(event) => setDateOfService(event.target.value)} />
-        </label>
-        <button className="primary-button" type="button" onClick={acquireImage} disabled={!ready || !patient}>
-          <ScanLine size={18} />
-          Scan
-        </button>
-        <button className="secondary-button danger-text" type="button" onClick={deleteCurrentPage} disabled={!ready || !patient || pageCount === 0}>
-          <Trash2 size={18} />
-          Delete Page
-        </button>
-        <button className="secondary-button" type="button" onClick={clearPages} disabled={!ready || !patient || pageCount === 0}>
-          <XCircle size={18} />
-          Clear
-        </button>
-        <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("pdf")} disabled={!ready || !patient || pageCount === 0}>
-          <Upload size={18} />
-          Save as PDF
-        </button>
-        <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("tif")} disabled={!ready || !patient || pageCount === 0}>
-          <Upload size={18} />
-          Save as TIF
-        </button>
+        <div className="scanner-fields">
+          <label>
+            Category
+            <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+              {categories.map((category) => (
+                <option key={category.categoryId} value={category.categoryId}>{category.categoryName}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Document Name
+            <input type="text" value={documentName} onChange={(event) => setDocumentName(event.target.value)} placeholder="Optional name" />
+          </label>
+          <label>
+            Date of Service
+            <input type="date" value={dateOfService} onChange={(event) => setDateOfService(event.target.value)} />
+          </label>
+        </div>
+        <div className="scanner-actions">
+          <button className="primary-button" type="button" onClick={acquireImage} disabled={!ready || !patient}>
+            <ScanLine size={18} />
+            Scan
+          </button>
+          <button className="secondary-button danger-text" type="button" onClick={deleteCurrentPage} disabled={!ready || !patient || pageCount === 0}>
+            <Trash2 size={18} />
+            Delete Page
+          </button>
+          <button className="secondary-button" type="button" onClick={clearPages} disabled={!ready || !patient || pageCount === 0}>
+            <XCircle size={18} />
+            Clear
+          </button>
+          <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("pdf")} disabled={!ready || !patient || pageCount === 0}>
+            <Upload size={18} />
+            Save as PDF
+          </button>
+          <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("tif")} disabled={!ready || !patient || pageCount === 0}>
+            <Upload size={18} />
+            Save as TIF
+          </button>
+        </div>
       </div>
       <div className="scan-review-note">
         {pageCount > 0 ? `${pageCount} page(s) ready for review. Delete unwanted pages before saving.` : "Scan pages will appear below for review before saving."}

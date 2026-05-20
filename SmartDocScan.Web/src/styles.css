@@ -713,11 +713,28 @@ tbody tr:nth-child(odd) {
 
 .scanner-toolbar {
   display: grid;
-  grid-template-columns: minmax(180px, 260px) minmax(220px, 1fr) minmax(150px, 180px) auto auto auto auto auto;
-  gap: 14px;
-  align-items: end;
+  gap: 16px;
   padding: 22px;
   border-bottom: 1px solid var(--border);
+}
+
+.scanner-fields {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) minmax(220px, 1fr) minmax(150px, 180px);
+  gap: 14px;
+  align-items: end;
+}
+
+.scanner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.scanner-actions .primary-button,
+.scanner-actions .secondary-button {
+  min-width: 110px;
 }
 
 .scanner-toolbar label {
@@ -2018,8 +2035,15 @@ tbody tr:nth-child(odd) {
   .company-form,
   .settings-form fieldset,
   .category-form,
-  .report-form,
-  .scanner-toolbar {
+  .report-form {
     grid-template-columns: 1fr;
+  }
+
+  .scanner-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .scanner-actions {
+    justify-content: flex-start;
   }
 }
