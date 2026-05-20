@@ -168,7 +168,11 @@ public sealed class AuthRepository
     private static async Task<UserDto?> FindLinkedExternalUserAsync(SqlConnection connection, string provider, string tenantId, string subjectId, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
-        command.CommandText = UserSelectSql + """
+        command.CommandText = """
+            SELECT u.username, u.name, u.comp_id, u.upload_doc, u.scan_doc, u.delete_doc, u.delete_manage,
+                   u.print_doc, u.download_doc, u.add_cat, u.add_users, u.add_patients, u.box, u.report,
+                   u.su, u.disabled, u.IsAdmin
+            FROM usersinfo u
             INNER JOIN user_external_login x ON x.username = u.username
             WHERE x.provider = @provider
               AND x.tenant_id = @tenantId
