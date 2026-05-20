@@ -34,6 +34,16 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
       .catch(() => onNotice({ type: "error", text: "Dynamsoft resources could not be loaded." }));
   }, [onNotice]);
 
+  useEffect(() => {
+    if (!ready || !patient?.patientId) {
+      return;
+    }
+
+    clearScannerBuffer();
+    setDocumentName("");
+    setDateOfService("");
+  }, [patient?.patientId, ready]);
+
   async function initializeViewer() {
     const dwt = window.Dynamsoft?.DWT;
     if (!dwt) {
@@ -167,12 +177,18 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
       `${uploadUrl.pathname}${uploadUrl.search}`,
       uploadName,
       () => {
+        clearScannerBuffer();
+        setDocumentName("");
+        setDateOfService("");
         onNotice({ type: "success", text: "Scanned document saved successfully." });
         onSaved?.();
       },
       (_code, message) => {
         const msg = message || "";
         if (msg.includes("OK (200)") || msg.includes("OK (201)")) {
+          clearScannerBuffer();
+          setDocumentName("");
+          setDateOfService("");
           onNotice({ type: "success", text: `Scanned document saved as ${isTiff ? "TIF" : "PDF"}.` });
           onSaved?.();
         } else {
@@ -206,6 +222,19 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
     }
 
     webTwain.RemoveAllImages?.();
+    updatePageCount(webTwain);
+  }
+
+  function clearScannerBuffer() {
+    const webTwain = getWebTwain();
+    if (!webTwain) {
+      setPageCount(0);
+      return;
+    }
+
+    if (webTwain.HowManyImagesInBuffer > 0) {
+      webTwain.RemoveAllImages?.();
+    }
     updatePageCount(webTwain);
   }
 
