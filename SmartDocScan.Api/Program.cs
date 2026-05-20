@@ -363,26 +363,10 @@ app.MapGet("/api/documents/{documentId:int}/download", async (int documentId, Do
     return Results.File(fullPath, "application/octet-stream", document.DocumentName);
 }).RequireAuthorization();
 
-app.MapGet("/api/documents/{documentId:int}/preview", async (int documentId, HttpContext httpContext, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
-{
-    var document = await repository.GetDocumentAsync(documentId, cancellationToken);
-    if (document?.Url is null)
-    {
-        return Results.NotFound(new { message = "Document not found." });
-    }
-
-    var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
-    var fullPath = Path.GetFullPath(Path.Combine(storeRoot, document.Url.Replace('/', Path.DirectorySeparatorChar)));
-    var fullStoreRoot = Path.GetFullPath(storeRoot);
-    if (!fullPath.StartsWith(fullStoreRoot, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
-    {
-        return Results.NotFound(new { message = "Document file not found." });
-    }
-
-    var fileName = Path.GetFileName(document.Url);
-    httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(fileName)}\"";
-    return Results.File(fullPath, GetContentType(document.Url ?? document.DocumentName ?? fullPath), enableRangeProcessing: true);
-}).RequireAuthorization();
+app.MapGet("/api/documents/{documentId:int}/preview", (int documentId, HttpContext httpContext, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+    PreviewDocumentAsync(documentId, null, httpContext, repository, configuration, cancellationToken)).RequireAuthorization();
+app.MapGet("/api/documents/{documentId:int}/preview/{fileName}", (int documentId, string fileName, HttpContext httpContext, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+    PreviewDocumentAsync(documentId, fileName, httpContext, repository, configuration, cancellationToken)).RequireAuthorization();
 
 app.MapDelete("/api/documents/{documentId:int}", async (int documentId, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
@@ -715,6 +699,30 @@ static bool IsElevated(ClaimsPrincipal principal)
 static int ReadCompanyId(ClaimsPrincipal principal)
 {
     return int.TryParse(principal.FindFirst("company_id")?.Value, out var companyId) ? companyId : 0;
+}
+
+static async Task<IResult> PreviewDocumentAsync(int documentId, string? routeFileName, HttpContext httpContext, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken)
+{
+    var document = await repository.GetDocumentAsync(documentId, cancellationToken);
+    if (document?.Url is null)
+    {
+        return Results.NotFound(new { message = "Document not found." });
+    }
+
+    var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
+    var fullPath = Path.GetFullPath(Path.Combine(storeRoot, document.Url.Replace('/', Path.DirectorySeparatorChar)));
+    var fullStoreRoot = Path.GetFullPath(storeRoot);
+    if (!fullPath.StartsWith(fullStoreRoot, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
+    {
+        return Results.NotFound(new { message = "Document file not found." });
+    }
+
+    var storedFileName = Path.GetFileName(document.Url);
+    var displayFileName = string.IsNullOrWhiteSpace(routeFileName) ? storedFileName : routeFileName;
+    var contentType = GetContentType(storedFileName);
+    httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(displayFileName)}\"";
+    httpContext.Response.Headers.XContentTypeOptions = "nosniff";
+    return Results.File(fullPath, contentType, enableRangeProcessing: true);
 }
 
 static string GetContentType(string fileName)

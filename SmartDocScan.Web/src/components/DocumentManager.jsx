@@ -99,7 +99,7 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
   }
 
   function openDocument(document) {
-    window.open(getDocumentPreviewUrl(document.documentId), "_blank", "noopener,noreferrer");
+    window.open(getDocumentPreviewUrl(document), "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -275,7 +275,7 @@ function handleOpenKey(event, document, openDocument) {
 }
 
 function DocumentThumbnail({ document }) {
-  const previewUrl = getDocumentPreviewUrl(document.documentId);
+  const previewUrl = getDocumentPreviewUrl(document);
   const extension = getExtension(document.url) || getExtension(document.documentName);
 
   if (["png", "jpg", "jpeg", "gif", "webp"].includes(extension)) {

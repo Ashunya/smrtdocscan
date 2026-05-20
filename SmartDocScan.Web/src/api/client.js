@@ -140,8 +140,11 @@ export function getDocumentDownloadUrl(documentId) {
   return `${API_BASE_URL}/documents/${documentId}/download`;
 }
 
-export function getDocumentPreviewUrl(documentId) {
-  return `${API_BASE_URL}/documents/${documentId}/preview`;
+export function getDocumentPreviewUrl(document) {
+  const documentId = typeof document === "object" ? document.documentId : document;
+  const sourceName = typeof document === "object" ? (document.url || document.documentName || "document") : "document";
+  const fileName = String(sourceName).split("?")[0].split("/").pop() || "document";
+  return `${API_BASE_URL}/documents/${documentId}/preview/${encodeURIComponent(fileName)}`;
 }
 
 export function deleteDocument(documentId) {
