@@ -21,7 +21,7 @@ services:
     ports:
       - "5080:8080"
     volumes:
-      - ./Store:/data/store
+      - ${SMARTDOCSCAN_STORE_PATH:-./Store}:/data/store
       - ./DataProtection-Keys:/root/.aspnet/DataProtection-Keys
 
   web:

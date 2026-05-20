@@ -1467,6 +1467,55 @@ tbody tr:nth-child(odd) {
   text-align: center;
 }
 
+.signin-sso-button {
+  min-height: 44px;
+  margin-top: 16px;
+  border: 1px solid #d8cec6;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #122033;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.signin-sso-button:hover {
+  border-color: #c1692a;
+  box-shadow: 0 8px 18px rgba(193, 105, 42, 0.16);
+  transform: translateY(-1px);
+}
+
+.microsoft-logo {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.microsoft-logo span:nth-child(1) {
+  background: #f25022;
+}
+
+.microsoft-logo span:nth-child(2) {
+  background: #7fba00;
+}
+
+.microsoft-logo span:nth-child(3) {
+  background: #00a4ef;
+}
+
+.microsoft-logo span:nth-child(4) {
+  background: #ffb900;
+}
+
 .signin-help {
   margin: 18px 0 0 !important;
   color: #607086 !important;

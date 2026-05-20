@@ -58,11 +58,25 @@ export function SignIn({ onSignedIn, logoUrl }) {
               {loading ? "Signing in..." : "Login"}
             </button>
           </form>
-          <a className="signin-sso-link" href={getMicrosoftSignInUrl("/")}>Sign in with Microsoft</a>
+          <a className="signin-sso-button" href={getMicrosoftSignInUrl("/")}>
+            <MicrosoftLogo />
+            Sign in with Microsoft
+          </a>
           <p className="signin-help">Need help signing in? Contact your company administrator.</p>
           <p className="signin-copyright">Copyright © 2019 <span>Ashunya</span>. All Rights Reserved.</p>
         </div>
       </section>
     </main>
+  );
+}
+
+function MicrosoftLogo() {
+  return (
+    <span className="microsoft-logo" aria-hidden="true">
+      <span />
+      <span />
+      <span />
+      <span />
+    </span>
   );
 }
