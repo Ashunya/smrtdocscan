@@ -164,10 +164,12 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
     webTwain.IfSSL = uploadUrl.protocol === "https:";
     webTwain.HTTPPort = uploadUrl.port ? Number(uploadUrl.port) : (webTwain.IfSSL ? 443 : 80);
     const uploadMethod = isTiff
-      ? (webTwain.HTTPUploadAllThroughPostAsMultiPageTIFF || webTwain.HTTPUploadAllThroughPostAsTIFF)
+      ? webTwain.HTTPUploadAllThroughPostAsMultiPageTIFF
       : webTwain.HTTPUploadAllThroughPostAsPDF;
     if (!uploadMethod) {
-      onNotice({ type: "error", text: `Save as ${isTiff ? "TIF" : "PDF"} is not supported by this scanner component.` });
+      onNotice({ type: "error", text: isTiff
+        ? "Multi-page TIF save is not supported by this scanner component. Save as PDF or update the Dynamsoft resources."
+        : "Save as PDF is not supported by this scanner component." });
       return;
     }
 

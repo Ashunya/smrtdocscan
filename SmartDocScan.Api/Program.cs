@@ -407,7 +407,7 @@ app.MapGet("/api/documents/{documentId:int}/download", async (int documentId, Do
         return Results.NotFound(new { message = "Document file not found." });
     }
 
-    return Results.File(fullPath, "application/octet-stream", document.DocumentName);
+    return Results.File(fullPath, "application/octet-stream", BuildDownloadFileName(document.DocumentName, document.Url));
 }).RequireAuthorization();
 
 app.MapGet("/api/documents/{documentId:int}/preview", (int documentId, HttpContext httpContext, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
@@ -942,6 +942,21 @@ static string SanitizeHeaderFileName(string? fileName)
     return string.IsNullOrWhiteSpace(fileName)
         ? "document"
         : fileName.Replace("\\", "_").Replace("/", "_").Replace("\"", "'");
+}
+
+static string BuildDownloadFileName(string? documentName, string? storedUrl)
+{
+    var storedFileName = Path.GetFileName((storedUrl ?? string.Empty).Replace('/', Path.DirectorySeparatorChar));
+    var extension = Path.GetExtension(storedFileName);
+    var displayName = string.IsNullOrWhiteSpace(documentName) ? storedFileName : documentName.Trim();
+    var safeName = SanitizeHeaderFileName(Path.GetFileName(displayName));
+
+    if (string.IsNullOrWhiteSpace(Path.GetExtension(safeName)) && !string.IsNullOrWhiteSpace(extension))
+    {
+        safeName += extension;
+    }
+
+    return safeName;
 }
 
 static DateTime? ParseDateOnly(string? value)
