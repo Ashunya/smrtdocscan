@@ -569,11 +569,9 @@ app.MapGet("/api/auth/microsoft", (HttpContext httpContext) =>
         return Results.BadRequest(new { message = "Microsoft SSO is not configured. Set SMARTDOCSCAN_MICROSOFT_CLIENT_ID and SMARTDOCSCAN_MICROSOFT_CLIENT_SECRET." });
     }
 
-    var redirectUri = httpContext.Request.Query["returnUrl"].FirstOrDefault();
-    if (string.IsNullOrWhiteSpace(redirectUri) || !redirectUri.StartsWith("/", StringComparison.Ordinal))
-    {
-        redirectUri = "/";
-    }
+    var redirectUri = BuildPostSignInRedirect(
+        httpContext.Request.Query["returnUrl"].FirstOrDefault(),
+        httpContext.RequestServices.GetRequiredService<IConfiguration>());
 
     return Results.Challenge(new AuthenticationProperties { RedirectUri = redirectUri }, [OpenIdConnectDefaults.AuthenticationScheme]);
 });
@@ -670,6 +668,30 @@ static string? FindClaimValue(ClaimsPrincipal? principal, params string[] claimT
     }
 
     return null;
+}
+
+static string BuildPostSignInRedirect(string? returnUrl, IConfiguration configuration)
+{
+    if (string.IsNullOrWhiteSpace(returnUrl))
+    {
+        returnUrl = "/";
+    }
+
+    var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+    if (Uri.TryCreate(returnUrl, UriKind.Absolute, out var absoluteReturnUri)
+        && allowedOrigins.Any(origin => Uri.TryCreate(origin, UriKind.Absolute, out var allowedOrigin)
+            && Uri.Compare(absoluteReturnUri, allowedOrigin, UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0))
+    {
+        return absoluteReturnUri.ToString();
+    }
+
+    if (!returnUrl.StartsWith("/", StringComparison.Ordinal) || returnUrl.StartsWith("//", StringComparison.Ordinal))
+    {
+        returnUrl = "/";
+    }
+
+    var webOrigin = allowedOrigins.FirstOrDefault(origin => Uri.TryCreate(origin, UriKind.Absolute, out _));
+    return string.IsNullOrWhiteSpace(webOrigin) ? returnUrl : new Uri(new Uri(webOrigin.TrimEnd('/') + "/"), returnUrl.TrimStart('/')).ToString();
 }
 
 static bool CanAccessCompany(ClaimsPrincipal principal, int companyId)
