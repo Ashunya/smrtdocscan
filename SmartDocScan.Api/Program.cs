@@ -44,6 +44,11 @@ var authBuilder = builder.Services
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        var cookieDomain = builder.Configuration["Authentication:CookieDomain"];
+        if (!string.IsNullOrWhiteSpace(cookieDomain))
+        {
+            options.Cookie.Domain = cookieDomain.Trim();
+        }
         options.SlidingExpiration = true;
         options.ExpireTimeSpan = TimeSpan.FromHours(10);
         options.Events.OnRedirectToLogin = context =>

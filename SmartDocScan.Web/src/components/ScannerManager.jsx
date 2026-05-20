@@ -1,6 +1,6 @@
 import { ScanLine, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { getApiBaseUrl, listCategories } from "../api/client";
+import { listCategories } from "../api/client";
 
 export function ScannerManager({ companyId, patient, onNotice }) {
   const webTwainRef = useRef(null);
@@ -134,7 +134,7 @@ export function ScannerManager({ companyId, patient, onNotice }) {
     const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
     const isTiff = format === "tif";
     const uploadName = `ScanImage_${stamp}.${isTiff ? "tif" : "pdf"}`;
-    const uploadUrl = new URL(`${getApiBaseUrl()}/documents/scan?Id=${companyId}&pid=${patient.patientId}&Cat_id=${categoryId}`, window.location.origin);
+    const uploadUrl = new URL(`/api/documents/scan?Id=${companyId}&pid=${patient.patientId}&Cat_id=${categoryId}`, window.location.origin);
     webTwain.IfSSL = uploadUrl.protocol === "https:";
     webTwain.HTTPPort = uploadUrl.port ? Number(uploadUrl.port) : (webTwain.IfSSL ? 443 : 80);
     const uploadMethod = isTiff
