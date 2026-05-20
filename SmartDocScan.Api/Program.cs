@@ -10,6 +10,7 @@ using SmartDocScan.Api.Models;
 using SmartDocScan.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+const string MicrosoftSsoNotConfiguredMessage = "Microsoft SSO is not configured. Save Microsoft Client ID and Client Secret in Settings.";
 SettingsRepository.LoadIntoConfiguration(builder.Configuration);
 
 var maxDocumentUploadBytes = builder.Configuration.GetValue<long?>("Uploads:MaxDocumentBytes") ?? 200L * 1024L * 1024L;
@@ -71,47 +72,72 @@ var authBuilder = builder.Services
         };
     });
 
-if (!string.IsNullOrWhiteSpace(builder.Configuration["Authentication:Microsoft:ClientId"]))
+authBuilder.AddOpenIdConnect(options =>
 {
-    authBuilder.AddOpenIdConnect(options =>
+    options.Authority = "https://login.microsoftonline.com/organizations/v2.0";
+    options.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"] ?? "smartdocscan-db-configured";
+    options.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ?? "";
+    options.CallbackPath = builder.Configuration["Authentication:Microsoft:CallbackPath"] ?? "/api/auth/microsoft/callback";
+    options.ResponseType = OpenIdConnectResponseType.Code;
+    options.SaveTokens = false;
+    options.Scope.Clear();
+    options.Scope.Add("openid");
+    options.Scope.Add("profile");
+    options.Scope.Add("email");
+    options.TokenValidationParameters.ValidateIssuer = false;
+    options.Events.OnRedirectToIdentityProvider = async context =>
     {
-        options.Authority = "https://login.microsoftonline.com/organizations/v2.0";
-        options.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"];
-        options.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"];
-        options.CallbackPath = builder.Configuration["Authentication:Microsoft:CallbackPath"] ?? "/api/auth/microsoft/callback";
-        options.ResponseType = OpenIdConnectResponseType.Code;
-        options.SaveTokens = false;
-        options.Scope.Clear();
-        options.Scope.Add("openid");
-        options.Scope.Add("profile");
-        options.Scope.Add("email");
-        options.TokenValidationParameters.ValidateIssuer = false;
-        options.Events.OnTokenValidated = async context =>
+        var settings = await LoadMicrosoftSsoRuntimeSettingsAsync(context.HttpContext);
+        if (!ApplyMicrosoftSsoSettings(context.Options, settings))
         {
-            var authRepository = context.HttpContext.RequestServices.GetRequiredService<AuthRepository>();
-            var cancellationToken = context.HttpContext.RequestAborted;
-            var principal = context.Principal;
-            var tenantId = FindClaimValue(principal, "tid", "http://schemas.microsoft.com/identity/claims/tenantid");
-            var objectId = FindClaimValue(principal, "oid", "http://schemas.microsoft.com/identity/claims/objectidentifier", ClaimTypes.NameIdentifier);
-            var email = FindClaimValue(principal, "preferred_username", ClaimTypes.Email, "email", "upn");
+            context.HandleResponse();
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsJsonAsync(new { message = MicrosoftSsoNotConfiguredMessage });
+            return;
+        }
 
-            if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(objectId))
-            {
-                context.Fail("Microsoft sign-in did not return tenant and object identifiers.");
-                return;
-            }
+        context.ProtocolMessage.ClientId = settings.ClientId;
+    };
+    options.Events.OnAuthorizationCodeReceived = async context =>
+    {
+        var settings = await LoadMicrosoftSsoRuntimeSettingsAsync(context.HttpContext);
+        if (!ApplyMicrosoftSsoSettings(context.Options, settings))
+        {
+            context.Fail(MicrosoftSsoNotConfiguredMessage);
+            return;
+        }
 
-            var user = await authRepository.FindExternalUserAsync("microsoft", tenantId, objectId, email, cancellationToken);
-            if (user is null)
-            {
-                context.Fail("This Microsoft account is not linked to an active SmartDocScan user.");
-                return;
-            }
+        if (context.TokenEndpointRequest is not null)
+        {
+            context.TokenEndpointRequest.ClientId = settings.ClientId;
+            context.TokenEndpointRequest.ClientSecret = settings.ClientSecret;
+        }
+    };
+    options.Events.OnTokenValidated = async context =>
+    {
+        var authRepository = context.HttpContext.RequestServices.GetRequiredService<AuthRepository>();
+        var cancellationToken = context.HttpContext.RequestAborted;
+        var principal = context.Principal;
+        var tenantId = FindClaimValue(principal, "tid", "http://schemas.microsoft.com/identity/claims/tenantid");
+        var objectId = FindClaimValue(principal, "oid", "http://schemas.microsoft.com/identity/claims/objectidentifier", ClaimTypes.NameIdentifier);
+        var email = FindClaimValue(principal, "preferred_username", ClaimTypes.Email, "email", "upn");
 
-            context.Principal = CreatePrincipal(user, "microsoft");
-        };
-    });
-}
+        if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(objectId))
+        {
+            context.Fail("Microsoft sign-in did not return tenant and object identifiers.");
+            return;
+        }
+
+        var user = await authRepository.FindExternalUserAsync("microsoft", tenantId, objectId, email, cancellationToken);
+        if (user is null)
+        {
+            context.Fail("This Microsoft account is not linked to an active SmartDocScan user.");
+            return;
+        }
+
+        context.Principal = CreatePrincipal(user, "microsoft");
+    };
+});
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
@@ -568,12 +594,12 @@ app.MapPost("/api/auth/verify-email-otp", async (VerifyOtpRequest request, AuthR
     return Results.Ok(new LoginResponse { User = user });
 });
 
-app.MapGet("/api/auth/microsoft", (HttpContext httpContext) =>
+app.MapGet("/api/auth/microsoft", async (HttpContext httpContext) =>
 {
-    var clientId = httpContext.RequestServices.GetRequiredService<IConfiguration>()["Authentication:Microsoft:ClientId"];
-    if (string.IsNullOrWhiteSpace(clientId))
+    var settings = await LoadMicrosoftSsoRuntimeSettingsAsync(httpContext);
+    if (!HasMicrosoftSsoSettings(settings))
     {
-        return Results.BadRequest(new { message = "Microsoft SSO is not configured. Set SMARTDOCSCAN_MICROSOFT_CLIENT_ID and SMARTDOCSCAN_MICROSOFT_CLIENT_SECRET." });
+        return Results.BadRequest(new { message = MicrosoftSsoNotConfiguredMessage });
     }
 
     var redirectUri = BuildPostSignInRedirect(
@@ -675,6 +701,35 @@ static string? FindClaimValue(ClaimsPrincipal? principal, params string[] claimT
     }
 
     return null;
+}
+
+static async Task<MicrosoftSsoSettingsDto> LoadMicrosoftSsoRuntimeSettingsAsync(HttpContext httpContext)
+{
+    var configuration = httpContext.RequestServices.GetRequiredService<IConfiguration>();
+    var repository = httpContext.RequestServices.GetRequiredService<SettingsRepository>();
+    return await repository.GetMicrosoftSsoRuntimeSettingsAsync(configuration, httpContext.RequestAborted);
+}
+
+static bool ApplyMicrosoftSsoSettings(OpenIdConnectOptions options, MicrosoftSsoSettingsDto settings)
+{
+    if (!HasMicrosoftSsoSettings(settings))
+    {
+        return false;
+    }
+
+    options.ClientId = settings.ClientId!.Trim();
+    options.ClientSecret = settings.ClientSecret!.Trim();
+    if (!string.IsNullOrWhiteSpace(settings.CallbackPath))
+    {
+        options.CallbackPath = settings.CallbackPath.Trim();
+    }
+    return true;
+}
+
+static bool HasMicrosoftSsoSettings(MicrosoftSsoSettingsDto settings)
+{
+    return !string.IsNullOrWhiteSpace(settings.ClientId)
+        && !string.IsNullOrWhiteSpace(settings.ClientSecret);
 }
 
 static string BuildPostSignInRedirect(string? returnUrl, IConfiguration configuration)

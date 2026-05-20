@@ -58,6 +58,22 @@ public sealed class SettingsRepository
         };
     }
 
+    public async Task<MicrosoftSsoSettingsDto> GetMicrosoftSsoRuntimeSettingsAsync(IConfiguration configuration, CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+        await EnsureTableAsync(connection, cancellationToken);
+        var values = await ReadSettingsAsync(connection, cancellationToken);
+
+        return new MicrosoftSsoSettingsDto
+        {
+            ClientId = Get(values, "Authentication:Microsoft:ClientId", configuration["Authentication:Microsoft:ClientId"]),
+            ClientSecret = Get(values, "Authentication:Microsoft:ClientSecret", configuration["Authentication:Microsoft:ClientSecret"]),
+            CallbackPath = Get(values, "Authentication:Microsoft:CallbackPath", configuration["Authentication:Microsoft:CallbackPath"] ?? "/api/auth/microsoft/callback"),
+            HasClientSecret = !string.IsNullOrWhiteSpace(Get(values, "Authentication:Microsoft:ClientSecret", configuration["Authentication:Microsoft:ClientSecret"]))
+        };
+    }
+
     public async Task SaveSecuritySettingsAsync(SecuritySettingsDto settings, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqlConnection(_connectionString);
