@@ -807,16 +807,8 @@ static async Task<IResult> PreviewDocumentAsync(int documentId, string? routeFil
 
 static IResult PreviewTiffAsPdf(string fullPath, string displayFileName, HttpContext httpContext)
 {
-    var frames = new List<PdfImagePage>();
     using var images = new MagickImageCollection(fullPath);
-    foreach (var image in images)
-    {
-        image.AutoOrient();
-        image.Format = MagickFormat.Jpeg;
-        image.Quality = 85;
-        frames.Add(new PdfImagePage(image.ToByteArray(), checked((int)image.Width), checked((int)image.Height)));
-    }
-
+    var frames = BuildTiffPreviewFrames(images);
     if (frames.Count == 0)
     {
         return Results.Problem("The TIFF file does not contain any readable pages.", statusCode: StatusCodes.Status422UnprocessableEntity);
@@ -827,6 +819,39 @@ static IResult PreviewTiffAsPdf(string fullPath, string displayFileName, HttpCon
     httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(previewName)}\"";
     httpContext.Response.Headers.XContentTypeOptions = "nosniff";
     return Results.File(pdf, "application/pdf", enableRangeProcessing: false);
+}
+
+static List<PdfImagePage> BuildTiffPreviewFrames(MagickImageCollection images)
+{
+    var usableImages = images
+        .Where(image => image.Width > 0 && image.Height > 0)
+        .ToList();
+    if (usableImages.Count == 0)
+    {
+        return [];
+    }
+
+    var largestArea = usableImages.Max(image => (long)image.Width * image.Height);
+    var minimumArea = Math.Max(largestArea / 4, 100_000);
+    var frames = new List<PdfImagePage>();
+
+    foreach (var source in usableImages.Where(image => (long)image.Width * image.Height >= minimumArea))
+    {
+        using var image = (MagickImage)source.Clone();
+        image.AutoOrient();
+        image.BackgroundColor = MagickColors.White;
+        image.Alpha(AlphaOption.Remove);
+        image.ColorFuzz = new Percentage(8);
+        image.Trim();
+        image.ResetPage();
+        image.BorderColor = MagickColors.White;
+        image.Border(16);
+        image.Format = MagickFormat.Jpeg;
+        image.Quality = 90;
+        frames.Add(new PdfImagePage(image.ToByteArray(), checked((int)image.Width), checked((int)image.Height)));
+    }
+
+    return frames;
 }
 
 static byte[] BuildImagePdf(IReadOnlyList<PdfImagePage> images)
