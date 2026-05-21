@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -968,7 +969,7 @@ static Task AuditAsync(
         targetType,
         targetId,
         outcome,
-        httpContext.Connection.RemoteIpAddress?.ToString(),
+        GetClientIpAddress(httpContext),
         details,
         httpContext.RequestAborted);
 }
@@ -1112,7 +1113,75 @@ static bool IsAllowedBrowserOrigin(HttpRequest request, string[] allowedOrigins)
 
 static string GetRateLimitPartitionKey(HttpContext httpContext)
 {
-    return httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    return GetClientIpAddress(httpContext) ?? "unknown";
+}
+
+static string? GetClientIpAddress(HttpContext httpContext)
+{
+    var remoteIp = httpContext.Connection.RemoteIpAddress;
+    if (IsTrustedProxyAddress(remoteIp))
+    {
+        var forwardedFor = FirstHeaderValue(httpContext.Request.Headers["X-Forwarded-For"].ToString());
+        if (IsValidIpAddress(forwardedFor))
+        {
+            return forwardedFor;
+        }
+
+        var realIp = FirstHeaderValue(httpContext.Request.Headers["X-Real-IP"].ToString());
+        if (IsValidIpAddress(realIp))
+        {
+            return realIp;
+        }
+
+        var cloudflareIp = FirstHeaderValue(httpContext.Request.Headers["CF-Connecting-IP"].ToString());
+        if (IsValidIpAddress(cloudflareIp))
+        {
+            return cloudflareIp;
+        }
+    }
+
+    return remoteIp?.ToString();
+}
+
+static string? FirstHeaderValue(string? value)
+{
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        return null;
+    }
+
+    var first = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+    return string.IsNullOrWhiteSpace(first) ? null : first;
+}
+
+static bool IsValidIpAddress(string? value)
+{
+    return !string.IsNullOrWhiteSpace(value) && IPAddress.TryParse(value, out _);
+}
+
+static bool IsTrustedProxyAddress(IPAddress? address)
+{
+    if (address is null)
+    {
+        return false;
+    }
+
+    if (IPAddress.IsLoopback(address))
+    {
+        return true;
+    }
+
+    if (address.IsIPv4MappedToIPv6)
+    {
+        address = address.MapToIPv4();
+    }
+
+    var bytes = address.GetAddressBytes();
+    return address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
+        && bytes.Length == 4
+        && bytes[0] == 172
+        && bytes[1] >= 16
+        && bytes[1] <= 31;
 }
 
 static async Task<IResult?> ValidateDocumentOwnershipAsync(
