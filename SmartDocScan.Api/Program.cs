@@ -196,6 +196,16 @@ var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get
 app.Use(async (context, next) =>
 {
     AddSecurityHeaders(context.Response);
+    AddApiCacheHeaders(context.Request, context.Response);
+
+    if (IsUnsafeMethod(context.Request.Method)
+        && !IsMicrosoftCallbackRequest(context.Request, app.Configuration)
+        && IsCrossSiteBrowserRequest(context.Request))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsJsonAsync(new { message = "Cross-site requests are not allowed." });
+        return;
+    }
 
     if (IsUnsafeMethod(context.Request.Method)
         && !IsMicrosoftCallbackRequest(context.Request, app.Configuration)
@@ -1215,6 +1225,20 @@ static void AddSecurityHeaders(HttpResponse response)
     response.Headers.TryAdd("X-Frame-Options", "DENY");
     response.Headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
     response.Headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    response.Headers.TryAdd("X-Permitted-Cross-Domain-Policies", "none");
+    response.Headers.TryAdd("Cross-Origin-Resource-Policy", "same-site");
+}
+
+static void AddApiCacheHeaders(HttpRequest request, HttpResponse response)
+{
+    if (!request.Path.StartsWithSegments("/api"))
+    {
+        return;
+    }
+
+    response.Headers["Cache-Control"] = "no-store, no-cache, max-age=0";
+    response.Headers["Pragma"] = "no-cache";
+    response.Headers["Expires"] = "0";
 }
 
 static bool IsUnsafeMethod(string method)
@@ -1223,6 +1247,12 @@ static bool IsUnsafeMethod(string method)
         && !HttpMethods.IsHead(method)
         && !HttpMethods.IsOptions(method)
         && !HttpMethods.IsTrace(method);
+}
+
+static bool IsCrossSiteBrowserRequest(HttpRequest request)
+{
+    var fetchSite = request.Headers["Sec-Fetch-Site"].FirstOrDefault();
+    return string.Equals(fetchSite, "cross-site", StringComparison.OrdinalIgnoreCase);
 }
 
 static bool IsMicrosoftCallbackRequest(HttpRequest request, IConfiguration configuration)
