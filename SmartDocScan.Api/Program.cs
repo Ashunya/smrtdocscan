@@ -163,6 +163,22 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+app.Use(async (context, next) =>
+{
+    AddSecurityHeaders(context.Response);
+
+    if (IsUnsafeMethod(context.Request.Method)
+        && !IsAllowedBrowserOrigin(context.Request, allowedOrigins))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsJsonAsync(new { message = "Request origin is not allowed." });
+        return;
+    }
+
+    await next();
+});
+
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
@@ -924,6 +940,40 @@ static bool CanManageUsers(ClaimsPrincipal principal)
 static bool CanManagePatients(ClaimsPrincipal principal)
 {
     return IsElevated(principal) || ReadBoolClaim(principal, "add_patients");
+}
+
+static void AddSecurityHeaders(HttpResponse response)
+{
+    response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
+    response.Headers.TryAdd("X-Frame-Options", "DENY");
+    response.Headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
+    response.Headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+}
+
+static bool IsUnsafeMethod(string method)
+{
+    return !HttpMethods.IsGet(method)
+        && !HttpMethods.IsHead(method)
+        && !HttpMethods.IsOptions(method)
+        && !HttpMethods.IsTrace(method);
+}
+
+static bool IsAllowedBrowserOrigin(HttpRequest request, string[] allowedOrigins)
+{
+    var origin = request.Headers.Origin.FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(origin))
+    {
+        return true;
+    }
+
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var originUri))
+    {
+        return false;
+    }
+
+    return allowedOrigins.Any(allowed =>
+        Uri.TryCreate(allowed, UriKind.Absolute, out var allowedUri)
+        && Uri.Compare(originUri, allowedUri, UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0);
 }
 
 static string GetRateLimitPartitionKey(HttpContext httpContext)
