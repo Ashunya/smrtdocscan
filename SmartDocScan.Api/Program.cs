@@ -387,18 +387,24 @@ app.MapDelete("/api/categories/{categoryId:int}", async (int categoryId, ClaimsP
     }
 }).RequireAuthorization();
 
-app.MapGet("/api/documents", async (int companyId, int patientId, ClaimsPrincipal principal, DocumentRepository repository, CancellationToken cancellationToken) =>
+app.MapGet("/api/documents", async (int companyId, int patientId, ClaimsPrincipal principal, DocumentRepository repository, PatientRepository patientRepository, CancellationToken cancellationToken) =>
 {
     if (!CanAccessCompany(principal, companyId))
     {
         return Results.Forbid();
     }
 
+    var patient = await patientRepository.GetAsync(patientId, cancellationToken);
+    if (patient is null || patient.CompanyId != companyId)
+    {
+        return Results.NotFound(new { message = "Patient not found." });
+    }
+
     var documents = await repository.GetByPatientAsync(companyId, patientId, cancellationToken);
     return Results.Ok(documents);
 }).RequireAuthorization();
 
-app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal principal, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal principal, DocumentRepository repository, PatientRepository patientRepository, CategoryRepository categoryRepository, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
     if (!httpRequest.HasFormContentType)
     {
@@ -428,6 +434,12 @@ app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal pr
         return Results.Forbid();
     }
 
+    var ownershipValidation = await ValidateDocumentOwnershipAsync(companyId, patientId, categoryId, patientRepository, categoryRepository, cancellationToken);
+    if (ownershipValidation is not null)
+    {
+        return ownershipValidation;
+    }
+
     var safeName = BuildStoredDocumentName(form["documentName"], file.FileName);
     var validationResult = await ValidateUploadedDocumentAsync(file, safeName, maxDocumentUploadBytes, cancellationToken);
     if (validationResult is not null)
@@ -444,7 +456,7 @@ app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal pr
     return Results.Created($"/api/documents/{document.DocumentId}", document);
 }).RequireAuthorization();
 
-app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincipal principal, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincipal principal, DocumentRepository repository, PatientRepository patientRepository, CategoryRepository categoryRepository, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
     if (!httpRequest.HasFormContentType)
     {
@@ -471,6 +483,12 @@ app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincip
     if (!ReadBoolClaim(principal, "scan_document") && !IsElevated(principal))
     {
         return Results.Forbid();
+    }
+
+    var ownershipValidation = await ValidateDocumentOwnershipAsync(companyId, patientId, categoryId, patientRepository, categoryRepository, cancellationToken);
+    if (ownershipValidation is not null)
+    {
+        return ownershipValidation;
     }
 
     var safeName = BuildStoredDocumentName(httpRequest.Query["documentName"], file.FileName);
@@ -979,6 +997,29 @@ static bool IsAllowedBrowserOrigin(HttpRequest request, string[] allowedOrigins)
 static string GetRateLimitPartitionKey(HttpContext httpContext)
 {
     return httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+}
+
+static async Task<IResult?> ValidateDocumentOwnershipAsync(
+    int companyId,
+    int patientId,
+    int categoryId,
+    PatientRepository patientRepository,
+    CategoryRepository categoryRepository,
+    CancellationToken cancellationToken)
+{
+    var patient = await patientRepository.GetAsync(patientId, cancellationToken);
+    if (patient is null || patient.CompanyId != companyId)
+    {
+        return Results.NotFound(new { message = "Patient not found." });
+    }
+
+    var category = await categoryRepository.GetAsync(categoryId, cancellationToken);
+    if (category is null || category.CompanyId != companyId)
+    {
+        return Results.NotFound(new { message = "Category not found." });
+    }
+
+    return null;
 }
 
 static bool CanManageBoxes(ClaimsPrincipal principal)
