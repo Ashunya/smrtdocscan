@@ -56,18 +56,19 @@ public sealed class BoxRepository
         return await GetAsync(id, cancellationToken) ?? throw new InvalidOperationException("Box was created but could not be loaded.");
     }
 
-    public async Task<bool> DeleteAsync(int boxId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(int boxId, int companyId, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM box WHERE box_id = @boxId;";
+        command.CommandText = "DELETE FROM box WHERE box_id = @boxId AND comp_id = @companyId;";
         command.Parameters.AddWithValue("@boxId", boxId);
+        command.Parameters.AddWithValue("@companyId", companyId);
         return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
     }
 
-    private async Task<BoxDto?> GetAsync(int boxId, CancellationToken cancellationToken)
+    public async Task<BoxDto?> GetAsync(int boxId, CancellationToken cancellationToken)
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);

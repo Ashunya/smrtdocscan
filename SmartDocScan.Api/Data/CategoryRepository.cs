@@ -73,15 +73,41 @@ public sealed class CategoryRepository
         };
     }
 
-    public async Task<bool> DeleteAsync(int categoryId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(int categoryId, int companyId, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM category WHERE cat_id = @categoryId;";
+        command.CommandText = "DELETE FROM category WHERE cat_id = @categoryId AND comp_id = @companyId;";
         command.Parameters.AddWithValue("@categoryId", categoryId);
+        command.Parameters.AddWithValue("@companyId", companyId);
         return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
+    }
+
+    public async Task<CategoryDto?> GetAsync(int categoryId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT cat_id, comp_id, cat_name, access
+            FROM category
+            WHERE cat_id = @categoryId;
+            """;
+        command.Parameters.AddWithValue("@categoryId", categoryId);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken)
+            ? new CategoryDto
+            {
+                CategoryId = reader.GetInt32(reader.GetOrdinal("cat_id")),
+                CompanyId = reader.GetInt32(reader.GetOrdinal("comp_id")),
+                CategoryName = ReadString(reader, "cat_name"),
+                Access = ReadString(reader, "access")
+            }
+            : null;
     }
 
     private static string? ReadString(SqlDataReader reader, string name)

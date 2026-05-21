@@ -262,7 +262,7 @@ app.MapGet("/api/boxes", async (int companyId, ClaimsPrincipal principal, BoxRep
 
 app.MapPost("/api/boxes", async (BoxUpsertRequest request, ClaimsPrincipal principal, BoxRepository repository, CancellationToken cancellationToken) =>
 {
-    if (!CanAccessCompany(principal, request.CompanyId))
+    if (!CanAccessCompany(principal, request.CompanyId) || !CanManageBoxes(principal))
     {
         return Results.Forbid();
     }
@@ -278,11 +278,22 @@ app.MapPost("/api/boxes", async (BoxUpsertRequest request, ClaimsPrincipal princ
     }
 }).RequireAuthorization();
 
-app.MapDelete("/api/boxes/{boxId:int}", async (int boxId, BoxRepository repository, CancellationToken cancellationToken) =>
+app.MapDelete("/api/boxes/{boxId:int}", async (int boxId, ClaimsPrincipal principal, BoxRepository repository, CancellationToken cancellationToken) =>
 {
+    var box = await repository.GetAsync(boxId, cancellationToken);
+    if (box is null)
+    {
+        return Results.NotFound(new { message = "Box not found." });
+    }
+
+    if (!CanAccessCompany(principal, box.CompanyId) || !CanManageBoxes(principal))
+    {
+        return Results.Forbid();
+    }
+
     try
     {
-        return await repository.DeleteAsync(boxId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "Box not found." });
+        return await repository.DeleteAsync(boxId, box.CompanyId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "Box not found." });
     }
     catch (SqlException)
     {
@@ -303,7 +314,7 @@ app.MapGet("/api/categories", async (int companyId, ClaimsPrincipal principal, C
 
 app.MapPost("/api/categories", async (CategoryUpsertRequest request, ClaimsPrincipal principal, CategoryRepository repository, CancellationToken cancellationToken) =>
 {
-    if (!CanAccessCompany(principal, request.CompanyId))
+    if (!CanAccessCompany(principal, request.CompanyId) || !CanManageCategories(principal))
     {
         return Results.Forbid();
     }
@@ -319,11 +330,22 @@ app.MapPost("/api/categories", async (CategoryUpsertRequest request, ClaimsPrinc
     }
 }).RequireAuthorization();
 
-app.MapDelete("/api/categories/{categoryId:int}", async (int categoryId, CategoryRepository repository, CancellationToken cancellationToken) =>
+app.MapDelete("/api/categories/{categoryId:int}", async (int categoryId, ClaimsPrincipal principal, CategoryRepository repository, CancellationToken cancellationToken) =>
 {
+    var category = await repository.GetAsync(categoryId, cancellationToken);
+    if (category is null)
+    {
+        return Results.NotFound(new { message = "Category not found." });
+    }
+
+    if (!CanAccessCompany(principal, category.CompanyId) || !CanManageCategories(principal))
+    {
+        return Results.Forbid();
+    }
+
     try
     {
-        return await repository.DeleteAsync(categoryId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "Category not found." });
+        return await repository.DeleteAsync(categoryId, category.CompanyId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "Category not found." });
     }
     catch (SqlException)
     {
@@ -902,6 +924,16 @@ static bool CanManageUsers(ClaimsPrincipal principal)
 static bool CanManagePatients(ClaimsPrincipal principal)
 {
     return IsElevated(principal) || ReadBoolClaim(principal, "add_patients");
+}
+
+static bool CanManageBoxes(ClaimsPrincipal principal)
+{
+    return IsElevated(principal) || ReadBoolClaim(principal, "box");
+}
+
+static bool CanManageCategories(ClaimsPrincipal principal)
+{
+    return IsElevated(principal) || ReadBoolClaim(principal, "add_category");
 }
 
 static int ReadCompanyId(ClaimsPrincipal principal)
