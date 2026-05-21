@@ -1,4 +1,5 @@
 import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
+import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
@@ -17,6 +18,7 @@ export function Sidebar({ activeView, onNavigate, user, logoUrl, open = true }) 
     { id: "users", label: "Users", icon: GroupOutlinedIcon, permission: "addUsers" },
     { id: "categories", label: "Categories", icon: CategoryOutlinedIcon, permission: "addCategory" },
     { id: "reports", label: "Reports", icon: BarChartOutlinedIcon, permission: "report" },
+    { id: "audit", label: "Audit Logs", icon: AssignmentOutlinedIcon, superOnly: true },
     { id: "settings", label: "Settings", icon: SettingsOutlinedIcon, superOnly: true },
   ].filter((item) => canShow(item, user));
 

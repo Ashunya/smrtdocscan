@@ -617,7 +617,8 @@ tbody tr:nth-child(odd) {
 }
 
 .category-form,
-.report-form {
+.report-form,
+.audit-filter-form {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) auto;
   gap: 14px;
@@ -628,6 +629,10 @@ tbody tr:nth-child(odd) {
 
 .report-form {
   grid-template-columns: 180px 180px auto;
+}
+
+.audit-filter-form {
+  grid-template-columns: repeat(6, minmax(120px, 1fr)) auto;
 }
 
 .settings-form {
@@ -696,7 +701,8 @@ tbody tr:nth-child(odd) {
 }
 
 .category-form label,
-.report-form label {
+.report-form label,
+.audit-filter-form label {
   display: grid;
   gap: 7px;
   color: #3a2e28;
@@ -705,11 +711,42 @@ tbody tr:nth-child(odd) {
 }
 
 .category-form input,
-.report-form input {
+.report-form input,
+.audit-filter-form input,
+.audit-filter-form select {
   height: 40px;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 10px;
+}
+
+.audit-table-wrap {
+  max-height: 620px;
+  overflow: auto;
+}
+
+.audit-table-wrap td {
+  vertical-align: top;
+}
+
+.audit-outcome {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.audit-outcome.success {
+  color: #0f6b3b;
+  background: #e7f7ee;
+}
+
+.audit-outcome.failure {
+  color: #b42318;
+  background: #fff0ee;
 }
 
 .scanner-toolbar {
@@ -1113,6 +1150,8 @@ tbody tr:nth-child(odd) {
 .company-form input,
 .category-form input,
 .report-form input,
+.audit-filter-form input,
+.audit-filter-form select,
 .scanner-toolbar input,
 .scanner-toolbar select {
   border-color: #d8cec6;
@@ -1130,6 +1169,8 @@ tbody tr:nth-child(odd) {
 .company-form input:focus,
 .category-form input:focus,
 .report-form input:focus,
+.audit-filter-form input:focus,
+.audit-filter-form select:focus,
 .scanner-toolbar input:focus,
 .scanner-toolbar select:focus {
   outline: 0;
@@ -1917,6 +1958,7 @@ tbody tr:nth-child(odd) {
 :root[data-theme="dark"] .settings-form label,
 :root[data-theme="dark"] .category-form label,
 :root[data-theme="dark"] .report-form label,
+:root[data-theme="dark"] .audit-filter-form label,
 :root[data-theme="dark"] .scanner-toolbar label {
   color: var(--muted);
 }
@@ -2058,7 +2100,8 @@ tbody tr:nth-child(odd) {
   .company-form,
   .settings-form fieldset,
   .category-form,
-  .report-form {
+  .report-form,
+  .audit-filter-form {
     grid-template-columns: 1fr;
   }
 

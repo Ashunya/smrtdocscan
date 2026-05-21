@@ -255,3 +255,14 @@ export function getDocumentReport({ companyId, fromDate, toDate, take = 500 }) {
   if (toDate) params.set("toDate", toDate);
   return request(`/reports/documents?${params.toString()}`);
 }
+
+export function getAuditLogs({ companyId, actor, action, outcome, fromDate, toDate, take = 200 } = {}) {
+  const params = new URLSearchParams({ take: String(take) });
+  if (companyId) params.set("companyId", String(companyId));
+  if (actor) params.set("actor", actor);
+  if (action) params.set("action", action);
+  if (outcome) params.set("outcome", outcome);
+  if (fromDate) params.set("fromDate", fromDate);
+  if (toDate) params.set("toDate", toDate);
+  return request(`/audit-logs?${params.toString()}`);
+}

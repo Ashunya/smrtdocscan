@@ -1,4 +1,5 @@
 using Microsoft.Data.SqlClient;
+using SmartDocScan.Api.Models;
 
 namespace SmartDocScan.Api.Data;
 
@@ -45,6 +46,63 @@ public sealed class AuditRepository
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<AuditLogDto>> SearchAsync(
+        int? companyId,
+        string? actor,
+        string? action,
+        string? outcome,
+        DateTime? fromDate,
+        DateTime? toDate,
+        int take = 200,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureSchemaAsync(cancellationToken);
+        var logs = new List<AuditLogDto>();
+        await using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT TOP (@take) audit_id, action, actor, comp_id, target_type, target_id,
+                   outcome, ip_address, details, created_on
+            FROM audit_log
+            WHERE (@companyId IS NULL OR comp_id = @companyId)
+              AND (@actor IS NULL OR actor LIKE '%' + @actor + '%')
+              AND (@action IS NULL OR action LIKE '%' + @action + '%')
+              AND (@outcome IS NULL OR outcome = @outcome)
+              AND (@fromDate IS NULL OR created_on >= @fromDate)
+              AND (@toDate IS NULL OR created_on < DATEADD(day, 1, @toDate))
+            ORDER BY created_on DESC, audit_id DESC;
+            """;
+        command.Parameters.AddWithValue("@take", Math.Clamp(take, 1, 500));
+        command.Parameters.AddWithValue("@companyId", companyId.HasValue ? companyId.Value : DBNull.Value);
+        command.Parameters.AddWithValue("@actor", DbValue(Trim(actor, 100)));
+        command.Parameters.AddWithValue("@action", DbValue(Trim(action, 80)));
+        command.Parameters.AddWithValue("@outcome", DbValue(Trim(outcome, 30)));
+        command.Parameters.AddWithValue("@fromDate", fromDate.HasValue ? fromDate.Value.Date : DBNull.Value);
+        command.Parameters.AddWithValue("@toDate", toDate.HasValue ? toDate.Value.Date : DBNull.Value);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            logs.Add(new AuditLogDto
+            {
+                AuditId = reader.GetInt64(reader.GetOrdinal("audit_id")),
+                Action = ReadString(reader, "action"),
+                Actor = ReadString(reader, "actor"),
+                CompanyId = ReadNullableInt(reader, "comp_id"),
+                TargetType = ReadString(reader, "target_type"),
+                TargetId = ReadString(reader, "target_id"),
+                Outcome = ReadString(reader, "outcome"),
+                IpAddress = ReadString(reader, "ip_address"),
+                Details = ReadString(reader, "details"),
+                CreatedOn = reader.GetDateTime(reader.GetOrdinal("created_on"))
+            });
+        }
+
+        return logs;
+    }
+
     private static object DbValue(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? DBNull.Value : value;
@@ -59,6 +117,18 @@ public sealed class AuditRepository
 
         value = value.Trim();
         return value.Length <= maxLength ? value : value[..maxLength];
+    }
+
+    private static string? ReadString(SqlDataReader reader, string name)
+    {
+        var ordinal = reader.GetOrdinal(name);
+        return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
+    }
+
+    private static int? ReadNullableInt(SqlDataReader reader, string name)
+    {
+        var ordinal = reader.GetOrdinal(name);
+        return reader.IsDBNull(ordinal) ? null : reader.GetInt32(ordinal);
     }
 
     private async Task EnsureSchemaAsync(CancellationToken cancellationToken)

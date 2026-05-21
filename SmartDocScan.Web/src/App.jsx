@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Building2, Key, LogOut, Menu as MenuIcon, Moon, Sun } from "lucide-react";
 import { AppBar, Avatar, Box, CssBaseline, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Menu as MuiMenu, MenuItem, Stack, ThemeProvider, Toolbar, Typography, createTheme } from "@mui/material";
 import { changePassword, createPatient, deletePatient, getBrandingSettings, getCurrentUser, listCompanies, logout, searchPatients, updatePatient } from "./api/client";
+import { AuditLogManager } from "./components/AuditLogManager";
 import { BoxManager } from "./components/BoxManager";
 import { BarcodeManager } from "./components/BarcodeManager";
 import { CategoryManager } from "./components/CategoryManager";
@@ -332,6 +333,9 @@ export default function App() {
     if (activeView === "settings") {
       return "Settings";
     }
+    if (activeView === "audit") {
+      return "Audit Logs";
+    }
     return "Patient Directory";
   }, [activeView]);
 
@@ -473,6 +477,8 @@ export default function App() {
           <ReportManager companyId={companyId} onNotice={setNotice} />
         ) : activeView === "settings" && currentUser.superUser ? (
           <SettingsManager onNotice={setNotice} onBrandingChange={(branding) => setLogoUrl(branding.logoDataUrl || "/smartdocscan-logo.svg")} />
+        ) : activeView === "audit" && currentUser.superUser ? (
+          <AuditLogManager companyId={companyId} onNotice={setNotice} />
         ) : activeView === "scan" ? (
           <ScannerManager companyId={companyId} patient={documentPatient} onNotice={setNotice} onSaved={() => setActiveView("documents")} />
         ) : activeView === "barcode" && documentPatient ? (

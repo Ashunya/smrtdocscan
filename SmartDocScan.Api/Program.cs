@@ -677,6 +677,27 @@ app.MapGet("/api/reports/documents", async (int companyId, DateTime? fromDate, D
     return Results.Ok(documents);
 }).RequireAuthorization();
 
+app.MapGet("/api/audit-logs", async (
+    int? companyId,
+    string? actor,
+    string? action,
+    string? outcome,
+    DateTime? fromDate,
+    DateTime? toDate,
+    int? take,
+    ClaimsPrincipal principal,
+    AuditRepository repository,
+    CancellationToken cancellationToken) =>
+{
+    if (!ReadBoolClaim(principal, "super_user"))
+    {
+        return Results.Forbid();
+    }
+
+    var logs = await repository.SearchAsync(companyId, actor, action, outcome, fromDate, toDate, take ?? 200, cancellationToken);
+    return Results.Ok(logs);
+}).RequireAuthorization();
+
 app.MapGet("/api/users", async (int companyId, ClaimsPrincipal principal, UserRepository repository, CancellationToken cancellationToken) =>
 {
     if (!CanAccessCompany(principal, companyId) || !CanManageUsers(principal))
