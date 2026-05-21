@@ -345,9 +345,9 @@ function convertScansToBlob(webTwain, format) {
 function getDwtImageType(format) {
   const imageTypes = window.Dynamsoft?.DWT?.EnumDWT_ImageType || {};
   if (format === "tif") {
-    return imageTypes.IT_MULTIPAGE_TIF ?? imageTypes.IT_TIF ?? 8;
+    return imageTypes.IT_TIF ?? 2;
   }
-  return imageTypes.IT_MULTIPAGE_PDF ?? imageTypes.IT_PDF ?? 7;
+  return imageTypes.IT_PDF ?? 4;
 }
 
 function loadScript(src) {
