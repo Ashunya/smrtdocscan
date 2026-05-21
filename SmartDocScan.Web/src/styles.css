@@ -730,11 +730,52 @@ tbody tr:nth-child(odd) {
   flex-wrap: wrap;
   gap: 12px;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .scanner-actions .primary-button,
 .scanner-actions .secondary-button {
   min-width: 110px;
+}
+
+.scan-page-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 132px;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff8f1;
+  color: var(--text);
+}
+
+.scan-page-count strong {
+  color: var(--accent);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.scan-page-count span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.scanner-count-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .scanner-toolbar label {
@@ -1782,6 +1823,13 @@ tbody tr:nth-child(odd) {
 :root[data-theme="dark"] .panel-header {
   background: var(--surface);
   border-color: var(--border);
+}
+
+:root[data-theme="dark"] .scan-page-count,
+:root[data-theme="dark"] .scanner-count-pill {
+  background: #071421;
+  border-color: var(--border);
+  color: var(--text);
 }
 
 :root[data-theme="dark"] th {

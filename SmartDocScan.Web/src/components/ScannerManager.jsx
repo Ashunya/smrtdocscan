@@ -5,6 +5,7 @@ import { listCategories } from "../api/client";
 export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
   const webTwainRef = useRef(null);
   const productKeyRef = useRef("");
+  const lastPageCountRef = useRef(0);
   const [categories, setCategories] = useState([]);
   const [categoryId, setCategoryId] = useState("");
   const [ready, setReady] = useState(false);
@@ -43,6 +44,18 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
     setDocumentName("");
     setDateOfService("");
   }, [patient?.patientId, ready]);
+
+  useEffect(() => {
+    if (!ready) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      updatePageCount(getWebTwain());
+    }, 500);
+
+    return () => window.clearInterval(timer);
+  }, [ready]);
 
   async function initializeViewer() {
     const dwt = window.Dynamsoft?.DWT;
@@ -98,6 +111,10 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
       webTwain.Viewer?.gotoPage?.(webTwain.HowManyImagesInBuffer - 1);
       updatePageCount(webTwain);
     });
+
+    webTwain.RegisterEvent?.("OnBitmapChanged", () => updatePageCount(webTwain));
+    webTwain.RegisterEvent?.("OnImageAreaSelected", () => updatePageCount(webTwain));
+    webTwain.RegisterEvent?.("OnMouseClick", () => updatePageCount(webTwain));
 
     webTwain.__smartDocScanEventsRegistered = true;
   }
@@ -212,6 +229,7 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
       : Math.max(webTwain.HowManyImagesInBuffer - 1, 0);
     webTwain.RemoveImage?.(index);
     updatePageCount(webTwain);
+    window.setTimeout(() => updatePageCount(webTwain), 150);
     if (webTwain.HowManyImagesInBuffer > 0) {
       webTwain.Viewer?.gotoPage?.(Math.min(index, webTwain.HowManyImagesInBuffer - 1));
     }
@@ -225,6 +243,7 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
 
     webTwain.RemoveAllImages?.();
     updatePageCount(webTwain);
+    window.setTimeout(() => updatePageCount(webTwain), 150);
   }
 
   function clearScannerBuffer() {
@@ -238,10 +257,15 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
       webTwain.RemoveAllImages?.();
     }
     updatePageCount(webTwain);
+    window.setTimeout(() => updatePageCount(webTwain), 150);
   }
 
   function updatePageCount(webTwain) {
-    setPageCount(webTwain?.HowManyImagesInBuffer || 0);
+    const nextPageCount = Number(webTwain?.HowManyImagesInBuffer) || 0;
+    if (lastPageCountRef.current !== nextPageCount) {
+      lastPageCountRef.current = nextPageCount;
+      setPageCount(nextPageCount);
+    }
   }
 
   return (
@@ -250,6 +274,10 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
         <div>
           <h2>Scan Document</h2>
           <p>{patient ? `Scanning for ${patient.lastName}, ${patient.firstName}` : "Select a patient from Find Patient first."}</p>
+        </div>
+        <div className="scan-page-count" aria-live="polite">
+          <strong>{pageCount}</strong>
+          <span>{pageCount === 1 ? "page scanned" : "pages scanned"}</span>
         </div>
       </div>
       <div className="scanner-toolbar">
@@ -272,6 +300,9 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
           </label>
         </div>
         <div className="scanner-actions">
+          <div className="scanner-count-pill" aria-live="polite">
+            {pageCount} {pageCount === 1 ? "page" : "pages"}
+          </div>
           <button className="primary-button" type="button" onClick={acquireImage} disabled={!ready || !patient}>
             <ScanLine size={18} />
             Scan
