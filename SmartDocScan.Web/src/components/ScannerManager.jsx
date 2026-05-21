@@ -1,6 +1,6 @@
 import { ScanLine, Trash2, Upload, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { listCategories } from "../api/client";
+import { getApiBaseUrl, listCategories } from "../api/client";
 
 export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
   const webTwainRef = useRef(null);
@@ -172,7 +172,7 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
     const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
     const isTiff = format === "tif";
     const uploadName = buildDocumentFileName(documentName, `ScanImage_${stamp}`, isTiff ? "tif" : "pdf");
-    const uploadUrl = new URL(`/api/documents/scan?Id=${companyId}&pid=${patient.patientId}&Cat_id=${categoryId}`, window.location.origin);
+    const uploadUrl = new URL(`${getApiBaseUrl().replace(/\/$/, "")}/documents/scan?Id=${companyId}&pid=${patient.patientId}&Cat_id=${categoryId}`, window.location.origin);
     uploadUrl.searchParams.set("documentName", uploadName);
     uploadUrl.searchParams.set("pages", String(webTwain.HowManyImagesInBuffer));
     if (dateOfService) {
@@ -274,10 +274,6 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
         <div>
           <h2>Scan Document</h2>
           <p>{patient ? `Scanning for ${patient.lastName}, ${patient.firstName}` : "Select a patient from Find Patient first."}</p>
-        </div>
-        <div className="scan-page-count" aria-live="polite">
-          <strong>{pageCount}</strong>
-          <span>{pageCount === 1 ? "page scanned" : "pages scanned"}</span>
         </div>
       </div>
       <div className="scanner-toolbar">
