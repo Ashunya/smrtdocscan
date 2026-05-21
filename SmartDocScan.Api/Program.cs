@@ -760,6 +760,11 @@ app.MapPost("/api/auth/change-password", async (ChangePasswordRequest request, C
         return Results.BadRequest(new { message = "Password changes are only available for local SmartDocScan users." });
     }
 
+    if (!string.Equals(request.NewPassword, request.ConfirmPassword, StringComparison.Ordinal))
+    {
+        return Results.BadRequest(new { message = "New passwords do not match." });
+    }
+
     var username = principal.FindFirst("username")?.Value;
     var changed = await repository.ChangePasswordAsync(username ?? "", request.CurrentPassword, request.NewPassword, cancellationToken);
     return changed ? Results.NoContent() : Results.BadRequest(new { message = "Current password is incorrect." });

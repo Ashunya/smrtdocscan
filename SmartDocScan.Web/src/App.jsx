@@ -286,7 +286,12 @@ export default function App() {
     setCpSaving(true);
     setCpError("");
     try {
-      await changePassword({ username: currentUser.username, currentPassword: cpForm.current, newPassword: cpForm.next });
+      await changePassword({
+        username: currentUser.username,
+        currentPassword: cpForm.current,
+        newPassword: cpForm.next,
+        confirmPassword: cpForm.confirm,
+      });
       setCpOpen(false);
       setNotice({ type: "success", text: "Password changed successfully." });
     } catch (error) {

@@ -227,10 +227,10 @@ export function getMicrosoftSignInUrl(returnUrl = "/") {
   return `${API_BASE_URL}/auth/microsoft?${params.toString()}`;
 }
 
-export function changePassword({ username, currentPassword, newPassword }) {
+export function changePassword({ username, currentPassword, newPassword, confirmPassword }) {
   return request("/auth/change-password", {
     method: "POST",
-    body: JSON.stringify({ username, currentPassword, newPassword }),
+    body: JSON.stringify({ username, currentPassword, newPassword, confirmPassword }),
   });
 }
 

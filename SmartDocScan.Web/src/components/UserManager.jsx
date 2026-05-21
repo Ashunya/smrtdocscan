@@ -22,6 +22,7 @@ const blankUser = {
   username: "",
   name: "",
   password: "",
+  confirmPassword: "",
 };
 
 export function UserManager({ companyId, onNotice }) {
@@ -55,7 +56,7 @@ export function UserManager({ companyId, onNotice }) {
   }, [companyId, onNotice]);
 
   function editUser(user) {
-    setForm({ ...user, password: "" });
+    setForm({ ...user, password: "", confirmPassword: "" });
   }
 
   function updateField(field, value) {
@@ -64,10 +65,27 @@ export function UserManager({ companyId, onNotice }) {
 
   async function handleSubmit(event) {
     event.preventDefault();
+    const editingExisting = users.some((user) => user.username === form.username);
+    if (!editingExisting && !form.password) {
+      onNotice({ type: "error", text: "Password is required for new users." });
+      return;
+    }
+    if (form.password || form.confirmPassword) {
+      if (form.password !== form.confirmPassword) {
+        onNotice({ type: "error", text: "Passwords do not match." });
+        return;
+      }
+    }
+
     setSaving(true);
     onNotice(null);
     try {
-      const saved = await saveUser({ ...form, companyId });
+      const payload = { ...form, companyId };
+      if (editingExisting && !payload.password) {
+        delete payload.password;
+        delete payload.confirmPassword;
+      }
+      const saved = await saveUser(payload);
       setUsers((current) => [saved, ...current.filter((user) => user.username !== saved.username)]);
       setForm(blankUser);
       onNotice({ type: "success", text: "User saved." });
@@ -111,7 +129,22 @@ export function UserManager({ companyId, onNotice }) {
         </label>
         <label>
           Password
-          <input value={form.password || ""} onChange={(event) => updateField("password", event.target.value)} required />
+          <input
+            type="password"
+            value={form.password || ""}
+            onChange={(event) => updateField("password", event.target.value)}
+            placeholder={users.some((user) => user.username === form.username) ? "Leave blank to keep current password" : ""}
+            autoComplete="new-password"
+          />
+        </label>
+        <label>
+          Confirm Password
+          <input
+            type="password"
+            value={form.confirmPassword || ""}
+            onChange={(event) => updateField("confirmPassword", event.target.value)}
+            autoComplete="new-password"
+          />
         </label>
 
         <div className="permission-grid">

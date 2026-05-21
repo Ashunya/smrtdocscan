@@ -78,18 +78,32 @@ public sealed class UserRepository
 
     public async Task<UserDto> UpsertAsync(UserUpsertRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Password))
+        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Name))
         {
-            throw new InvalidOperationException("Username, name, and password are required.");
+            throw new InvalidOperationException("Username and name are required.");
         }
 
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         var exists = await ExistsAsync(connection, request.Username.Trim(), cancellationToken);
+        var passwordProvided = !string.IsNullOrWhiteSpace(request.Password);
+        if (!exists && !passwordProvided)
+        {
+            throw new InvalidOperationException("Password is required for new users.");
+        }
+
+        if (passwordProvided
+            && !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Passwords do not match.");
+        }
+
         await using var command = connection.CreateCommand();
-        command.CommandText = exists ? UpdateSql : InsertSql;
-        AddUpsertParameters(command, request, HashPassword(request.Password!.Trim()));
+        command.CommandText = exists
+            ? (passwordProvided ? UpdateSql : UpdateSqlWithoutPassword)
+            : InsertSql;
+        AddUpsertParameters(command, request, passwordProvided ? HashPassword(request.Password!.Trim()) : null);
         await command.ExecuteNonQueryAsync(cancellationToken);
 
         return await GetByUsernameAsync(request.Username.Trim(), cancellationToken)
@@ -148,11 +162,14 @@ public sealed class UserRepository
         return await reader.ReadAsync(cancellationToken) ? MapUser(reader) : null;
     }
 
-    private static void AddUpsertParameters(SqlCommand command, UserUpsertRequest request, string passwordHash)
+    private static void AddUpsertParameters(SqlCommand command, UserUpsertRequest request, string? passwordHash)
     {
         command.Parameters.AddWithValue("@username", request.Username!.Trim());
         command.Parameters.AddWithValue("@name", request.Name!.Trim());
-        command.Parameters.AddWithValue("@password", passwordHash);
+        if (!string.IsNullOrWhiteSpace(passwordHash))
+        {
+            command.Parameters.AddWithValue("@password", passwordHash);
+        }
         command.Parameters.AddWithValue("@companyId", request.CompanyId);
         command.Parameters.AddWithValue("@uploadDoc", Flag(request.UploadDocument));
         command.Parameters.AddWithValue("@scanDoc", Flag(request.ScanDocument));
@@ -313,6 +330,27 @@ public sealed class UserRepository
         UPDATE usersinfo
         SET name = @name,
             password = @password,
+            comp_id = @companyId,
+            upload_doc = @uploadDoc,
+            scan_doc = @scanDoc,
+            delete_doc = @deleteDoc,
+            delete_manage = @deleteManage,
+            print_doc = @printDoc,
+            download_doc = @downloadDoc,
+            add_cat = @addCat,
+            add_users = @addUsers,
+            add_patients = @addPatients,
+            box = @box,
+            report = @report,
+            su = @su,
+            disabled = @disabled,
+            IsAdmin = @isAdmin
+        WHERE username = @username;
+        """;
+
+    private const string UpdateSqlWithoutPassword = """
+        UPDATE usersinfo
+        SET name = @name,
             comp_id = @companyId,
             upload_doc = @uploadDoc,
             scan_doc = @scanDoc,

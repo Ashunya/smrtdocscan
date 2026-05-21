@@ -595,6 +595,7 @@ tbody tr:nth-child(odd) {
 }
 
 .user-form input[type="text"],
+.user-form input[type="password"],
 .user-form input:not([type]),
 .company-form input {
   height: 40px;
@@ -1107,6 +1108,7 @@ tbody tr:nth-child(odd) {
 .document-upload input,
 .document-upload select,
 .user-form input[type="text"],
+.user-form input[type="password"],
 .user-form input:not([type]),
 .company-form input,
 .category-form input,
