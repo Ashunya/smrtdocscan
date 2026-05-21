@@ -176,7 +176,7 @@ app.MapGet("/api/patients/{patientId:int}", async (int patientId, ClaimsPrincipa
 
 app.MapPost("/api/patients", async (PatientUpsertRequest request, ClaimsPrincipal principal, PatientRepository repository, CancellationToken cancellationToken) =>
 {
-    if (!CanAccessCompany(principal, request.CompanyId))
+    if (!CanAccessCompany(principal, request.CompanyId) || !CanManagePatients(principal))
     {
         return Results.Forbid();
     }
@@ -200,7 +200,7 @@ app.MapPut("/api/patients/{patientId:int}", async (int patientId, PatientUpsertR
         return Results.NotFound();
     }
 
-    if (!CanAccessCompany(principal, existingPatient.CompanyId))
+    if (!CanAccessCompany(principal, existingPatient.CompanyId) || !CanManagePatients(principal))
     {
         return Results.Forbid();
     }
@@ -234,7 +234,7 @@ app.MapDelete("/api/patients/{patientId:int}", async (int patientId, ClaimsPrinc
         return Results.NotFound(new { message = "Patient not found." });
     }
 
-    if (!CanAccessCompany(principal, existingPatient.CompanyId) || !CanManagePatients(principal))
+    if (!CanAccessCompany(principal, existingPatient.CompanyId) || !IsElevated(principal))
     {
         return Results.Forbid();
     }
@@ -401,25 +401,22 @@ app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal pr
         return validationResult;
     }
 
-    var relativeUrl = Path.Combine(companyId.ToString(), patientId.ToString(), categoryId + "_" + safeName).Replace('\\', '/');
     var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
-    var targetDirectory = Path.Combine(storeRoot, companyId.ToString(), patientId.ToString());
-    Directory.CreateDirectory(targetDirectory);
-    var targetPath = Path.Combine(targetDirectory, categoryId + "_" + safeName);
-
-    await using (var stream = File.Create(targetPath))
-    {
-        await file.CopyToAsync(stream, cancellationToken);
-    }
+    var savedDocument = await SaveUploadedDocumentAsync(file, storeRoot, companyId, patientId, categoryId, safeName, cancellationToken);
 
     var pages = int.TryParse(form["pages"], out var parsedPages) ? Math.Max(parsedPages, 1) : 1;
     var dateOfService = ParseDateOnly(form["dateOfService"]);
-    var document = await repository.CreateAsync(companyId, patientId, categoryId, safeName, relativeUrl, pages, form["uploadedBy"], dateOfService, cancellationToken);
+    var document = await repository.CreateAsync(companyId, patientId, categoryId, savedDocument.SafeName, savedDocument.RelativeUrl, pages, form["uploadedBy"], dateOfService, cancellationToken);
     return Results.Created($"/api/documents/{document.DocumentId}", document);
 }).RequireAuthorization();
 
 app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincipal principal, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
+    if (!httpRequest.HasFormContentType)
+    {
+        return Results.BadRequest(new { message = "Multipart form data is required." });
+    }
+
     var file = httpRequest.Form.Files["RemoteFile"] ?? httpRequest.Form.Files["file"];
     if (file is null || file.Length == 0)
     {
@@ -449,20 +446,12 @@ app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincip
         return validationResult;
     }
 
-    var relativeUrl = Path.Combine(companyId.ToString(), patientId.ToString(), categoryId + "_" + safeName).Replace('\\', '/');
     var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
-    var targetDirectory = Path.Combine(storeRoot, companyId.ToString(), patientId.ToString());
-    Directory.CreateDirectory(targetDirectory);
-    var targetPath = Path.Combine(targetDirectory, categoryId + "_" + safeName);
-
-    await using (var stream = File.Create(targetPath))
-    {
-        await file.CopyToAsync(stream, cancellationToken);
-    }
+    var savedDocument = await SaveUploadedDocumentAsync(file, storeRoot, companyId, patientId, categoryId, safeName, cancellationToken);
 
     var pages = int.TryParse(httpRequest.Query["pages"], out var parsedPages) ? Math.Max(parsedPages, 1) : 1;
     var dateOfService = ParseDateOnly(httpRequest.Query["dateOfService"]);
-    var document = await repository.CreateAsync(companyId, patientId, categoryId, safeName, relativeUrl, pages, "Scanner", dateOfService, cancellationToken);
+    var document = await repository.CreateAsync(companyId, patientId, categoryId, savedDocument.SafeName, savedDocument.RelativeUrl, pages, "Scanner", dateOfService, cancellationToken);
     return Results.Ok(document);
 }).RequireAuthorization();
 
@@ -1157,6 +1146,55 @@ static string BuildStoredDocumentName(string? requestedName, string originalFile
     }
 
     return safeName;
+}
+
+static async Task<(string SafeName, string RelativeUrl)> SaveUploadedDocumentAsync(
+    IFormFile file,
+    string storeRoot,
+    int companyId,
+    int patientId,
+    int categoryId,
+    string safeName,
+    CancellationToken cancellationToken)
+{
+    var targetDirectory = Path.Combine(storeRoot, companyId.ToString(), patientId.ToString());
+    Directory.CreateDirectory(targetDirectory);
+
+    for (var attempt = 0; attempt < 10_000; attempt++)
+    {
+        var candidateName = AddFileNameSuffix(safeName, attempt);
+        var storedFileName = categoryId + "_" + candidateName;
+        var targetPath = Path.Combine(targetDirectory, storedFileName);
+
+        try
+        {
+            await using var stream = new FileStream(targetPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, bufferSize: 81920, useAsync: true);
+            await file.CopyToAsync(stream, cancellationToken);
+
+            var relativeUrl = Path.Combine(companyId.ToString(), patientId.ToString(), storedFileName).Replace('\\', '/');
+            return (candidateName, relativeUrl);
+        }
+        catch (IOException) when (File.Exists(targetPath))
+        {
+            // Another document already uses this name. Try a numeric suffix without overwriting it.
+        }
+    }
+
+    throw new IOException("Unable to allocate a unique stored document name.");
+}
+
+static string AddFileNameSuffix(string fileName, int suffix)
+{
+    if (suffix <= 0)
+    {
+        return fileName;
+    }
+
+    var extension = Path.GetExtension(fileName);
+    var name = Path.GetFileNameWithoutExtension(fileName);
+    return string.IsNullOrWhiteSpace(extension)
+        ? $"{name}-{suffix}"
+        : $"{name}-{suffix}{extension}";
 }
 
 static async Task<IResult?> ValidateUploadedDocumentAsync(IFormFile file, string storedFileName, long maxDocumentUploadBytes, CancellationToken cancellationToken)
