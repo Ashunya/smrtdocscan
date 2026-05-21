@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -36,6 +37,20 @@ builder.Services.AddSingleton<UserRepository>();
 builder.Services.AddSingleton<AuthRepository>();
 builder.Services.AddSingleton<SettingsRepository>();
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            GetRateLimitPartitionKey(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(5),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+});
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -59,7 +74,9 @@ var authBuilder = builder.Services
         options.Cookie.Name = "smartdocscan.session";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
         var cookieDomain = builder.Configuration["Authentication:CookieDomain"];
         if (!string.IsNullOrWhiteSpace(cookieDomain))
         {
@@ -147,6 +164,7 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 app.UseCors();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -706,7 +724,7 @@ app.MapPost("/api/auth/login", async (LoginRequest request, UserRepository repos
 
     await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, CreatePrincipal(user, "local"));
     return Results.Ok(new LoginResponse { User = user });
-});
+}).RequireRateLimiting("auth");
 
 app.MapPost("/api/auth/verify-email-otp", async (VerifyOtpRequest request, AuthRepository authRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
@@ -718,7 +736,7 @@ app.MapPost("/api/auth/verify-email-otp", async (VerifyOtpRequest request, AuthR
 
     await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, CreatePrincipal(user, "local"));
     return Results.Ok(new LoginResponse { User = user });
-});
+}).RequireRateLimiting("auth");
 
 app.MapGet("/api/auth/microsoft", async (HttpContext httpContext) =>
 {
@@ -733,7 +751,7 @@ app.MapGet("/api/auth/microsoft", async (HttpContext httpContext) =>
         httpContext.RequestServices.GetRequiredService<IConfiguration>());
 
     return Results.Challenge(new AuthenticationProperties { RedirectUri = redirectUri }, [OpenIdConnectDefaults.AuthenticationScheme]);
-});
+}).RequireRateLimiting("auth");
 
 app.MapPost("/api/auth/change-password", async (ChangePasswordRequest request, ClaimsPrincipal principal, UserRepository repository, CancellationToken cancellationToken) =>
 {
@@ -745,7 +763,7 @@ app.MapPost("/api/auth/change-password", async (ChangePasswordRequest request, C
     var username = principal.FindFirst("username")?.Value;
     var changed = await repository.ChangePasswordAsync(username ?? "", request.CurrentPassword, request.NewPassword, cancellationToken);
     return changed ? Results.NoContent() : Results.BadRequest(new { message = "Current password is incorrect." });
-}).RequireAuthorization();
+}).RequireAuthorization().RequireRateLimiting("auth");
 
 app.MapPost("/api/auth/logout", async (HttpContext httpContext) =>
 {
@@ -901,6 +919,11 @@ static bool CanManageUsers(ClaimsPrincipal principal)
 static bool CanManagePatients(ClaimsPrincipal principal)
 {
     return IsElevated(principal) || ReadBoolClaim(principal, "add_patients");
+}
+
+static string GetRateLimitPartitionKey(HttpContext httpContext)
+{
+    return httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 }
 
 static bool CanManageBoxes(ClaimsPrincipal principal)
