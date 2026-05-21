@@ -187,6 +187,13 @@ authBuilder.AddOpenIdConnect(options =>
         await AuditAsync(auditRepository, "auth.microsoft.login", user.Username, user.CompanyId, "user", user.Username, "success", context.HttpContext);
         context.Principal = CreatePrincipal(user, "microsoft");
     };
+    options.Events.OnRemoteFailure = context =>
+    {
+        context.HandleResponse();
+        var redirectUri = BuildPostSignInRedirect("/", context.HttpContext.RequestServices.GetRequiredService<IConfiguration>());
+        context.Response.Redirect(AppendQueryString(redirectUri, "authError", "microsoft"));
+        return Task.CompletedTask;
+    };
 });
 builder.Services.AddAuthorization();
 
@@ -849,6 +856,12 @@ app.MapGet("/api/auth/me", (ClaimsPrincipal principal) =>
 
 app.MapPost("/api/auth/login", async (LoginRequest request, UserRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
+    if (!IsReasonableAuthInput(request.Username, 320) || !IsReasonableAuthInput(request.Password, 1024))
+    {
+        await AuditAsync(auditRepository, "auth.local.login", request.Username, null, "user", request.Username, "failure", httpContext);
+        return Results.Unauthorized();
+    }
+
     var user = await repository.LoginAsync(request.Username, request.Password, cancellationToken);
     if (user is null)
     {
@@ -856,21 +869,15 @@ app.MapPost("/api/auth/login", async (LoginRequest request, UserRepository repos
         return Results.Unauthorized();
     }
 
+    await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, CreatePrincipal(user, "local"));
     await AuditAsync(auditRepository, "auth.local.login", user.Username, user.CompanyId, "user", user.Username, "success", httpContext);
     return Results.Ok(new LoginResponse { User = user });
 }).RequireRateLimiting("auth");
 
-app.MapPost("/api/auth/verify-email-otp", async (VerifyOtpRequest request, AuthRepository authRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
+app.MapPost("/api/auth/verify-email-otp", () =>
 {
-    var user = await authRepository.VerifyEmailOtpChallengeAsync(request.ChallengeId, request.Code, cancellationToken);
-    if (user is null)
-    {
-        return Results.Unauthorized();
-    }
-
-    await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, CreatePrincipal(user, "local"));
-    return Results.Ok(new LoginResponse { User = user });
+    return Results.BadRequest(new { message = "Email OTP sign-in is not enabled." });
 }).RequireRateLimiting("auth");
 
 app.MapGet("/api/auth/microsoft", async (HttpContext httpContext) =>
@@ -893,6 +900,13 @@ app.MapPost("/api/auth/change-password", async (ChangePasswordRequest request, C
     if (principal.FindFirst("auth_provider")?.Value != "local")
     {
         return Results.BadRequest(new { message = "Password changes are only available for local SmartDocScan users." });
+    }
+
+    if (!IsReasonableAuthInput(request.CurrentPassword, 1024)
+        || !IsReasonableAuthInput(request.NewPassword, 1024)
+        || !IsReasonableAuthInput(request.ConfirmPassword, 1024))
+    {
+        return Results.BadRequest(new { message = "Password value is invalid." });
     }
 
     if (!string.Equals(request.NewPassword, request.ConfirmPassword, StringComparison.Ordinal))
@@ -1191,6 +1205,17 @@ static string BuildPostSignInRedirect(string? returnUrl, IConfiguration configur
 
     var webOrigin = allowedOrigins.FirstOrDefault(origin => Uri.TryCreate(origin, UriKind.Absolute, out _));
     return string.IsNullOrWhiteSpace(webOrigin) ? returnUrl : new Uri(new Uri(webOrigin.TrimEnd('/') + "/"), returnUrl.TrimStart('/')).ToString();
+}
+
+static string AppendQueryString(string uri, string name, string value)
+{
+    var separator = uri.Contains('?', StringComparison.Ordinal) ? "&" : "?";
+    return $"{uri}{separator}{Uri.EscapeDataString(name)}={Uri.EscapeDataString(value)}";
+}
+
+static bool IsReasonableAuthInput(string? value, int maxLength)
+{
+    return !string.IsNullOrWhiteSpace(value) && value.Trim().Length <= maxLength;
 }
 
 static bool CanAccessCompany(ClaimsPrincipal principal, int companyId)
