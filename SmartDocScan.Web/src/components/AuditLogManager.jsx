@@ -97,7 +97,7 @@ export function AuditLogManager({ companyId, onNotice }) {
         <table>
           <thead>
             <tr>
-              <th>Created</th>
+              <th>Created (Pacific)</th>
               <th>Action</th>
               <th>Outcome</th>
               <th>Actor</th>
@@ -130,5 +130,22 @@ export function AuditLogManager({ companyId, onNotice }) {
 }
 
 function formatDate(value) {
-  return value ? new Date(value).toLocaleString() : "";
+  if (!value) {
+    return "";
+  }
+
+  const utcValue = typeof value === "string" && !/[zZ]|[+-]\d{2}:\d{2}$/.test(value)
+    ? `${value}Z`
+    : value;
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  }).format(new Date(utcValue));
 }
