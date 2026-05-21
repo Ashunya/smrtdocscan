@@ -45,6 +45,13 @@ public sealed class AuthRepository
         var linkedUser = await FindLinkedExternalUserAsync(connection, provider, tenantId, subjectId, cancellationToken);
         if (linkedUser is not null)
         {
+            if (!linkedUser.IsAdmin
+                && !linkedUser.SuperUser
+                && !await IsTenantAllowedAsync(linkedUser.CompanyId, provider, tenantId, cancellationToken))
+            {
+                return null;
+            }
+
             return linkedUser;
         }
 
