@@ -1,6 +1,6 @@
 import { ScanLine, Trash2, Upload, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { getApiBaseUrl, listCategories } from "../api/client";
+import { listCategories, uploadDocument } from "../api/client";
 
 export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
   const webTwainRef = useRef(null);
@@ -12,6 +12,7 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
   const [pageCount, setPageCount] = useState(0);
   const [documentName, setDocumentName] = useState("");
   const [dateOfService, setDateOfService] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -157,7 +158,7 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
     );
   }
 
-  function uploadScannedDocument(format) {
+  async function uploadScannedDocument(format) {
     if (!categoryId) {
       onNotice({ type: "error", text: "Choose a category first." });
       return;
@@ -171,50 +172,33 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
 
     const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
     const isTiff = format === "tif";
+    const currentPageCount = Number(webTwain.HowManyImagesInBuffer) || 0;
     const uploadName = buildDocumentFileName(documentName, `ScanImage_${stamp}`, isTiff ? "tif" : "pdf");
-    const uploadUrl = new URL(`${getApiBaseUrl().replace(/\/$/, "")}/documents/scan?Id=${companyId}&pid=${patient.patientId}&Cat_id=${categoryId}`, window.location.origin);
-    uploadUrl.searchParams.set("documentName", uploadName);
-    uploadUrl.searchParams.set("pages", String(webTwain.HowManyImagesInBuffer));
-    if (dateOfService) {
-      uploadUrl.searchParams.set("dateOfService", dateOfService);
-    }
-    webTwain.IfSSL = uploadUrl.protocol === "https:";
-    webTwain.HTTPPort = uploadUrl.port ? Number(uploadUrl.port) : (webTwain.IfSSL ? 443 : 80);
-    const uploadMethod = isTiff
-      ? webTwain.HTTPUploadAllThroughPostAsMultiPageTIFF
-      : webTwain.HTTPUploadAllThroughPostAsPDF;
-    if (!uploadMethod) {
-      onNotice({ type: "error", text: isTiff
-        ? "Multi-page TIF save is not supported by this scanner component. Save as PDF or update the Dynamsoft resources."
-        : "Save as PDF is not supported by this scanner component." });
-      return;
-    }
 
-    uploadMethod.call(
-      webTwain,
-      uploadUrl.hostname,
-      `${uploadUrl.pathname}${uploadUrl.search}`,
-      uploadName,
-      () => {
-        clearScannerBuffer();
-        setDocumentName("");
-        setDateOfService("");
-        onNotice({ type: "success", text: "Scanned document saved successfully." });
-        onSaved?.();
-      },
-      (_code, message) => {
-        const msg = message || "";
-        if (msg.includes("OK (200)") || msg.includes("OK (201)")) {
-          clearScannerBuffer();
-          setDocumentName("");
-          setDateOfService("");
-          onNotice({ type: "success", text: `Scanned document saved as ${isTiff ? "TIF" : "PDF"}.` });
-          onSaved?.();
-        } else {
-          onNotice({ type: "error", text: msg || "Scan upload failed." });
-        }
-      }
-    );
+    setSaving(true);
+    try {
+      const blob = await convertScansToBlob(webTwain, isTiff ? "tif" : "pdf");
+      const file = new File([blob], uploadName, { type: blob.type || (isTiff ? "image/tiff" : "application/pdf") });
+      await uploadDocument({
+        companyId,
+        patientId: patient.patientId,
+        categoryId,
+        documentName: uploadName,
+        dateOfService,
+        pages: currentPageCount,
+        uploadedBy: "Scanner",
+        file,
+      });
+      clearScannerBuffer();
+      setDocumentName("");
+      setDateOfService("");
+      onNotice({ type: "success", text: `Scanned document saved as ${isTiff ? "TIF" : "PDF"}.` });
+      onSaved?.();
+    } catch (error) {
+      onNotice({ type: "error", text: error?.message || "Scan upload failed." });
+    } finally {
+      setSaving(false);
+    }
   }
 
   function deleteCurrentPage() {
@@ -299,25 +283,25 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
           <div className="scanner-count-pill" aria-live="polite">
             {pageCount} {pageCount === 1 ? "page" : "pages"}
           </div>
-          <button className="primary-button" type="button" onClick={acquireImage} disabled={!ready || !patient}>
+          <button className="primary-button" type="button" onClick={acquireImage} disabled={!ready || !patient || saving}>
             <ScanLine size={18} />
             Scan
           </button>
-          <button className="secondary-button danger-text" type="button" onClick={deleteCurrentPage} disabled={!ready || !patient || pageCount === 0}>
+          <button className="secondary-button danger-text" type="button" onClick={deleteCurrentPage} disabled={!ready || !patient || pageCount === 0 || saving}>
             <Trash2 size={18} />
             Delete Page
           </button>
-          <button className="secondary-button" type="button" onClick={clearPages} disabled={!ready || !patient || pageCount === 0}>
+          <button className="secondary-button" type="button" onClick={clearPages} disabled={!ready || !patient || pageCount === 0 || saving}>
             <XCircle size={18} />
             Clear
           </button>
-          <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("pdf")} disabled={!ready || !patient || pageCount === 0}>
+          <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("pdf")} disabled={!ready || !patient || pageCount === 0 || saving}>
             <Upload size={18} />
-            Save as PDF
+            {saving ? "Saving..." : "Save as PDF"}
           </button>
-          <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("tif")} disabled={!ready || !patient || pageCount === 0}>
+          <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("tif")} disabled={!ready || !patient || pageCount === 0 || saving}>
             <Upload size={18} />
-            Save as TIF
+            {saving ? "Saving..." : "Save as TIF"}
           </button>
         </div>
       </div>
@@ -334,6 +318,36 @@ function buildDocumentFileName(name, fallback, extension) {
   const withoutPath = base.split(/[\\/]/).pop() || fallback;
   const withoutExtension = withoutPath.replace(/\.[^.]+$/, "");
   return `${withoutExtension}.${extension}`;
+}
+
+function convertScansToBlob(webTwain, format) {
+  const imageType = getDwtImageType(format);
+  const indices = Array.from({ length: webTwain.HowManyImagesInBuffer }, (_value, index) => index);
+
+  if (typeof webTwain.convertToBlob === "function") {
+    return webTwain.convertToBlob(imageType, indices);
+  }
+
+  if (typeof webTwain.ConvertToBlob === "function") {
+    return new Promise((resolve, reject) => {
+      webTwain.ConvertToBlob(
+        indices,
+        imageType,
+        (blob) => resolve(blob),
+        (code, message) => reject(new Error(message || `Scanner document conversion failed (${code}).`))
+      );
+    });
+  }
+
+  return Promise.reject(new Error("This Dynamsoft scanner component cannot export reviewed pages for upload."));
+}
+
+function getDwtImageType(format) {
+  const imageTypes = window.Dynamsoft?.DWT?.EnumDWT_ImageType || {};
+  if (format === "tif") {
+    return imageTypes.IT_MULTIPAGE_TIF ?? imageTypes.IT_TIF ?? 8;
+  }
+  return imageTypes.IT_MULTIPAGE_PDF ?? imageTypes.IT_PDF ?? 7;
 }
 
 function loadScript(src) {

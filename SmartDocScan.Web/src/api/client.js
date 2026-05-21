@@ -126,7 +126,7 @@ export function listDocuments({ companyId, patientId }) {
   return request(`/documents?${params.toString()}`);
 }
 
-export function uploadDocument({ companyId, patientId, categoryId, file, documentName, dateOfService, uploadedBy = "Miranda" }) {
+export function uploadDocument({ companyId, patientId, categoryId, file, documentName, dateOfService, pages, uploadedBy = "Miranda" }) {
   const formData = new FormData();
   formData.set("companyId", String(companyId));
   formData.set("patientId", String(patientId));
@@ -137,6 +137,9 @@ export function uploadDocument({ companyId, patientId, categoryId, file, documen
   }
   if (dateOfService) {
     formData.set("dateOfService", dateOfService);
+  }
+  if (pages) {
+    formData.set("pages", String(pages));
   }
   formData.set("file", file);
   return requestForm("/documents", formData);
