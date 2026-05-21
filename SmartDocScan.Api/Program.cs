@@ -259,6 +259,7 @@ app.MapPost("/api/patients", async (PatientUpsertRequest request, ClaimsPrincipa
 {
     if (!CanAccessCompany(principal, request.CompanyId) || !CanManagePatients(principal))
     {
+        await AuditForbiddenAsync(auditRepository, "patient.create", principal, request.CompanyId, "patient", request.ExternalPatientId, httpContext);
         return Results.Forbid();
     }
 
@@ -284,16 +285,19 @@ app.MapPut("/api/patients/{patientId:int}", async (int patientId, PatientUpsertR
 
     if (!CanAccessCompany(principal, existingPatient.CompanyId) || !CanManagePatients(principal))
     {
+        await AuditForbiddenAsync(auditRepository, "patient.update", principal, existingPatient.CompanyId, "patient", patientId.ToString(), httpContext);
         return Results.Forbid();
     }
 
     if (request.CompanyId != existingPatient.CompanyId && !IsElevated(principal))
     {
+        await AuditForbiddenAsync(auditRepository, "patient.update", principal, existingPatient.CompanyId, "patient", patientId.ToString(), httpContext);
         return Results.Forbid();
     }
 
     if (!CanAccessCompany(principal, request.CompanyId))
     {
+        await AuditForbiddenAsync(auditRepository, "patient.update", principal, request.CompanyId, "patient", patientId.ToString(), httpContext);
         return Results.Forbid();
     }
 
@@ -322,6 +326,7 @@ app.MapDelete("/api/patients/{patientId:int}", async (int patientId, ClaimsPrinc
 
     if (!CanAccessCompany(principal, existingPatient.CompanyId) || !IsElevated(principal))
     {
+        await AuditForbiddenAsync(auditRepository, "patient.delete", principal, existingPatient.CompanyId, "patient", patientId.ToString(), httpContext);
         return Results.Forbid();
     }
 
@@ -369,7 +374,7 @@ app.MapPost("/api/boxes", async (BoxUpsertRequest request, ClaimsPrincipal princ
     }
 }).RequireAuthorization();
 
-app.MapDelete("/api/boxes/{boxId:int}", async (int boxId, ClaimsPrincipal principal, BoxRepository repository, CancellationToken cancellationToken) =>
+app.MapDelete("/api/boxes/{boxId:int}", async (int boxId, ClaimsPrincipal principal, BoxRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     var box = await repository.GetAsync(boxId, cancellationToken);
     if (box is null)
@@ -379,6 +384,7 @@ app.MapDelete("/api/boxes/{boxId:int}", async (int boxId, ClaimsPrincipal princi
 
     if (!CanAccessCompany(principal, box.CompanyId) || !CanManageBoxes(principal))
     {
+        await AuditForbiddenAsync(auditRepository, "box.delete", principal, box.CompanyId, "box", boxId.ToString(), httpContext);
         return Results.Forbid();
     }
 
@@ -403,10 +409,11 @@ app.MapGet("/api/categories", async (int companyId, ClaimsPrincipal principal, C
     return Results.Ok(categories);
 }).RequireAuthorization();
 
-app.MapPost("/api/categories", async (CategoryUpsertRequest request, ClaimsPrincipal principal, CategoryRepository repository, CancellationToken cancellationToken) =>
+app.MapPost("/api/categories", async (CategoryUpsertRequest request, ClaimsPrincipal principal, CategoryRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     if (!CanAccessCompany(principal, request.CompanyId) || !CanManageCategories(principal))
     {
+        await AuditForbiddenAsync(auditRepository, "category.create", principal, request.CompanyId, "category", request.CategoryName, httpContext);
         return Results.Forbid();
     }
 
@@ -421,7 +428,7 @@ app.MapPost("/api/categories", async (CategoryUpsertRequest request, ClaimsPrinc
     }
 }).RequireAuthorization();
 
-app.MapDelete("/api/categories/{categoryId:int}", async (int categoryId, ClaimsPrincipal principal, CategoryRepository repository, CancellationToken cancellationToken) =>
+app.MapDelete("/api/categories/{categoryId:int}", async (int categoryId, ClaimsPrincipal principal, CategoryRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     var category = await repository.GetAsync(categoryId, cancellationToken);
     if (category is null)
@@ -431,6 +438,7 @@ app.MapDelete("/api/categories/{categoryId:int}", async (int categoryId, ClaimsP
 
     if (!CanAccessCompany(principal, category.CompanyId) || !CanManageCategories(principal))
     {
+        await AuditForbiddenAsync(auditRepository, "category.delete", principal, category.CompanyId, "category", categoryId.ToString(), httpContext);
         return Results.Forbid();
     }
 
@@ -609,6 +617,7 @@ app.MapDelete("/api/documents/{documentId:int}", async (int documentId, ClaimsPr
 
     if (!CanAccessCompany(principal, document.CompanyId) || (!ReadBoolClaim(principal, "delete_document") && !IsElevated(principal)))
     {
+        await AuditForbiddenAsync(auditRepository, "document.delete", principal, document.CompanyId, "document", documentId.ToString(), httpContext);
         return Results.Forbid();
     }
 
@@ -649,6 +658,7 @@ app.MapPost("/api/companies", async (CompanyUpsertRequest request, ClaimsPrincip
 {
     if (!IsElevated(principal))
     {
+        await AuditForbiddenAsync(auditRepository, "company.upsert", principal, request.CompanyId, "company", request.CompanyId.ToString(), httpContext);
         return Results.Forbid();
     }
 
@@ -668,6 +678,7 @@ app.MapDelete("/api/companies/{companyId:int}", async (int companyId, ClaimsPrin
 {
     if (!IsElevated(principal))
     {
+        await AuditForbiddenAsync(auditRepository, "company.delete", principal, companyId, "company", companyId.ToString(), httpContext);
         return Results.Forbid();
     }
 
@@ -707,10 +718,12 @@ app.MapGet("/api/audit-logs", async (
     int? take,
     ClaimsPrincipal principal,
     AuditRepository repository,
+    HttpContext httpContext,
     CancellationToken cancellationToken) =>
 {
     if (!ReadBoolClaim(principal, "super_user"))
     {
+        await AuditForbiddenAsync(repository, "audit.read", principal, ReadCompanyId(principal), "audit", "audit_log", httpContext);
         return Results.Forbid();
     }
 
@@ -718,10 +731,11 @@ app.MapGet("/api/audit-logs", async (
     return Results.Ok(logs);
 }).RequireAuthorization();
 
-app.MapGet("/api/users", async (int companyId, ClaimsPrincipal principal, UserRepository repository, CancellationToken cancellationToken) =>
+app.MapGet("/api/users", async (int companyId, ClaimsPrincipal principal, UserRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     if (!CanAccessCompany(principal, companyId) || !CanManageUsers(principal))
     {
+        await AuditForbiddenAsync(auditRepository, "user.read", principal, companyId, "user", "users", httpContext);
         return Results.Forbid();
     }
 
@@ -733,11 +747,13 @@ app.MapPost("/api/users", async (UserUpsertRequest request, ClaimsPrincipal prin
 {
     if (!CanAccessCompany(principal, request.CompanyId) || !CanManageUsers(principal))
     {
+        await AuditForbiddenAsync(auditRepository, "user.upsert", principal, request.CompanyId, "user", request.Username, httpContext);
         return Results.Forbid();
     }
 
     if (!ReadBoolClaim(principal, "super_user") && (request.SuperUser || request.IsAdmin))
     {
+        await AuditForbiddenAsync(auditRepository, "user.upsert", principal, request.CompanyId, "user", request.Username, httpContext);
         return Results.Forbid();
     }
 
@@ -753,11 +769,13 @@ app.MapPost("/api/users", async (UserUpsertRequest request, ClaimsPrincipal prin
 
         if (!CanAccessCompany(principal, existingUser.CompanyId))
         {
+            await AuditForbiddenAsync(auditRepository, "user.upsert", principal, existingUser.CompanyId, "user", existingUser.Username, httpContext);
             return Results.Forbid();
         }
 
         if (!ReadBoolClaim(principal, "super_user") && (existingUser.SuperUser || existingUser.IsAdmin))
         {
+            await AuditForbiddenAsync(auditRepository, "user.upsert", principal, existingUser.CompanyId, "user", existingUser.Username, httpContext);
             return Results.Forbid();
         }
     }
@@ -785,11 +803,13 @@ app.MapDelete("/api/users/{username}", async (string username, ClaimsPrincipal p
 
     if (!CanAccessCompany(principal, user.CompanyId) || !CanManageUsers(principal))
     {
+        await AuditForbiddenAsync(auditRepository, "user.delete", principal, user.CompanyId, "user", decodedUsername, httpContext);
         return Results.Forbid();
     }
 
     if (!ReadBoolClaim(principal, "super_user") && (user.SuperUser || user.IsAdmin))
     {
+        await AuditForbiddenAsync(auditRepository, "user.delete", principal, user.CompanyId, "user", decodedUsername, httpContext);
         return Results.Forbid();
     }
 
@@ -806,10 +826,11 @@ app.MapDelete("/api/users/{username}", async (string username, ClaimsPrincipal p
     return deleted ? Results.NoContent() : Results.NotFound(new { message = "User not found." });
 }).RequireAuthorization();
 
-app.MapGet("/api/settings/security", async (ClaimsPrincipal principal, SettingsRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapGet("/api/settings/security", async (ClaimsPrincipal principal, SettingsRepository repository, AuditRepository auditRepository, IConfiguration configuration, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     if (!ReadBoolClaim(principal, "super_user"))
     {
+        await AuditForbiddenAsync(auditRepository, "settings.security.read", principal, ReadCompanyId(principal), "settings", "security", httpContext);
         return Results.Forbid();
     }
 
@@ -820,6 +841,7 @@ app.MapPost("/api/settings/security", async (SecuritySettingsDto request, Claims
 {
     if (!ReadBoolClaim(principal, "super_user"))
     {
+        await AuditForbiddenAsync(auditRepository, "settings.security.update", principal, ReadCompanyId(principal), "settings", "security", httpContext);
         return Results.Forbid();
     }
 
@@ -1004,6 +1026,18 @@ static Task AuditAsync(
         GetClientIpAddress(httpContext),
         details,
         httpContext.RequestAborted);
+}
+
+static Task AuditForbiddenAsync(
+    AuditRepository auditRepository,
+    string action,
+    ClaimsPrincipal principal,
+    int? companyId,
+    string? targetType,
+    string? targetId,
+    HttpContext httpContext)
+{
+    return AuditAsync(auditRepository, action, GetActor(principal), companyId, targetType, targetId, "forbidden", httpContext);
 }
 
 static bool ReadBoolClaim(ClaimsPrincipal principal, string type)
