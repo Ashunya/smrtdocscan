@@ -75,14 +75,15 @@ public sealed class UserRepository
             ?? throw new InvalidOperationException("User was saved but could not be loaded.");
     }
 
-    public async Task<bool> DeleteAsync(string username, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(string username, int companyId, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM usersinfo WHERE username = @username;";
+        command.CommandText = "DELETE FROM usersinfo WHERE username = @username AND comp_id = @companyId;";
         command.Parameters.AddWithValue("@username", username.Trim());
+        command.Parameters.AddWithValue("@companyId", companyId);
         return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
     }
 
@@ -119,7 +120,7 @@ public sealed class UserRepository
         return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken)) > 0;
     }
 
-    private async Task<UserDto?> GetByUsernameAsync(string username, CancellationToken cancellationToken)
+    public async Task<UserDto?> GetByUsernameAsync(string username, CancellationToken cancellationToken)
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);

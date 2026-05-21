@@ -109,7 +109,7 @@ public sealed class DocumentRepository
         return await GetAsync(documentId, cancellationToken);
     }
 
-    public async Task<bool> DeleteAsync(int documentId, string? deletedBy, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(int documentId, int companyId, string? deletedBy, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -120,9 +120,11 @@ public sealed class DocumentRepository
             SET deleted = 1,
                 deleted_on = @deletedOn,
                 deleted_by = @deletedBy
-            WHERE doc_id = @documentId;
+            WHERE doc_id = @documentId
+              AND comp_id = @companyId;
             """;
         command.Parameters.AddWithValue("@documentId", documentId);
+        command.Parameters.AddWithValue("@companyId", companyId);
         command.Parameters.AddWithValue("@deletedOn", DateTime.UtcNow);
         command.Parameters.AddWithValue("@deletedBy", string.IsNullOrWhiteSpace(deletedBy) ? DBNull.Value : deletedBy.Trim());
 

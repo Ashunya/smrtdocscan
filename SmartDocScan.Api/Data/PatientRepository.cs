@@ -74,7 +74,7 @@ public sealed class PatientRepository
         return await GetAsync(id, cancellationToken) ?? throw new InvalidOperationException("Patient was created but could not be loaded.");
     }
 
-    public async Task<PatientDto?> UpdateAsync(int patientId, PatientUpsertRequest request, CancellationToken cancellationToken = default)
+    public async Task<PatientDto?> UpdateAsync(int patientId, PatientUpsertRequest request, int existingCompanyId, CancellationToken cancellationToken = default)
     {
         await EnsureExternalPatientIdIsUniqueAsync(request.CompanyId, request.ExternalPatientId, patientId, cancellationToken);
 
@@ -93,22 +93,25 @@ public sealed class PatientRepository
                 physician = @physician,
                 box = @box,
                 ssn = @ssn
-            WHERE patient_id = @patientId;
+            WHERE patient_id = @patientId
+              AND comp_id = @existingCompanyId;
             """;
         command.Parameters.AddWithValue("@patientId", patientId);
+        command.Parameters.AddWithValue("@existingCompanyId", existingCompanyId);
         AddUpsertParameters(command, request);
         var rows = await command.ExecuteNonQueryAsync(cancellationToken);
         return rows == 0 ? null : await GetAsync(patientId, cancellationToken);
     }
 
-    public async Task<bool> DeleteAsync(int patientId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(int patientId, int companyId, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM patient WHERE patient_id = @patientId;";
+        command.CommandText = "DELETE FROM patient WHERE patient_id = @patientId AND comp_id = @companyId;";
         command.Parameters.AddWithValue("@patientId", patientId);
+        command.Parameters.AddWithValue("@companyId", companyId);
         return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
     }
 

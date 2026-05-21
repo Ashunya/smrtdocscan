@@ -163,10 +163,15 @@ app.MapGet("/api/patients", async (int companyId, string? search, int? take, Cla
     return Results.Ok(patients);
 }).RequireAuthorization();
 
-app.MapGet("/api/patients/{patientId:int}", async (int patientId, PatientRepository repository, CancellationToken cancellationToken) =>
+app.MapGet("/api/patients/{patientId:int}", async (int patientId, ClaimsPrincipal principal, PatientRepository repository, CancellationToken cancellationToken) =>
 {
     var patient = await repository.GetAsync(patientId, cancellationToken);
-    return patient is null ? Results.NotFound() : Results.Ok(patient);
+    if (patient is null)
+    {
+        return Results.NotFound();
+    }
+
+    return CanAccessCompany(principal, patient.CompanyId) ? Results.Ok(patient) : Results.Forbid();
 }).RequireAuthorization();
 
 app.MapPost("/api/patients", async (PatientUpsertRequest request, ClaimsPrincipal principal, PatientRepository repository, CancellationToken cancellationToken) =>
@@ -189,6 +194,22 @@ app.MapPost("/api/patients", async (PatientUpsertRequest request, ClaimsPrincipa
 
 app.MapPut("/api/patients/{patientId:int}", async (int patientId, PatientUpsertRequest request, ClaimsPrincipal principal, PatientRepository repository, CancellationToken cancellationToken) =>
 {
+    var existingPatient = await repository.GetAsync(patientId, cancellationToken);
+    if (existingPatient is null)
+    {
+        return Results.NotFound();
+    }
+
+    if (!CanAccessCompany(principal, existingPatient.CompanyId))
+    {
+        return Results.Forbid();
+    }
+
+    if (request.CompanyId != existingPatient.CompanyId && !IsElevated(principal))
+    {
+        return Results.Forbid();
+    }
+
     if (!CanAccessCompany(principal, request.CompanyId))
     {
         return Results.Forbid();
@@ -196,7 +217,7 @@ app.MapPut("/api/patients/{patientId:int}", async (int patientId, PatientUpsertR
 
     try
     {
-        var patient = await repository.UpdateAsync(patientId, request, cancellationToken);
+        var patient = await repository.UpdateAsync(patientId, request, existingPatient.CompanyId, cancellationToken);
         return patient is null ? Results.NotFound() : Results.Ok(patient);
     }
     catch (InvalidOperationException ex)
@@ -205,11 +226,22 @@ app.MapPut("/api/patients/{patientId:int}", async (int patientId, PatientUpsertR
     }
 }).RequireAuthorization();
 
-app.MapDelete("/api/patients/{patientId:int}", async (int patientId, PatientRepository repository, CancellationToken cancellationToken) =>
+app.MapDelete("/api/patients/{patientId:int}", async (int patientId, ClaimsPrincipal principal, PatientRepository repository, CancellationToken cancellationToken) =>
 {
+    var existingPatient = await repository.GetAsync(patientId, cancellationToken);
+    if (existingPatient is null)
+    {
+        return Results.NotFound(new { message = "Patient not found." });
+    }
+
+    if (!CanAccessCompany(principal, existingPatient.CompanyId) || !CanManagePatients(principal))
+    {
+        return Results.Forbid();
+    }
+
     try
     {
-        return await repository.DeleteAsync(patientId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "Patient not found." });
+        return await repository.DeleteAsync(patientId, existingPatient.CompanyId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "Patient not found." });
     }
     catch (SqlException)
     {
@@ -335,7 +367,24 @@ app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal pr
         return Results.Forbid();
     }
 
+    if (!ReadBoolClaim(principal, "upload_document") && !IsElevated(principal))
+    {
+        return Results.Forbid();
+    }
+
+    var validationResult = ValidateUploadedDocument(file, maxDocumentUploadBytes);
+    if (validationResult is not null)
+    {
+        return validationResult;
+    }
+
     var safeName = BuildStoredDocumentName(form["documentName"], file.FileName);
+    validationResult = ValidateStoredDocumentName(safeName);
+    if (validationResult is not null)
+    {
+        return validationResult;
+    }
+
     var relativeUrl = Path.Combine(companyId.ToString(), patientId.ToString(), categoryId + "_" + safeName).Replace('\\', '/');
     var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
     var targetDirectory = Path.Combine(storeRoot, companyId.ToString(), patientId.ToString());
@@ -372,7 +421,24 @@ app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincip
         return Results.Forbid();
     }
 
+    if (!ReadBoolClaim(principal, "scan_document") && !IsElevated(principal))
+    {
+        return Results.Forbid();
+    }
+
+    var validationResult = ValidateUploadedDocument(file, maxDocumentUploadBytes);
+    if (validationResult is not null)
+    {
+        return validationResult;
+    }
+
     var safeName = BuildStoredDocumentName(httpRequest.Query["documentName"], file.FileName);
+    validationResult = ValidateStoredDocumentName(safeName);
+    if (validationResult is not null)
+    {
+        return validationResult;
+    }
+
     var relativeUrl = Path.Combine(companyId.ToString(), patientId.ToString(), categoryId + "_" + safeName).Replace('\\', '/');
     var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
     var targetDirectory = Path.Combine(storeRoot, companyId.ToString(), patientId.ToString());
@@ -390,7 +456,7 @@ app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincip
     return Results.Ok(document);
 }).RequireAuthorization();
 
-app.MapGet("/api/documents/{documentId:int}/download", async (int documentId, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapGet("/api/documents/{documentId:int}/download", async (int documentId, ClaimsPrincipal principal, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
     var document = await repository.GetDocumentAsync(documentId, cancellationToken);
     if (document?.Url is null)
@@ -398,10 +464,15 @@ app.MapGet("/api/documents/{documentId:int}/download", async (int documentId, Do
         return Results.NotFound(new { message = "Document not found." });
     }
 
+    if (!CanAccessCompany(principal, document.CompanyId) || (!ReadBoolClaim(principal, "download_document") && !IsElevated(principal)))
+    {
+        return Results.Forbid();
+    }
+
     var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
     var fullPath = Path.GetFullPath(Path.Combine(storeRoot, document.Url.Replace('/', Path.DirectorySeparatorChar)));
     var fullStoreRoot = Path.GetFullPath(storeRoot);
-    if (!fullPath.StartsWith(fullStoreRoot, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
+    if (!IsPathUnderRoot(fullPath, fullStoreRoot) || !File.Exists(fullPath))
     {
         return Results.NotFound(new { message = "Document file not found." });
     }
@@ -418,7 +489,7 @@ app.MapGet("/api/documents/{documentId:int}/page/{page:int}", (int documentId, i
 app.MapGet("/api/documents/{documentId:int}/thumbnail", (int documentId, HttpContext httpContext, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
     PreviewTiffPageAsync(documentId, 1, httpContext, repository, configuration, cancellationToken)).RequireAuthorization();
 
-app.MapDelete("/api/documents/{documentId:int}", async (int documentId, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapDelete("/api/documents/{documentId:int}", async (int documentId, ClaimsPrincipal principal, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
     var document = await repository.GetDocumentAsync(documentId, cancellationToken);
     if (document is null)
@@ -426,7 +497,12 @@ app.MapDelete("/api/documents/{documentId:int}", async (int documentId, Document
         return Results.NotFound(new { message = "Document not found." });
     }
 
-    var deleted = await repository.DeleteAsync(documentId, "Miranda", cancellationToken);
+    if (!CanAccessCompany(principal, document.CompanyId) || (!ReadBoolClaim(principal, "delete_document") && !IsElevated(principal)))
+    {
+        return Results.Forbid();
+    }
+
+    var deleted = await repository.DeleteAsync(documentId, document.CompanyId, principal.FindFirst("username")?.Value, cancellationToken);
     if (!deleted)
     {
         return Results.NotFound(new { message = "Document not found." });
@@ -437,7 +513,7 @@ app.MapDelete("/api/documents/{documentId:int}", async (int documentId, Document
         var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
         var fullPath = Path.GetFullPath(Path.Combine(storeRoot, document.Url.Replace('/', Path.DirectorySeparatorChar)));
         var fullStoreRoot = Path.GetFullPath(storeRoot);
-        if (fullPath.StartsWith(fullStoreRoot, StringComparison.OrdinalIgnoreCase) && File.Exists(fullPath))
+        if (IsPathUnderRoot(fullPath, fullStoreRoot) && File.Exists(fullPath))
         {
             File.Delete(fullPath);
         }
@@ -505,7 +581,7 @@ app.MapGet("/api/reports/documents", async (int companyId, DateTime? fromDate, D
 
 app.MapGet("/api/users", async (int companyId, ClaimsPrincipal principal, UserRepository repository, CancellationToken cancellationToken) =>
 {
-    if (!CanAccessCompany(principal, companyId))
+    if (!CanAccessCompany(principal, companyId) || !CanManageUsers(principal))
     {
         return Results.Forbid();
     }
@@ -516,9 +592,30 @@ app.MapGet("/api/users", async (int companyId, ClaimsPrincipal principal, UserRe
 
 app.MapPost("/api/users", async (UserUpsertRequest request, ClaimsPrincipal principal, UserRepository repository, CancellationToken cancellationToken) =>
 {
-    if (!CanAccessCompany(principal, request.CompanyId))
+    if (!CanAccessCompany(principal, request.CompanyId) || !CanManageUsers(principal))
     {
         return Results.Forbid();
+    }
+
+    if (!ReadBoolClaim(principal, "super_user") && (request.SuperUser || request.IsAdmin))
+    {
+        return Results.Forbid();
+    }
+
+    var existingUser = string.IsNullOrWhiteSpace(request.Username)
+        ? null
+        : await repository.GetByUsernameAsync(request.Username.Trim(), cancellationToken);
+    if (existingUser is not null)
+    {
+        if (!CanAccessCompany(principal, existingUser.CompanyId))
+        {
+            return Results.Forbid();
+        }
+
+        if (!ReadBoolClaim(principal, "super_user") && (existingUser.SuperUser || existingUser.IsAdmin))
+        {
+            return Results.Forbid();
+        }
     }
 
     try
@@ -532,9 +629,31 @@ app.MapPost("/api/users", async (UserUpsertRequest request, ClaimsPrincipal prin
     }
 }).RequireAuthorization();
 
-app.MapDelete("/api/users/{username}", async (string username, UserRepository repository, CancellationToken cancellationToken) =>
+app.MapDelete("/api/users/{username}", async (string username, ClaimsPrincipal principal, UserRepository repository, CancellationToken cancellationToken) =>
 {
-    return await repository.DeleteAsync(Uri.UnescapeDataString(username), cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "User not found." });
+    var decodedUsername = Uri.UnescapeDataString(username);
+    var user = await repository.GetByUsernameAsync(decodedUsername, cancellationToken);
+    if (user is null)
+    {
+        return Results.NotFound(new { message = "User not found." });
+    }
+
+    if (!CanAccessCompany(principal, user.CompanyId) || !CanManageUsers(principal))
+    {
+        return Results.Forbid();
+    }
+
+    if (!ReadBoolClaim(principal, "super_user") && (user.SuperUser || user.IsAdmin))
+    {
+        return Results.Forbid();
+    }
+
+    if (string.Equals(decodedUsername, principal.FindFirst("username")?.Value, StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.BadRequest(new { message = "You cannot delete your own user account." });
+    }
+
+    return await repository.DeleteAsync(decodedUsername, user.CompanyId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "User not found." });
 }).RequireAuthorization();
 
 app.MapGet("/api/settings/security", async (ClaimsPrincipal principal, SettingsRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
@@ -775,6 +894,16 @@ static bool IsElevated(ClaimsPrincipal principal)
     return ReadBoolClaim(principal, "is_admin") || ReadBoolClaim(principal, "super_user");
 }
 
+static bool CanManageUsers(ClaimsPrincipal principal)
+{
+    return IsElevated(principal) || ReadBoolClaim(principal, "add_users");
+}
+
+static bool CanManagePatients(ClaimsPrincipal principal)
+{
+    return IsElevated(principal) || ReadBoolClaim(principal, "add_patients");
+}
+
 static int ReadCompanyId(ClaimsPrincipal principal)
 {
     return int.TryParse(principal.FindFirst("company_id")?.Value, out var companyId) ? companyId : 0;
@@ -788,10 +917,15 @@ static async Task<IResult> PreviewDocumentAsync(int documentId, string? routeFil
         return Results.NotFound(new { message = "Document not found." });
     }
 
+    if (!CanAccessCompany(httpContext.User, document.CompanyId))
+    {
+        return Results.Forbid();
+    }
+
     var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
     var fullPath = Path.GetFullPath(Path.Combine(storeRoot, document.Url.Replace('/', Path.DirectorySeparatorChar)));
     var fullStoreRoot = Path.GetFullPath(storeRoot);
-    if (!fullPath.StartsWith(fullStoreRoot, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
+    if (!IsPathUnderRoot(fullPath, fullStoreRoot) || !File.Exists(fullPath))
     {
         return Results.NotFound(new { message = "Document file not found." });
     }
@@ -815,6 +949,11 @@ static async Task<IResult> PreviewTiffPageAsync(int documentId, int page, HttpCo
     if (document?.Url is null)
     {
         return Results.NotFound(new { message = "Document not found." });
+    }
+
+    if (!CanAccessCompany(httpContext.User, document.CompanyId))
+    {
+        return Results.Forbid();
     }
 
     var resolved = ResolveStoredDocumentPath(configuration, document.Url);
@@ -901,9 +1040,16 @@ static string? ResolveStoredDocumentPath(IConfiguration configuration, string st
     var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
     var fullPath = Path.GetFullPath(Path.Combine(storeRoot, storedUrl.Replace('/', Path.DirectorySeparatorChar)));
     var fullStoreRoot = Path.GetFullPath(storeRoot);
-    return fullPath.StartsWith(fullStoreRoot, StringComparison.OrdinalIgnoreCase) && File.Exists(fullPath)
+    return IsPathUnderRoot(fullPath, fullStoreRoot) && File.Exists(fullPath)
         ? fullPath
         : null;
+}
+
+static bool IsPathUnderRoot(string fullPath, string fullRoot)
+{
+    var normalizedRoot = Path.TrimEndingDirectorySeparator(fullRoot) + Path.DirectorySeparatorChar;
+    return fullPath.Equals(Path.TrimEndingDirectorySeparator(fullRoot), StringComparison.OrdinalIgnoreCase)
+        || fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
 }
 
 static int ParsePositiveQueryInt(HttpContext httpContext, string name, int fallback)
@@ -991,4 +1137,30 @@ static string BuildStoredDocumentName(string? requestedName, string originalFile
     }
 
     return safeName;
+}
+
+static IResult? ValidateUploadedDocument(IFormFile file, long maxDocumentUploadBytes)
+{
+    if (file.Length > maxDocumentUploadBytes)
+    {
+        return Results.BadRequest(new { message = $"Document exceeds the maximum upload size of {maxDocumentUploadBytes / 1024 / 1024} MB." });
+    }
+
+    return ValidateStoredDocumentName(file.FileName);
+}
+
+static IResult? ValidateStoredDocumentName(string fileName)
+{
+    var extension = Path.GetExtension(fileName).ToLowerInvariant();
+    if (IsAllowedDocumentExtension(extension))
+    {
+        return null;
+    }
+
+    return Results.BadRequest(new { message = "Unsupported document type. Allowed file types are PDF, TIFF, JPG, PNG, BMP, GIF, WEBP, and TXT." });
+}
+
+static bool IsAllowedDocumentExtension(string extension)
+{
+    return extension is ".pdf" or ".tif" or ".tiff" or ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" or ".webp" or ".txt";
 }
