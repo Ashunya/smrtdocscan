@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -804,6 +805,12 @@ app.MapPost("/api/settings/security", async (SecuritySettingsDto request, Claims
         return Results.Forbid();
     }
 
+    var validationError = ValidateSecuritySettings(request);
+    if (validationError is not null)
+    {
+        return validationError;
+    }
+
     await repository.SaveSecuritySettingsAsync(request, cancellationToken);
     await AuditAsync(auditRepository, "settings.security.update", GetActor(principal), ReadCompanyId(principal), "settings", "security", "success", httpContext);
     return Results.Ok(new { message = "Settings saved." });
@@ -1025,6 +1032,130 @@ static bool HasMicrosoftSsoSettings(MicrosoftSsoSettingsDto settings)
 {
     return !string.IsNullOrWhiteSpace(settings.ClientId)
         && !string.IsNullOrWhiteSpace(settings.ClientSecret);
+}
+
+static IResult? ValidateSecuritySettings(SecuritySettingsDto settings)
+{
+    var microsoft = settings.Microsoft ?? new MicrosoftSsoSettingsDto();
+    if (!string.IsNullOrWhiteSpace(microsoft.ClientId) && !Guid.TryParse(microsoft.ClientId.Trim(), out _))
+    {
+        return Results.BadRequest(new { message = "Microsoft Client ID must be a valid application GUID." });
+    }
+
+    if (microsoft.ClientSecret?.Length > 4096)
+    {
+        return Results.BadRequest(new { message = "Microsoft Client Secret is too long." });
+    }
+
+    if (!IsValidLocalCallbackPath(microsoft.CallbackPath))
+    {
+        return Results.BadRequest(new { message = "Microsoft callback path must be a local path, for example /api/auth/microsoft/callback." });
+    }
+
+    var smtp = settings.Smtp ?? new SmtpSettingsDto();
+    if (!string.IsNullOrWhiteSpace(smtp.Host) && smtp.Host.Trim().Length > 255)
+    {
+        return Results.BadRequest(new { message = "SMTP host is too long." });
+    }
+
+    if (!string.IsNullOrWhiteSpace(smtp.Port)
+        && (!int.TryParse(smtp.Port.Trim(), out var port) || port is < 1 or > 65535))
+    {
+        return Results.BadRequest(new { message = "SMTP port must be between 1 and 65535." });
+    }
+
+    if (!string.IsNullOrWhiteSpace(smtp.EnableSsl)
+        && !bool.TryParse(smtp.EnableSsl.Trim(), out _))
+    {
+        return Results.BadRequest(new { message = "SMTP SSL setting must be true or false." });
+    }
+
+    if (!string.IsNullOrWhiteSpace(smtp.From) && !IsValidEmailAddress(smtp.From))
+    {
+        return Results.BadRequest(new { message = "SMTP from address must be a valid email address." });
+    }
+
+    if (smtp.Password?.Length > 4096)
+    {
+        return Results.BadRequest(new { message = "SMTP password is too long." });
+    }
+
+    var logoDataUrl = settings.Branding?.LogoDataUrl;
+    if (!IsValidLogoDataUrl(logoDataUrl))
+    {
+        return Results.BadRequest(new { message = "Logo must be a PNG, JPEG, GIF, or WebP data URL under 512 KB." });
+    }
+
+    return null;
+}
+
+static bool IsValidLocalCallbackPath(string? callbackPath)
+{
+    if (string.IsNullOrWhiteSpace(callbackPath))
+    {
+        return true;
+    }
+
+    var path = callbackPath.Trim();
+    return path.Length <= 200
+        && path.StartsWith("/", StringComparison.Ordinal)
+        && !path.StartsWith("//", StringComparison.Ordinal)
+        && Uri.TryCreate(path, UriKind.Relative, out _)
+        && !path.Contains('\\');
+}
+
+static bool IsValidEmailAddress(string value)
+{
+    try
+    {
+        var address = new MailAddress(value.Trim());
+        return string.Equals(address.Address, value.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+    catch
+    {
+        return false;
+    }
+}
+
+static bool IsValidLogoDataUrl(string? value)
+{
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        return true;
+    }
+
+    var logo = value.Trim();
+    if (logo.Length > 512 * 1024)
+    {
+        return false;
+    }
+
+    var commaIndex = logo.IndexOf(',');
+    if (commaIndex <= 0)
+    {
+        return false;
+    }
+
+    var metadata = logo[..commaIndex].ToLowerInvariant();
+    var allowed = metadata is "data:image/png;base64"
+        or "data:image/jpeg;base64"
+        or "data:image/jpg;base64"
+        or "data:image/gif;base64"
+        or "data:image/webp;base64";
+    if (!allowed)
+    {
+        return false;
+    }
+
+    try
+    {
+        Convert.FromBase64String(logo[(commaIndex + 1)..]);
+        return true;
+    }
+    catch
+    {
+        return false;
+    }
 }
 
 static string BuildPostSignInRedirect(string? returnUrl, IConfiguration configuration)

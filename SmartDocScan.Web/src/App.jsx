@@ -83,6 +83,7 @@ export default function App() {
 
   useEffect(() => {
     let ignore = false;
+    window.localStorage.removeItem("smartdocscan-user");
     getBrandingSettings()
       .then((branding) => {
         if (!ignore && branding.logoDataUrl) {
@@ -99,13 +100,11 @@ export default function App() {
         if (!ignore && result.authenticated && result.user) {
           setCurrentUser(result.user);
           setCompanyId(result.user.companyId || DEFAULT_COMPANY_ID);
-          window.localStorage.setItem("smartdocscan-user", JSON.stringify(result.user));
         }
       })
       .catch(() => {
         if (!ignore) {
           setCurrentUser(null);
-          window.localStorage.removeItem("smartdocscan-user");
         }
       })
       .finally(() => {
@@ -247,7 +246,6 @@ export default function App() {
   function handleSignedIn(user) {
     setCurrentUser(user);
     setCompanyId(user.companyId || DEFAULT_COMPANY_ID);
-    window.localStorage.setItem("smartdocscan-user", JSON.stringify(user));
   }
 
   async function handleSignOut() {
@@ -257,7 +255,6 @@ export default function App() {
       // Session may already be expired; clear local state either way.
     }
     setCurrentUser(null);
-    window.localStorage.removeItem("smartdocscan-user");
   }
 
   function openUserMenu(event) {
