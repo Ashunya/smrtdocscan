@@ -658,6 +658,11 @@ app.MapPost("/api/users", async (UserUpsertRequest request, ClaimsPrincipal prin
         : await repository.GetByUsernameAsync(request.Username.Trim(), cancellationToken);
     if (existingUser is not null)
     {
+        if (string.Equals(existingUser.Username, principal.FindFirst("username")?.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.BadRequest(new { message = "You cannot modify your own user account." });
+        }
+
         if (!CanAccessCompany(principal, existingUser.CompanyId))
         {
             return Results.Forbid();
