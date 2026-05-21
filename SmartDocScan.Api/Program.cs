@@ -198,6 +198,7 @@ app.Use(async (context, next) =>
     AddSecurityHeaders(context.Response);
 
     if (IsUnsafeMethod(context.Request.Method)
+        && !IsMicrosoftCallbackRequest(context.Request, app.Configuration)
         && !IsAllowedBrowserOrigin(context.Request, allowedOrigins))
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
@@ -1222,6 +1223,13 @@ static bool IsUnsafeMethod(string method)
         && !HttpMethods.IsHead(method)
         && !HttpMethods.IsOptions(method)
         && !HttpMethods.IsTrace(method);
+}
+
+static bool IsMicrosoftCallbackRequest(HttpRequest request, IConfiguration configuration)
+{
+    var callbackPath = configuration["Authentication:Microsoft:CallbackPath"] ?? "/api/auth/microsoft/callback";
+    return HttpMethods.IsPost(request.Method)
+        && request.Path.Equals(callbackPath, StringComparison.OrdinalIgnoreCase);
 }
 
 static bool IsAllowedBrowserOrigin(HttpRequest request, string[] allowedOrigins)
