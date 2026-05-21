@@ -1,4 +1,5 @@
 using Microsoft.Data.SqlClient;
+using Microsoft.AspNetCore.DataProtection;
 using SmartDocScan.Api.Models;
 
 namespace SmartDocScan.Api.Data;
@@ -6,11 +7,13 @@ namespace SmartDocScan.Api.Data;
 public sealed class SettingsRepository
 {
     private readonly string _connectionString;
+    private readonly IDataProtector _secretProtector;
 
-    public SettingsRepository(IConfiguration configuration)
+    public SettingsRepository(IConfiguration configuration, IDataProtectionProvider dataProtectionProvider)
     {
         _connectionString = configuration.GetConnectionString("SmartDocScan")
             ?? throw new InvalidOperationException("Connection string 'SmartDocScan' is missing.");
+        _secretProtector = dataProtectionProvider.CreateProtector("SmartDocScan.Settings.Secrets.v1");
     }
 
     public async Task<SecuritySettingsDto> GetSecuritySettingsAsync(IConfiguration configuration, CancellationToken cancellationToken = default)
@@ -26,7 +29,7 @@ public sealed class SettingsRepository
             {
                 ClientId = Get(values, "Authentication:Microsoft:ClientId", configuration["Authentication:Microsoft:ClientId"]),
                 ClientSecret = "",
-                HasClientSecret = !string.IsNullOrWhiteSpace(Get(values, "Authentication:Microsoft:ClientSecret", configuration["Authentication:Microsoft:ClientSecret"])),
+                HasClientSecret = !string.IsNullOrWhiteSpace(GetSecret(values, "Authentication:Microsoft:ClientSecret", configuration["Authentication:Microsoft:ClientSecret"])),
                 CallbackPath = Get(values, "Authentication:Microsoft:CallbackPath", configuration["Authentication:Microsoft:CallbackPath"] ?? "/api/auth/microsoft/callback")
             },
             Smtp = new SmtpSettingsDto
@@ -37,7 +40,7 @@ public sealed class SettingsRepository
                 From = Get(values, "Smtp:From", configuration["Smtp:From"] ?? "no-reply@ashunya.com"),
                 Username = Get(values, "Smtp:Username", configuration["Smtp:Username"]),
                 Password = "",
-                HasPassword = !string.IsNullOrWhiteSpace(Get(values, "Smtp:Password", configuration["Smtp:Password"]))
+                HasPassword = !string.IsNullOrWhiteSpace(GetSecret(values, "Smtp:Password", configuration["Smtp:Password"]))
             },
             Branding = new BrandingSettingsDto
             {
@@ -68,9 +71,28 @@ public sealed class SettingsRepository
         return new MicrosoftSsoSettingsDto
         {
             ClientId = Get(values, "Authentication:Microsoft:ClientId", configuration["Authentication:Microsoft:ClientId"]),
-            ClientSecret = Get(values, "Authentication:Microsoft:ClientSecret", configuration["Authentication:Microsoft:ClientSecret"]),
+            ClientSecret = GetSecret(values, "Authentication:Microsoft:ClientSecret", configuration["Authentication:Microsoft:ClientSecret"]),
             CallbackPath = Get(values, "Authentication:Microsoft:CallbackPath", configuration["Authentication:Microsoft:CallbackPath"] ?? "/api/auth/microsoft/callback"),
-            HasClientSecret = !string.IsNullOrWhiteSpace(Get(values, "Authentication:Microsoft:ClientSecret", configuration["Authentication:Microsoft:ClientSecret"]))
+            HasClientSecret = !string.IsNullOrWhiteSpace(GetSecret(values, "Authentication:Microsoft:ClientSecret", configuration["Authentication:Microsoft:ClientSecret"]))
+        };
+    }
+
+    public async Task<SmtpSettingsDto> GetSmtpRuntimeSettingsAsync(IConfiguration configuration, CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+        await EnsureTableAsync(connection, cancellationToken);
+        var values = await ReadSettingsAsync(connection, cancellationToken);
+
+        return new SmtpSettingsDto
+        {
+            Host = Get(values, "Smtp:Host", configuration["Smtp:Host"]),
+            Port = Get(values, "Smtp:Port", configuration["Smtp:Port"] ?? "587"),
+            EnableSsl = Get(values, "Smtp:EnableSsl", configuration["Smtp:EnableSsl"] ?? "true"),
+            From = Get(values, "Smtp:From", configuration["Smtp:From"] ?? "no-reply@ashunya.com"),
+            Username = Get(values, "Smtp:Username", configuration["Smtp:Username"]),
+            Password = GetSecret(values, "Smtp:Password", configuration["Smtp:Password"]),
+            HasPassword = !string.IsNullOrWhiteSpace(GetSecret(values, "Smtp:Password", configuration["Smtp:Password"]))
         };
     }
 
@@ -144,13 +166,13 @@ public sealed class SettingsRepository
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task UpsertSecretAsync(SqlConnection connection, string key, string? value, CancellationToken cancellationToken)
+    private async Task UpsertSecretAsync(SqlConnection connection, string key, string? value, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
             return;
         }
-        await UpsertAsync(connection, key, value, cancellationToken);
+        await UpsertAsync(connection, key, ProtectSecret(value.Trim()), cancellationToken);
     }
 
     private static async Task UpsertAsync(SqlConnection connection, string key, string? value, CancellationToken cancellationToken)
@@ -176,6 +198,38 @@ public sealed class SettingsRepository
         return values.TryGetValue(key, out var value) ? value : fallback;
     }
 
+    private string? GetSecret(IReadOnlyDictionary<string, string?> values, string key, string? fallback)
+    {
+        return UnprotectSecret(Get(values, key, fallback));
+    }
+
+    private string ProtectSecret(string value)
+    {
+        return ProtectedSecretPrefix + _secretProtector.Protect(value);
+    }
+
+    private string? UnprotectSecret(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+
+        if (!value.StartsWith(ProtectedSecretPrefix, StringComparison.Ordinal))
+        {
+            return value;
+        }
+
+        try
+        {
+            return _secretProtector.Unprotect(value[ProtectedSecretPrefix.Length..]);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private const string EnsureTableSql = """
         IF OBJECT_ID('dbo.app_setting', 'U') IS NULL
         BEGIN
@@ -186,4 +240,5 @@ public sealed class SettingsRepository
             );
         END;
         """;
+    private const string ProtectedSecretPrefix = "protected:";
 }

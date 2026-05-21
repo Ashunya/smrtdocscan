@@ -28,6 +28,7 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartHeadersLengthLimit = 64 * 1024;
 });
 
+builder.Services.AddDataProtection();
 builder.Services.AddSingleton<PatientRepository>();
 builder.Services.AddSingleton<BoxRepository>();
 builder.Services.AddSingleton<CategoryRepository>();
@@ -35,6 +36,7 @@ builder.Services.AddSingleton<DocumentRepository>();
 builder.Services.AddSingleton<CompanyRepository>();
 builder.Services.AddSingleton<UserRepository>();
 builder.Services.AddSingleton<AuthRepository>();
+builder.Services.AddSingleton<AuditRepository>();
 builder.Services.AddSingleton<SettingsRepository>();
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
 builder.Services.AddRateLimiter(options =>
@@ -88,6 +90,29 @@ var authBuilder = builder.Services
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return Task.CompletedTask;
+        };
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            var username = context.Principal?.FindFirst("username")?.Value;
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return;
+            }
+
+            var userRepository = context.HttpContext.RequestServices.GetRequiredService<UserRepository>();
+            var user = await userRepository.GetByUsernameAsync(username.Trim(), context.HttpContext.RequestAborted);
+            if (user is null || user.Disabled)
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return;
+            }
+
+            var authProvider = context.Principal?.FindFirst("auth_provider")?.Value ?? "local";
+            context.ReplacePrincipal(CreatePrincipal(user, authProvider));
+            context.ShouldRenew = true;
         };
     });
 
@@ -156,6 +181,8 @@ authBuilder.AddOpenIdConnect(options =>
             return;
         }
 
+        var auditRepository = context.HttpContext.RequestServices.GetRequiredService<AuditRepository>();
+        await AuditAsync(auditRepository, "auth.microsoft.login", user.Username, user.CompanyId, "user", user.Username, "success", context.HttpContext);
         context.Principal = CreatePrincipal(user, "microsoft");
     };
 });
@@ -208,7 +235,7 @@ app.MapGet("/api/patients/{patientId:int}", async (int patientId, ClaimsPrincipa
     return CanAccessCompany(principal, patient.CompanyId) ? Results.Ok(patient) : Results.Forbid();
 }).RequireAuthorization();
 
-app.MapPost("/api/patients", async (PatientUpsertRequest request, ClaimsPrincipal principal, PatientRepository repository, CancellationToken cancellationToken) =>
+app.MapPost("/api/patients", async (PatientUpsertRequest request, ClaimsPrincipal principal, PatientRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     if (!CanAccessCompany(principal, request.CompanyId) || !CanManagePatients(principal))
     {
@@ -218,6 +245,7 @@ app.MapPost("/api/patients", async (PatientUpsertRequest request, ClaimsPrincipa
     try
     {
         var patient = await repository.CreateAsync(request, cancellationToken);
+        await AuditAsync(auditRepository, "patient.create", GetActor(principal), patient.CompanyId, "patient", patient.PatientId.ToString(), "success", httpContext);
         return Results.Created($"/api/patients/{patient.PatientId}", patient);
     }
     catch (InvalidOperationException ex)
@@ -226,7 +254,7 @@ app.MapPost("/api/patients", async (PatientUpsertRequest request, ClaimsPrincipa
     }
 }).RequireAuthorization();
 
-app.MapPut("/api/patients/{patientId:int}", async (int patientId, PatientUpsertRequest request, ClaimsPrincipal principal, PatientRepository repository, CancellationToken cancellationToken) =>
+app.MapPut("/api/patients/{patientId:int}", async (int patientId, PatientUpsertRequest request, ClaimsPrincipal principal, PatientRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     var existingPatient = await repository.GetAsync(patientId, cancellationToken);
     if (existingPatient is null)
@@ -252,6 +280,10 @@ app.MapPut("/api/patients/{patientId:int}", async (int patientId, PatientUpsertR
     try
     {
         var patient = await repository.UpdateAsync(patientId, request, existingPatient.CompanyId, cancellationToken);
+        if (patient is not null)
+        {
+            await AuditAsync(auditRepository, "patient.update", GetActor(principal), patient.CompanyId, "patient", patient.PatientId.ToString(), "success", httpContext);
+        }
         return patient is null ? Results.NotFound() : Results.Ok(patient);
     }
     catch (InvalidOperationException ex)
@@ -260,7 +292,7 @@ app.MapPut("/api/patients/{patientId:int}", async (int patientId, PatientUpsertR
     }
 }).RequireAuthorization();
 
-app.MapDelete("/api/patients/{patientId:int}", async (int patientId, ClaimsPrincipal principal, PatientRepository repository, CancellationToken cancellationToken) =>
+app.MapDelete("/api/patients/{patientId:int}", async (int patientId, ClaimsPrincipal principal, PatientRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     var existingPatient = await repository.GetAsync(patientId, cancellationToken);
     if (existingPatient is null)
@@ -275,7 +307,12 @@ app.MapDelete("/api/patients/{patientId:int}", async (int patientId, ClaimsPrinc
 
     try
     {
-        return await repository.DeleteAsync(patientId, existingPatient.CompanyId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "Patient not found." });
+        var deleted = await repository.DeleteAsync(patientId, existingPatient.CompanyId, cancellationToken);
+        if (deleted)
+        {
+            await AuditAsync(auditRepository, "patient.delete", GetActor(principal), existingPatient.CompanyId, "patient", patientId.ToString(), "success", httpContext);
+        }
+        return deleted ? Results.NoContent() : Results.NotFound(new { message = "Patient not found." });
     }
     catch (SqlException)
     {
@@ -404,7 +441,7 @@ app.MapGet("/api/documents", async (int companyId, int patientId, ClaimsPrincipa
     return Results.Ok(documents);
 }).RequireAuthorization();
 
-app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal principal, DocumentRepository repository, PatientRepository patientRepository, CategoryRepository categoryRepository, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal principal, DocumentRepository repository, PatientRepository patientRepository, CategoryRepository categoryRepository, AuditRepository auditRepository, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
     if (!httpRequest.HasFormContentType)
     {
@@ -453,10 +490,11 @@ app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal pr
     var pages = int.TryParse(form["pages"], out var parsedPages) ? Math.Max(parsedPages, 1) : 1;
     var dateOfService = ParseDateOnly(form["dateOfService"]);
     var document = await repository.CreateAsync(companyId, patientId, categoryId, savedDocument.SafeName, savedDocument.RelativeUrl, pages, form["uploadedBy"], dateOfService, cancellationToken);
+    await AuditAsync(auditRepository, "document.upload", GetActor(principal), companyId, "document", document.DocumentId.ToString(), "success", httpRequest.HttpContext);
     return Results.Created($"/api/documents/{document.DocumentId}", document);
 }).RequireAuthorization();
 
-app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincipal principal, DocumentRepository repository, PatientRepository patientRepository, CategoryRepository categoryRepository, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincipal principal, DocumentRepository repository, PatientRepository patientRepository, CategoryRepository categoryRepository, AuditRepository auditRepository, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
     if (!httpRequest.HasFormContentType)
     {
@@ -504,6 +542,7 @@ app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincip
     var pages = int.TryParse(httpRequest.Query["pages"], out var parsedPages) ? Math.Max(parsedPages, 1) : 1;
     var dateOfService = ParseDateOnly(httpRequest.Query["dateOfService"]);
     var document = await repository.CreateAsync(companyId, patientId, categoryId, savedDocument.SafeName, savedDocument.RelativeUrl, pages, "Scanner", dateOfService, cancellationToken);
+    await AuditAsync(auditRepository, "document.scan", GetActor(principal), companyId, "document", document.DocumentId.ToString(), "success", httpRequest.HttpContext);
     return Results.Ok(document);
 }).RequireAuthorization();
 
@@ -540,7 +579,7 @@ app.MapGet("/api/documents/{documentId:int}/page/{page:int}", (int documentId, i
 app.MapGet("/api/documents/{documentId:int}/thumbnail", (int documentId, HttpContext httpContext, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
     PreviewTiffPageAsync(documentId, 1, httpContext, repository, configuration, cancellationToken)).RequireAuthorization();
 
-app.MapDelete("/api/documents/{documentId:int}", async (int documentId, ClaimsPrincipal principal, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapDelete("/api/documents/{documentId:int}", async (int documentId, ClaimsPrincipal principal, DocumentRepository repository, AuditRepository auditRepository, IConfiguration configuration, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     var document = await repository.GetDocumentAsync(documentId, cancellationToken);
     if (document is null)
@@ -558,6 +597,8 @@ app.MapDelete("/api/documents/{documentId:int}", async (int documentId, ClaimsPr
     {
         return Results.NotFound(new { message = "Document not found." });
     }
+
+    await AuditAsync(auditRepository, "document.delete", GetActor(principal), document.CompanyId, "document", documentId.ToString(), "success", httpContext);
 
     if (!string.IsNullOrWhiteSpace(document.Url))
     {
@@ -584,7 +625,7 @@ app.MapGet("/api/companies", async (ClaimsPrincipal principal, CompanyRepository
     return Results.Ok(companies);
 }).RequireAuthorization();
 
-app.MapPost("/api/companies", async (CompanyUpsertRequest request, ClaimsPrincipal principal, CompanyRepository repository, CancellationToken cancellationToken) =>
+app.MapPost("/api/companies", async (CompanyUpsertRequest request, ClaimsPrincipal principal, CompanyRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     if (!IsElevated(principal))
     {
@@ -594,6 +635,7 @@ app.MapPost("/api/companies", async (CompanyUpsertRequest request, ClaimsPrincip
     try
     {
         var company = await repository.UpsertAsync(request, cancellationToken);
+        await AuditAsync(auditRepository, "company.upsert", GetActor(principal), company.CompanyId, "company", company.CompanyId.ToString(), "success", httpContext);
         return Results.Ok(company);
     }
     catch (InvalidOperationException ex)
@@ -602,7 +644,7 @@ app.MapPost("/api/companies", async (CompanyUpsertRequest request, ClaimsPrincip
     }
 }).RequireAuthorization();
 
-app.MapDelete("/api/companies/{companyId:int}", async (int companyId, ClaimsPrincipal principal, CompanyRepository repository, CancellationToken cancellationToken) =>
+app.MapDelete("/api/companies/{companyId:int}", async (int companyId, ClaimsPrincipal principal, CompanyRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     if (!IsElevated(principal))
     {
@@ -611,7 +653,12 @@ app.MapDelete("/api/companies/{companyId:int}", async (int companyId, ClaimsPrin
 
     try
     {
-        return await repository.DeleteAsync(companyId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "Company not found." });
+        var deleted = await repository.DeleteAsync(companyId, cancellationToken);
+        if (deleted)
+        {
+            await AuditAsync(auditRepository, "company.delete", GetActor(principal), companyId, "company", companyId.ToString(), "success", httpContext);
+        }
+        return deleted ? Results.NoContent() : Results.NotFound(new { message = "Company not found." });
     }
     catch (SqlException)
     {
@@ -641,7 +688,7 @@ app.MapGet("/api/users", async (int companyId, ClaimsPrincipal principal, UserRe
     return Results.Ok(users);
 }).RequireAuthorization();
 
-app.MapPost("/api/users", async (UserUpsertRequest request, ClaimsPrincipal principal, UserRepository repository, CancellationToken cancellationToken) =>
+app.MapPost("/api/users", async (UserUpsertRequest request, ClaimsPrincipal principal, UserRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     if (!CanAccessCompany(principal, request.CompanyId) || !CanManageUsers(principal))
     {
@@ -677,6 +724,7 @@ app.MapPost("/api/users", async (UserUpsertRequest request, ClaimsPrincipal prin
     try
     {
         var user = await repository.UpsertAsync(request, cancellationToken);
+        await AuditAsync(auditRepository, "user.upsert", GetActor(principal), user.CompanyId, "user", user.Username, "success", httpContext);
         return Results.Ok(user);
     }
     catch (InvalidOperationException ex)
@@ -685,7 +733,7 @@ app.MapPost("/api/users", async (UserUpsertRequest request, ClaimsPrincipal prin
     }
 }).RequireAuthorization();
 
-app.MapDelete("/api/users/{username}", async (string username, ClaimsPrincipal principal, UserRepository repository, CancellationToken cancellationToken) =>
+app.MapDelete("/api/users/{username}", async (string username, ClaimsPrincipal principal, UserRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     var decodedUsername = Uri.UnescapeDataString(username);
     var user = await repository.GetByUsernameAsync(decodedUsername, cancellationToken);
@@ -709,7 +757,12 @@ app.MapDelete("/api/users/{username}", async (string username, ClaimsPrincipal p
         return Results.BadRequest(new { message = "You cannot delete your own user account." });
     }
 
-    return await repository.DeleteAsync(decodedUsername, user.CompanyId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "User not found." });
+    var deleted = await repository.DeleteAsync(decodedUsername, user.CompanyId, cancellationToken);
+    if (deleted)
+    {
+        await AuditAsync(auditRepository, "user.delete", GetActor(principal), user.CompanyId, "user", decodedUsername, "success", httpContext);
+    }
+    return deleted ? Results.NoContent() : Results.NotFound(new { message = "User not found." });
 }).RequireAuthorization();
 
 app.MapGet("/api/settings/security", async (ClaimsPrincipal principal, SettingsRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
@@ -722,7 +775,7 @@ app.MapGet("/api/settings/security", async (ClaimsPrincipal principal, SettingsR
     return Results.Ok(await repository.GetSecuritySettingsAsync(configuration, cancellationToken));
 }).RequireAuthorization();
 
-app.MapPost("/api/settings/security", async (SecuritySettingsDto request, ClaimsPrincipal principal, SettingsRepository repository, CancellationToken cancellationToken) =>
+app.MapPost("/api/settings/security", async (SecuritySettingsDto request, ClaimsPrincipal principal, SettingsRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     if (!ReadBoolClaim(principal, "super_user"))
     {
@@ -730,6 +783,7 @@ app.MapPost("/api/settings/security", async (SecuritySettingsDto request, Claims
     }
 
     await repository.SaveSecuritySettingsAsync(request, cancellationToken);
+    await AuditAsync(auditRepository, "settings.security.update", GetActor(principal), ReadCompanyId(principal), "settings", "security", "success", httpContext);
     return Results.Ok(new { message = "Settings saved." });
 }).RequireAuthorization();
 
@@ -753,15 +807,17 @@ app.MapGet("/api/auth/me", (ClaimsPrincipal principal) =>
     });
 });
 
-app.MapPost("/api/auth/login", async (LoginRequest request, UserRepository repository, HttpContext httpContext, CancellationToken cancellationToken) =>
+app.MapPost("/api/auth/login", async (LoginRequest request, UserRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     var user = await repository.LoginAsync(request.Username, request.Password, cancellationToken);
     if (user is null)
     {
+        await AuditAsync(auditRepository, "auth.local.login", request.Username, null, "user", request.Username, "failure", httpContext);
         return Results.Unauthorized();
     }
 
     await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, CreatePrincipal(user, "local"));
+    await AuditAsync(auditRepository, "auth.local.login", user.Username, user.CompanyId, "user", user.Username, "success", httpContext);
     return Results.Ok(new LoginResponse { User = user });
 }).RequireRateLimiting("auth");
 
@@ -792,7 +848,7 @@ app.MapGet("/api/auth/microsoft", async (HttpContext httpContext) =>
     return Results.Challenge(new AuthenticationProperties { RedirectUri = redirectUri }, [OpenIdConnectDefaults.AuthenticationScheme]);
 }).RequireRateLimiting("auth");
 
-app.MapPost("/api/auth/change-password", async (ChangePasswordRequest request, ClaimsPrincipal principal, UserRepository repository, CancellationToken cancellationToken) =>
+app.MapPost("/api/auth/change-password", async (ChangePasswordRequest request, ClaimsPrincipal principal, UserRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     if (principal.FindFirst("auth_provider")?.Value != "local")
     {
@@ -806,6 +862,7 @@ app.MapPost("/api/auth/change-password", async (ChangePasswordRequest request, C
 
     var username = principal.FindFirst("username")?.Value;
     var changed = await repository.ChangePasswordAsync(username ?? "", request.CurrentPassword, request.NewPassword, cancellationToken);
+    await AuditAsync(auditRepository, "auth.password.change", username, ReadCompanyId(principal), "user", username, changed ? "success" : "failure", httpContext);
     return changed ? Results.NoContent() : Results.BadRequest(new { message = "Current password is incorrect." });
 }).RequireAuthorization().RequireRateLimiting("auth");
 
@@ -865,6 +922,34 @@ static UserDto UserFromClaims(ClaimsPrincipal principal)
         SuperUser = ReadBoolClaim(principal, "super_user"),
         IsAdmin = ReadBoolClaim(principal, "is_admin")
     };
+}
+
+static string? GetActor(ClaimsPrincipal principal)
+{
+    return principal.FindFirst("username")?.Value;
+}
+
+static Task AuditAsync(
+    AuditRepository auditRepository,
+    string action,
+    string? actor,
+    int? companyId,
+    string? targetType,
+    string? targetId,
+    string outcome,
+    HttpContext httpContext,
+    string? details = null)
+{
+    return auditRepository.LogAsync(
+        action,
+        actor,
+        companyId,
+        targetType,
+        targetId,
+        outcome,
+        httpContext.Connection.RemoteIpAddress?.ToString(),
+        details,
+        httpContext.RequestAborted);
 }
 
 static bool ReadBoolClaim(ClaimsPrincipal principal, string type)

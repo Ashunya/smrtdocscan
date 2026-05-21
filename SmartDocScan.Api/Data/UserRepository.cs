@@ -43,6 +43,12 @@ public sealed class UserRepository
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
+        await EnsureLoginAttemptTableAsync(connection, cancellationToken);
+        if (await IsLoginLockedAsync(connection, username.Trim(), cancellationToken))
+        {
+            return null;
+        }
+
         UserDto? user;
         string? storedPassword;
         await using (var command = connection.CreateCommand())
@@ -56,6 +62,7 @@ public sealed class UserRepository
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             if (!await reader.ReadAsync(cancellationToken))
             {
+                await RecordFailedLoginAsync(connection, username.Trim(), cancellationToken);
                 return null;
             }
 
@@ -65,8 +72,11 @@ public sealed class UserRepository
 
         if (!VerifyPassword(password.Trim(), storedPassword, out var needsRehash))
         {
+            await RecordFailedLoginAsync(connection, username.Trim(), cancellationToken);
             return null;
         }
+
+        await ClearFailedLoginsAsync(connection, username.Trim(), cancellationToken);
 
         if (needsRehash)
         {
@@ -268,6 +278,80 @@ public sealed class UserRepository
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    private static async Task EnsureLoginAttemptTableAsync(SqlConnection connection, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            IF OBJECT_ID('dbo.auth_login_attempt', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.auth_login_attempt (
+                    username varchar(50) NOT NULL CONSTRAINT PK_auth_login_attempt PRIMARY KEY,
+                    failed_count int NOT NULL,
+                    first_failed_on datetime2 NOT NULL,
+                    last_failed_on datetime2 NOT NULL,
+                    locked_until datetime2 NULL
+                );
+            END;
+            """;
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task<bool> IsLoginLockedAsync(SqlConnection connection, string username, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT locked_until
+            FROM auth_login_attempt
+            WHERE username = @username;
+            """;
+        command.Parameters.AddWithValue("@username", username);
+        var lockedUntil = await command.ExecuteScalarAsync(cancellationToken);
+        return lockedUntil is DateTime value && value > DateTime.UtcNow;
+    }
+
+    private static async Task RecordFailedLoginAsync(SqlConnection connection, string username, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            MERGE auth_login_attempt AS target
+            USING (SELECT @username AS username) AS source
+              ON target.username = source.username
+            WHEN MATCHED THEN
+                UPDATE SET
+                    failed_count = CASE
+                        WHEN DATEDIFF(minute, first_failed_on, SYSUTCDATETIME()) >= @windowMinutes THEN 1
+                        ELSE failed_count + 1
+                    END,
+                    first_failed_on = CASE
+                        WHEN DATEDIFF(minute, first_failed_on, SYSUTCDATETIME()) >= @windowMinutes THEN SYSUTCDATETIME()
+                        ELSE first_failed_on
+                    END,
+                    last_failed_on = SYSUTCDATETIME(),
+                    locked_until = CASE
+                        WHEN DATEDIFF(minute, first_failed_on, SYSUTCDATETIME()) < @windowMinutes
+                             AND failed_count + 1 >= @maxFailures
+                        THEN DATEADD(minute, @lockoutMinutes, SYSUTCDATETIME())
+                        ELSE locked_until
+                    END
+            WHEN NOT MATCHED THEN
+                INSERT (username, failed_count, first_failed_on, last_failed_on, locked_until)
+                VALUES (@username, 1, SYSUTCDATETIME(), SYSUTCDATETIME(), NULL);
+            """;
+        command.Parameters.AddWithValue("@username", username);
+        command.Parameters.AddWithValue("@windowMinutes", LoginFailureWindowMinutes);
+        command.Parameters.AddWithValue("@maxFailures", MaxLoginFailures);
+        command.Parameters.AddWithValue("@lockoutMinutes", LoginLockoutMinutes);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task ClearFailedLoginsAsync(SqlConnection connection, string username, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM auth_login_attempt WHERE username = @username;";
+        command.Parameters.AddWithValue("@username", username);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     private static bool VerifyPassword(string password, string? storedPassword, out bool needsRehash)
     {
         needsRehash = false;
@@ -332,6 +416,9 @@ public sealed class UserRepository
     private const string PasswordHashPrefix = "pbkdf2_sha256";
     private const int PasswordHashIterations = 100000;
     private const int MinimumPasswordLength = 8;
+    private const int MaxLoginFailures = 10;
+    private const int LoginFailureWindowMinutes = 15;
+    private const int LoginLockoutMinutes = 15;
 
     private const string InsertSql = """
         INSERT INTO usersinfo (username, name, password, comp_id, upload_doc, scan_doc, delete_doc,
