@@ -621,7 +621,7 @@ app.MapDelete("/api/companies/{companyId:int}", async (int companyId, ClaimsPrin
 
 app.MapGet("/api/reports/documents", async (int companyId, DateTime? fromDate, DateTime? toDate, int? take, ClaimsPrincipal principal, DocumentRepository repository, CancellationToken cancellationToken) =>
 {
-    if (!CanAccessCompany(principal, companyId))
+    if (!CanAccessCompany(principal, companyId) || !CanViewReports(principal))
     {
         return Results.Forbid();
     }
@@ -963,6 +963,11 @@ static bool CanManageUsers(ClaimsPrincipal principal)
 static bool CanManagePatients(ClaimsPrincipal principal)
 {
     return IsElevated(principal) || ReadBoolClaim(principal, "add_patients");
+}
+
+static bool CanViewReports(ClaimsPrincipal principal)
+{
+    return IsElevated(principal) || ReadBoolClaim(principal, "report");
 }
 
 static void AddSecurityHeaders(HttpResponse response)

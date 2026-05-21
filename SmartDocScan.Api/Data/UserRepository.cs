@@ -99,6 +99,11 @@ public sealed class UserRepository
             throw new InvalidOperationException("Passwords do not match.");
         }
 
+        if (passwordProvided && !IsPasswordLongEnough(request.Password))
+        {
+            throw new InvalidOperationException($"Password must be at least {MinimumPasswordLength} characters.");
+        }
+
         await using var command = connection.CreateCommand();
         command.CommandText = exists
             ? (passwordProvided ? UpdateSql : UpdateSqlWithoutPassword)
@@ -125,6 +130,11 @@ public sealed class UserRepository
     public async Task<bool> ChangePasswordAsync(string username, string? currentPassword, string? newPassword, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(currentPassword) || string.IsNullOrWhiteSpace(newPassword))
+        {
+            return false;
+        }
+
+        if (!IsPasswordLongEnough(newPassword))
         {
             return false;
         }
@@ -300,6 +310,11 @@ public sealed class UserRepository
         return $"{PasswordHashPrefix}${PasswordHashIterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
     }
 
+    private static bool IsPasswordLongEnough(string? password)
+    {
+        return password?.Trim().Length >= MinimumPasswordLength;
+    }
+
     private const string UserSelectSql = """
         SELECT username, name, comp_id, upload_doc, scan_doc, delete_doc, delete_manage,
                print_doc, download_doc, add_cat, add_users, add_patients, box, report,
@@ -316,6 +331,7 @@ public sealed class UserRepository
 
     private const string PasswordHashPrefix = "pbkdf2_sha256";
     private const int PasswordHashIterations = 100000;
+    private const int MinimumPasswordLength = 8;
 
     private const string InsertSql = """
         INSERT INTO usersinfo (username, name, password, comp_id, upload_doc, scan_doc, delete_doc,
