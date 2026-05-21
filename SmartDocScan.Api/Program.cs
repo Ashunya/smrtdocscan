@@ -413,6 +413,10 @@ app.MapGet("/api/documents/{documentId:int}/preview", (int documentId, HttpConte
     PreviewDocumentAsync(documentId, null, httpContext, repository, configuration, cancellationToken)).RequireAuthorization();
 app.MapGet("/api/documents/{documentId:int}/preview/{fileName}", (int documentId, string fileName, HttpContext httpContext, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
     PreviewDocumentAsync(documentId, fileName, httpContext, repository, configuration, cancellationToken)).RequireAuthorization();
+app.MapGet("/api/documents/{documentId:int}/page/{page:int}", (int documentId, int page, HttpContext httpContext, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+    PreviewTiffPageAsync(documentId, page, httpContext, repository, configuration, cancellationToken)).RequireAuthorization();
+app.MapGet("/api/documents/{documentId:int}/thumbnail", (int documentId, HttpContext httpContext, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+    PreviewTiffPageAsync(documentId, 1, httpContext, repository, configuration, cancellationToken)).RequireAuthorization();
 
 app.MapDelete("/api/documents/{documentId:int}", async (int documentId, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
@@ -796,7 +800,7 @@ static async Task<IResult> PreviewDocumentAsync(int documentId, string? routeFil
     var displayFileName = string.IsNullOrWhiteSpace(routeFileName) ? storedFileName : routeFileName;
     if (IsTiffFile(storedFileName))
     {
-        return PreviewTiffAsPdf(fullPath, displayFileName, httpContext);
+        return PreviewTiffAsHtml(document, displayFileName, fullPath, httpContext);
     }
 
     var contentType = GetContentType(storedFileName);
@@ -805,148 +809,113 @@ static async Task<IResult> PreviewDocumentAsync(int documentId, string? routeFil
     return Results.File(fullPath, contentType, enableRangeProcessing: true);
 }
 
-static IResult PreviewTiffAsPdf(string fullPath, string displayFileName, HttpContext httpContext)
+static async Task<IResult> PreviewTiffPageAsync(int documentId, int page, HttpContext httpContext, DocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken)
+{
+    var document = await repository.GetDocumentAsync(documentId, cancellationToken);
+    if (document?.Url is null)
+    {
+        return Results.NotFound(new { message = "Document not found." });
+    }
+
+    var resolved = ResolveStoredDocumentPath(configuration, document.Url);
+    if (resolved is null)
+    {
+        return Results.NotFound(new { message = "Document file not found." });
+    }
+
+    var storedFileName = Path.GetFileName(document.Url);
+    if (!IsTiffFile(storedFileName))
+    {
+        return Results.BadRequest(new { message = "Document is not a TIFF file." });
+    }
+
+    var width = ParsePositiveQueryInt(httpContext, "width", 1400);
+    var height = ParsePositiveQueryInt(httpContext, "height", 1800);
+    var image = RenderTiffPageAsJpeg(resolved, page, width, height);
+    var pageFileName = $"{Path.GetFileNameWithoutExtension(storedFileName)}-page-{Math.Max(page, 1)}.jpg";
+    httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(pageFileName)}\"";
+    httpContext.Response.Headers.XContentTypeOptions = "nosniff";
+    httpContext.Response.Headers.CacheControl = "private, max-age=3600";
+    return Results.File(image, "image/jpeg", enableRangeProcessing: false);
+}
+
+static IResult PreviewTiffAsHtml(DocumentDto document, string displayFileName, string fullPath, HttpContext httpContext)
 {
     using var images = new MagickImageCollection(fullPath);
-    var frames = BuildTiffPreviewFrames(images);
-    if (frames.Count == 0)
+    var pageCount = Math.Max(document.NumberOfPages, images.Count);
+    if (pageCount <= 0)
     {
         return Results.Problem("The TIFF file does not contain any readable pages.", statusCode: StatusCodes.Status422UnprocessableEntity);
     }
 
-    var pdf = BuildImagePdf(frames);
-    var previewName = Path.ChangeExtension(displayFileName, ".pdf") ?? "preview.pdf";
-    httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(previewName)}\"";
+    var title = HtmlEncode(displayFileName);
+    var basePath = httpContext.Request.PathBase.ToString();
+    var builder = new StringBuilder();
+    builder.AppendLine("<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
+    builder.Append("<title>").Append(title).AppendLine("</title>");
+    builder.AppendLine("<style>body{margin:0;background:#262626;color:#fff;font-family:Segoe UI,Arial,sans-serif}.toolbar{position:sticky;top:0;z-index:2;display:flex;gap:12px;align-items:center;padding:10px 16px;background:#1f1f1f;border-bottom:1px solid #3a3a3a}.toolbar strong{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.toolbar button{border:1px solid #777;background:#fff;color:#111;border-radius:4px;padding:7px 12px;font-weight:600;cursor:pointer}.pages{padding:24px 12px}.page{display:block;max-width:min(96vw,1400px);width:auto;height:auto;margin:0 auto 24px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.45)}@media print{.toolbar{display:none}.pages{padding:0;background:#fff}.page{width:100%;max-width:100%;margin:0;box-shadow:none;page-break-after:always}}</style>");
+    builder.AppendLine("</head><body>");
+    builder.Append("<div class=\"toolbar\"><strong>").Append(title).Append("</strong><span>").Append(pageCount).Append(" pages</span><button onclick=\"window.print()\">Print</button></div><main class=\"pages\">");
+    for (var page = 1; page <= pageCount; page++)
+    {
+        builder.Append("<img class=\"page\" alt=\"Page ").Append(page).Append("\" src=\"")
+            .Append(basePath).Append("/api/documents/").Append(document.DocumentId).Append("/page/").Append(page)
+            .Append("?width=1400&height=1800\">");
+    }
+    builder.AppendLine("</main></body></html>");
+
+    httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(Path.ChangeExtension(displayFileName, ".html") ?? "preview.html")}\"";
     httpContext.Response.Headers.XContentTypeOptions = "nosniff";
-    return Results.File(pdf, "application/pdf", enableRangeProcessing: false);
+    return Results.Text(builder.ToString(), "text/html", Encoding.UTF8);
 }
 
-static List<PdfImagePage> BuildTiffPreviewFrames(MagickImageCollection images)
+static byte[] RenderTiffPageAsJpeg(string fullPath, int page, int maxWidth, int maxHeight)
 {
-    var usableImages = images
-        .Where(image => image.Width > 0 && image.Height > 0)
-        .ToList();
-    if (usableImages.Count == 0)
+    using var images = new MagickImageCollection(fullPath);
+    if (images.Count == 0)
     {
-        return [];
+        throw new InvalidOperationException("The TIFF file does not contain any readable pages.");
     }
 
-    var largestArea = usableImages.Max(image => (long)image.Width * image.Height);
-    var minimumArea = Math.Max(largestArea / 4, 100_000);
-    var frames = new List<PdfImagePage>();
-
-    foreach (var source in usableImages.Where(image => (long)image.Width * image.Height >= minimumArea))
+    var pageIndex = Math.Clamp(page, 1, images.Count) - 1;
+    using var image = (MagickImage)images[pageIndex].Clone();
+    image.AutoOrient();
+    image.BackgroundColor = MagickColors.White;
+    image.Alpha(AlphaOption.Remove);
+    image.ResetPage();
+    if (maxWidth > 0 || maxHeight > 0)
     {
-        using var image = (MagickImage)source.Clone();
-        image.AutoOrient();
-        image.BackgroundColor = MagickColors.White;
-        image.Alpha(AlphaOption.Remove);
-        image.ColorFuzz = new Percentage(8);
-        image.Trim();
-        image.ResetPage();
-        image.BorderColor = MagickColors.White;
-        image.Border(16);
-        image.Format = MagickFormat.Jpeg;
-        image.Quality = 90;
-        frames.Add(new PdfImagePage(image.ToByteArray(), checked((int)image.Width), checked((int)image.Height)));
+        image.Resize(new MagickGeometry((uint)Math.Max(maxWidth, 1), (uint)Math.Max(maxHeight, 1))
+        {
+            IgnoreAspectRatio = false,
+            Greater = true
+        });
     }
-
-    return frames;
+    image.Format = MagickFormat.Jpeg;
+    image.Quality = 92;
+    return image.ToByteArray();
 }
 
-static byte[] BuildImagePdf(IReadOnlyList<PdfImagePage> images)
+static string? ResolveStoredDocumentPath(IConfiguration configuration, string storedUrl)
 {
-    using var output = new MemoryStream();
-    var offsets = new List<long> { 0 };
-    WriteAscii(output, "%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n");
-
-    var pageCount = images.Count;
-    var pagesObjectId = 2;
-    var firstPageObjectId = 3;
-    var pageObjectIds = Enumerable.Range(0, pageCount).Select(i => firstPageObjectId + (i * 3)).ToArray();
-    var imageObjectIds = Enumerable.Range(0, pageCount).Select(i => firstPageObjectId + (i * 3) + 1).ToArray();
-    var contentObjectIds = Enumerable.Range(0, pageCount).Select(i => firstPageObjectId + (i * 3) + 2).ToArray();
-
-    WriteObject(output, offsets, 1, "<< /Type /Catalog /Pages 2 0 R >>");
-    WriteObject(output, offsets, pagesObjectId, $"<< /Type /Pages /Count {pageCount} /Kids [{string.Join(" ", pageObjectIds.Select(id => $"{id} 0 R"))}] >>");
-
-    for (var i = 0; i < pageCount; i++)
-    {
-        var layout = FitImageToPage(images[i]);
-        var content = FormattableString.Invariant($"q {layout.Width:0.###} 0 0 {layout.Height:0.###} {layout.X:0.###} {layout.Y:0.###} cm /Im{i + 1} Do Q");
-        var contentBytes = Encoding.ASCII.GetBytes(content);
-
-        SetObjectOffset(output, offsets, pageObjectIds[i]);
-        WriteAscii(output, $"{pageObjectIds[i]} 0 obj\n");
-        WriteAscii(output, FormattableString.Invariant(
-            $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {layout.PageWidth:0.###} {layout.PageHeight:0.###}] /Resources << /XObject << /Im{i + 1} {imageObjectIds[i]} 0 R >> >> /Contents {contentObjectIds[i]} 0 R >>\nendobj\n"));
-
-        SetObjectOffset(output, offsets, imageObjectIds[i]);
-        WriteAscii(output, $"{imageObjectIds[i]} 0 obj\n");
-        WriteAscii(output, $"<< /Type /XObject /Subtype /Image /Width {images[i].Width} /Height {images[i].Height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length {images[i].JpegBytes.Length} >>\nstream\n");
-        output.Write(images[i].JpegBytes);
-        WriteAscii(output, "\nendstream\nendobj\n");
-
-        SetObjectOffset(output, offsets, contentObjectIds[i]);
-        WriteAscii(output, $"{contentObjectIds[i]} 0 obj\n");
-        WriteAscii(output, $"<< /Length {contentBytes.Length} >>\nstream\n");
-        output.Write(contentBytes);
-        WriteAscii(output, "\nendstream\nendobj\n");
-    }
-
-    var xrefOffset = output.Position;
-    var highestObjectId = contentObjectIds.Last();
-    WriteAscii(output, $"xref\n0 {highestObjectId + 1}\n0000000000 65535 f \n");
-    for (var objectId = 1; objectId <= highestObjectId; objectId++)
-    {
-        WriteAscii(output, $"{offsets[objectId]:0000000000} 00000 n \n");
-    }
-    WriteAscii(output, $"trailer\n<< /Size {highestObjectId + 1} /Root 1 0 R >>\nstartxref\n{xrefOffset}\n%%EOF\n");
-    return output.ToArray();
+    var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
+    var fullPath = Path.GetFullPath(Path.Combine(storeRoot, storedUrl.Replace('/', Path.DirectorySeparatorChar)));
+    var fullStoreRoot = Path.GetFullPath(storeRoot);
+    return fullPath.StartsWith(fullStoreRoot, StringComparison.OrdinalIgnoreCase) && File.Exists(fullPath)
+        ? fullPath
+        : null;
 }
 
-static void WriteObject(Stream stream, IList<long> offsets, int objectId, string body)
+static int ParsePositiveQueryInt(HttpContext httpContext, string name, int fallback)
 {
-    SetObjectOffset(stream, offsets, objectId);
-    WriteAscii(stream, $"{objectId} 0 obj\n{body}\nendobj\n");
+    return int.TryParse(httpContext.Request.Query[name], out var parsed) && parsed > 0
+        ? Math.Min(parsed, 3000)
+        : fallback;
 }
 
-static void SetObjectOffset(Stream stream, IList<long> offsets, int objectId)
+static string HtmlEncode(string? value)
 {
-    while (offsets.Count <= objectId)
-    {
-        offsets.Add(0);
-    }
-    offsets[objectId] = stream.Position;
-}
-
-static PdfPageLayout FitImageToPage(PdfImagePage image)
-{
-    const double portraitWidth = 612;
-    const double portraitHeight = 792;
-    const double margin = 18;
-    var landscape = image.Width > image.Height;
-    var pageWidth = landscape ? portraitHeight : portraitWidth;
-    var pageHeight = landscape ? portraitWidth : portraitHeight;
-    var maxWidth = pageWidth - (margin * 2);
-    var maxHeight = pageHeight - (margin * 2);
-    var scale = Math.Min(maxWidth / image.Width, maxHeight / image.Height);
-    var width = image.Width * scale;
-    var height = image.Height * scale;
-
-    return new PdfPageLayout(
-        pageWidth,
-        pageHeight,
-        (pageWidth - width) / 2,
-        (pageHeight - height) / 2,
-        width,
-        height);
-}
-
-static void WriteAscii(Stream stream, string value)
-{
-    var bytes = Encoding.ASCII.GetBytes(value);
-    stream.Write(bytes);
+    return System.Net.WebUtility.HtmlEncode(value ?? string.Empty);
 }
 
 static string GetContentType(string fileName)
@@ -1023,7 +992,3 @@ static string BuildStoredDocumentName(string? requestedName, string originalFile
 
     return safeName;
 }
-
-sealed record PdfImagePage(byte[] JpegBytes, int Width, int Height);
-
-sealed record PdfPageLayout(double PageWidth, double PageHeight, double X, double Y, double Width, double Height);

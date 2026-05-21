@@ -153,6 +153,11 @@ export function getDocumentPreviewUrl(document) {
   return `${API_BASE_URL}/documents/${documentId}/preview/${encodeURIComponent(fileName)}`;
 }
 
+export function getDocumentThumbnailUrl(document) {
+  const documentId = typeof document === "object" ? document.documentId : document;
+  return `${API_BASE_URL}/documents/${documentId}/thumbnail`;
+}
+
 export function deleteDocument(documentId) {
   return request(`/documents/${documentId}`, {
     method: "DELETE",

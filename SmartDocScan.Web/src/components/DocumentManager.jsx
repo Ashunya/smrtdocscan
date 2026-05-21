@@ -1,6 +1,6 @@
 import { ArrowLeft, Barcode, Download, Grid2X2, Images, List, ScanLine, Trash2, Upload } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { deleteDocument, getDocumentDownloadUrl, getDocumentPreviewUrl, listCategories, listDocuments, uploadDocument } from "../api/client";
+import { deleteDocument, getDocumentDownloadUrl, getDocumentPreviewUrl, getDocumentThumbnailUrl, listCategories, listDocuments, uploadDocument } from "../api/client";
 
 export function DocumentManager({ companyId, patient, user, onBack, onNotice, onScan, onBarcode }) {
   const [categories, setCategories] = useState([]);
@@ -303,7 +303,15 @@ function DocumentThumbnail({ document }) {
   const previewUrl = getDocumentPreviewUrl(document);
   const extension = getExtension(document.url) || getExtension(document.documentName);
 
-  if (["png", "jpg", "jpeg", "gif", "webp", "tif", "tiff"].includes(extension)) {
+  if (["tif", "tiff"].includes(extension)) {
+    return (
+      <a className="document-thumb-preview" href={previewUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} aria-label={`Open ${document.documentName}`}>
+        <img src={getDocumentThumbnailUrl(document)} alt="" loading="lazy" />
+      </a>
+    );
+  }
+
+  if (["png", "jpg", "jpeg", "gif", "webp"].includes(extension)) {
     return (
       <a className="document-thumb-preview" href={previewUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} aria-label={`Open ${document.documentName}`}>
         <img src={previewUrl} alt="" loading="lazy" />
