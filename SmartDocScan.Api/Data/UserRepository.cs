@@ -1,4 +1,5 @@
 using Microsoft.Data.SqlClient;
+using System.Security.Cryptography;
 using SmartDocScan.Api.Models;
 
 namespace SmartDocScan.Api.Data;
@@ -42,17 +43,37 @@ public sealed class UserRepository
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = UserSelectSql + """
+        UserDto? user;
+        string? storedPassword;
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = UserSelectSqlWithPassword + """
              WHERE username = @username
-               AND password = @password
                AND disabled = 0;
             """;
-        command.Parameters.AddWithValue("@username", username.Trim());
-        command.Parameters.AddWithValue("@password", password.Trim());
+            command.Parameters.AddWithValue("@username", username.Trim());
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? MapUser(reader) : null;
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            if (!await reader.ReadAsync(cancellationToken))
+            {
+                return null;
+            }
+
+            storedPassword = ReadString(reader, "password");
+            user = MapUser(reader);
+        }
+
+        if (!VerifyPassword(password.Trim(), storedPassword, out var needsRehash))
+        {
+            return null;
+        }
+
+        if (needsRehash)
+        {
+            await UpdatePasswordAsync(connection, username.Trim(), HashPassword(password.Trim()), cancellationToken);
+        }
+
+        return user;
     }
 
     public async Task<UserDto> UpsertAsync(UserUpsertRequest request, CancellationToken cancellationToken = default)
@@ -68,7 +89,7 @@ public sealed class UserRepository
         var exists = await ExistsAsync(connection, request.Username.Trim(), cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = exists ? UpdateSql : InsertSql;
-        AddUpsertParameters(command, request);
+        AddUpsertParameters(command, request, HashPassword(request.Password!.Trim()));
         await command.ExecuteNonQueryAsync(cancellationToken);
 
         return await GetByUsernameAsync(request.Username.Trim(), cancellationToken)
@@ -97,19 +118,13 @@ public sealed class UserRepository
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            UPDATE usersinfo
-            SET password = @newPassword
-            WHERE username = @username
-              AND password = @currentPassword
-              AND disabled = 0;
-            """;
-        command.Parameters.AddWithValue("@username", username.Trim());
-        command.Parameters.AddWithValue("@currentPassword", currentPassword.Trim());
-        command.Parameters.AddWithValue("@newPassword", newPassword.Trim());
+        var storedPassword = await GetStoredPasswordAsync(connection, username.Trim(), cancellationToken);
+        if (!VerifyPassword(currentPassword.Trim(), storedPassword, out _))
+        {
+            return false;
+        }
 
-        return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
+        return await UpdatePasswordAsync(connection, username.Trim(), HashPassword(newPassword.Trim()), cancellationToken) > 0;
     }
 
     private static async Task<bool> ExistsAsync(SqlConnection connection, string username, CancellationToken cancellationToken)
@@ -133,11 +148,11 @@ public sealed class UserRepository
         return await reader.ReadAsync(cancellationToken) ? MapUser(reader) : null;
     }
 
-    private static void AddUpsertParameters(SqlCommand command, UserUpsertRequest request)
+    private static void AddUpsertParameters(SqlCommand command, UserUpsertRequest request, string passwordHash)
     {
         command.Parameters.AddWithValue("@username", request.Username!.Trim());
         command.Parameters.AddWithValue("@name", request.Name!.Trim());
-        command.Parameters.AddWithValue("@password", request.Password!.Trim());
+        command.Parameters.AddWithValue("@password", passwordHash);
         command.Parameters.AddWithValue("@companyId", request.CompanyId);
         command.Parameters.AddWithValue("@uploadDoc", Flag(request.UploadDocument));
         command.Parameters.AddWithValue("@scanDoc", Flag(request.ScanDocument));
@@ -199,12 +214,91 @@ public sealed class UserRepository
         return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
     }
 
+    private static async Task<string?> GetStoredPasswordAsync(SqlConnection connection, string username, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT password
+            FROM usersinfo
+            WHERE username = @username
+              AND disabled = 0;
+            """;
+        command.Parameters.AddWithValue("@username", username);
+        return await command.ExecuteScalarAsync(cancellationToken) as string;
+    }
+
+    private static async Task<int> UpdatePasswordAsync(SqlConnection connection, string username, string passwordHash, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE usersinfo
+            SET password = @password
+            WHERE username = @username
+              AND disabled = 0;
+            """;
+        command.Parameters.AddWithValue("@username", username);
+        command.Parameters.AddWithValue("@password", passwordHash);
+        return await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static bool VerifyPassword(string password, string? storedPassword, out bool needsRehash)
+    {
+        needsRehash = false;
+        if (string.IsNullOrEmpty(storedPassword))
+        {
+            return false;
+        }
+
+        if (!storedPassword.StartsWith(PasswordHashPrefix, StringComparison.Ordinal))
+        {
+            needsRehash = true;
+            return string.Equals(password, storedPassword, StringComparison.Ordinal);
+        }
+
+        var parts = storedPassword.Split('$');
+        if (parts.Length != 4
+            || !int.TryParse(parts[1], out var iterations)
+            || iterations < 10000)
+        {
+            return false;
+        }
+
+        try
+        {
+            var salt = Convert.FromBase64String(parts[2]);
+            var expectedHash = Convert.FromBase64String(parts[3]);
+            var actualHash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, expectedHash.Length);
+            return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
+    private static string HashPassword(string password)
+    {
+        var salt = RandomNumberGenerator.GetBytes(16);
+        var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, PasswordHashIterations, HashAlgorithmName.SHA256, 32);
+        return $"{PasswordHashPrefix}${PasswordHashIterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
+    }
+
     private const string UserSelectSql = """
         SELECT username, name, comp_id, upload_doc, scan_doc, delete_doc, delete_manage,
                print_doc, download_doc, add_cat, add_users, add_patients, box, report,
                su, disabled, IsAdmin
         FROM usersinfo
         """;
+
+    private const string UserSelectSqlWithPassword = """
+        SELECT username, name, password, comp_id, upload_doc, scan_doc, delete_doc, delete_manage,
+               print_doc, download_doc, add_cat, add_users, add_patients, box, report,
+               su, disabled, IsAdmin
+        FROM usersinfo
+        """;
+
+    private const string PasswordHashPrefix = "pbkdf2_sha256";
+    private const int PasswordHashIterations = 100000;
 
     private const string InsertSql = """
         INSERT INTO usersinfo (username, name, password, comp_id, upload_doc, scan_doc, delete_doc,

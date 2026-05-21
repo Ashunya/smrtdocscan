@@ -394,14 +394,8 @@ app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal pr
         return Results.Forbid();
     }
 
-    var validationResult = ValidateUploadedDocument(file, maxDocumentUploadBytes);
-    if (validationResult is not null)
-    {
-        return validationResult;
-    }
-
     var safeName = BuildStoredDocumentName(form["documentName"], file.FileName);
-    validationResult = ValidateStoredDocumentName(safeName);
+    var validationResult = await ValidateUploadedDocumentAsync(file, safeName, maxDocumentUploadBytes, cancellationToken);
     if (validationResult is not null)
     {
         return validationResult;
@@ -448,14 +442,8 @@ app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincip
         return Results.Forbid();
     }
 
-    var validationResult = ValidateUploadedDocument(file, maxDocumentUploadBytes);
-    if (validationResult is not null)
-    {
-        return validationResult;
-    }
-
     var safeName = BuildStoredDocumentName(httpRequest.Query["documentName"], file.FileName);
-    validationResult = ValidateStoredDocumentName(safeName);
+    var validationResult = await ValidateUploadedDocumentAsync(file, safeName, maxDocumentUploadBytes, cancellationToken);
     if (validationResult is not null)
     {
         return validationResult;
@@ -1171,14 +1159,23 @@ static string BuildStoredDocumentName(string? requestedName, string originalFile
     return safeName;
 }
 
-static IResult? ValidateUploadedDocument(IFormFile file, long maxDocumentUploadBytes)
+static async Task<IResult?> ValidateUploadedDocumentAsync(IFormFile file, string storedFileName, long maxDocumentUploadBytes, CancellationToken cancellationToken)
 {
     if (file.Length > maxDocumentUploadBytes)
     {
         return Results.BadRequest(new { message = $"Document exceeds the maximum upload size of {maxDocumentUploadBytes / 1024 / 1024} MB." });
     }
 
-    return ValidateStoredDocumentName(file.FileName);
+    var nameValidation = ValidateStoredDocumentName(storedFileName);
+    if (nameValidation is not null)
+    {
+        return nameValidation;
+    }
+
+    var signatureValid = await HasAllowedFileSignatureAsync(file, storedFileName, cancellationToken);
+    return signatureValid
+        ? null
+        : Results.BadRequest(new { message = "The uploaded file content does not match its file type." });
 }
 
 static IResult? ValidateStoredDocumentName(string fileName)
@@ -1195,4 +1192,45 @@ static IResult? ValidateStoredDocumentName(string fileName)
 static bool IsAllowedDocumentExtension(string extension)
 {
     return extension is ".pdf" or ".tif" or ".tiff" or ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" or ".webp" or ".txt";
+}
+
+static async Task<bool> HasAllowedFileSignatureAsync(IFormFile file, string storedFileName, CancellationToken cancellationToken)
+{
+    var extension = Path.GetExtension(storedFileName).ToLowerInvariant();
+    if (extension == ".txt")
+    {
+        return true;
+    }
+
+    var header = new byte[12];
+    await using var stream = file.OpenReadStream();
+    var read = await stream.ReadAsync(header.AsMemory(0, header.Length), cancellationToken);
+    return HasAllowedFileSignature(extension, header, read);
+}
+
+static bool HasAllowedFileSignature(string extension, byte[] header, int read)
+{
+    var span = header.AsSpan(0, read);
+
+    return extension switch
+    {
+        ".pdf" => StartsWithAscii(span, "%PDF"),
+        ".tif" or ".tiff" => StartsWith(span, [0x49, 0x49, 0x2A, 0x00]) || StartsWith(span, [0x4D, 0x4D, 0x00, 0x2A]),
+        ".jpg" or ".jpeg" => StartsWith(span, [0xFF, 0xD8, 0xFF]),
+        ".png" => StartsWith(span, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
+        ".gif" => StartsWithAscii(span, "GIF87a") || StartsWithAscii(span, "GIF89a"),
+        ".bmp" => StartsWithAscii(span, "BM"),
+        ".webp" => span.Length >= 12 && StartsWithAscii(span, "RIFF") && StartsWithAscii(span[8..], "WEBP"),
+        _ => false
+    };
+}
+
+static bool StartsWithAscii(ReadOnlySpan<byte> value, string expected)
+{
+    return value.Length >= expected.Length && Encoding.ASCII.GetString(value[..expected.Length]) == expected;
+}
+
+static bool StartsWith(ReadOnlySpan<byte> value, ReadOnlySpan<byte> expected)
+{
+    return value.Length >= expected.Length && value[..expected.Length].SequenceEqual(expected);
 }
