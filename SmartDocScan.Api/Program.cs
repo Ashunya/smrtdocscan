@@ -198,6 +198,7 @@ authBuilder.AddOpenIdConnect(options =>
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+await CleanupAuditLogsAsync(app.Services, app.Configuration);
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 app.Use(async (context, next) =>
@@ -1038,6 +1039,25 @@ static Task AuditForbiddenAsync(
     HttpContext httpContext)
 {
     return AuditAsync(auditRepository, action, GetActor(principal), companyId, targetType, targetId, "forbidden", httpContext);
+}
+
+static async Task CleanupAuditLogsAsync(IServiceProvider services, IConfiguration configuration)
+{
+    var retentionDays = configuration.GetValue<int?>("Audit:RetentionDays") ?? 365;
+    if (retentionDays <= 0)
+    {
+        return;
+    }
+
+    try
+    {
+        var auditRepository = services.GetRequiredService<AuditRepository>();
+        await auditRepository.DeleteOlderThanAsync(retentionDays);
+    }
+    catch
+    {
+        // Audit cleanup should not prevent the application from starting.
+    }
 }
 
 static bool ReadBoolClaim(ClaimsPrincipal principal, string type)

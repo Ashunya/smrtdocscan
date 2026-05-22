@@ -103,6 +103,26 @@ public sealed class AuditRepository
         return logs;
     }
 
+    public async Task<int> DeleteOlderThanAsync(int retentionDays, CancellationToken cancellationToken = default)
+    {
+        if (retentionDays <= 0)
+        {
+            return 0;
+        }
+
+        await EnsureSchemaAsync(cancellationToken);
+        await using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            DELETE FROM audit_log
+            WHERE created_on < DATEADD(day, -@retentionDays, SYSUTCDATETIME());
+            """;
+        command.Parameters.AddWithValue("@retentionDays", retentionDays);
+        return await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     private static object DbValue(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? DBNull.Value : value;
