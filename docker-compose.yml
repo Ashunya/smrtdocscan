@@ -3,47 +3,43 @@ services:
     build:
       context: .
       dockerfile: SmartDocScan.Api/Dockerfile
+    container_name: smrtdocscan-api
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       ConnectionStrings__SmartDocScan: ${SMARTDOCSCAN_CONNECTION_STRING}
-      Cors__AllowedOrigins__0: ${SMARTDOCSCAN_WEB_ORIGIN:-http://localhost:8088}
+      Cors__AllowedOrigins__0: https://scan.ashunya.com
       Store__RootPath: /data/store
-      Authentication__CookieDomain: ${SMARTDOCSCAN_COOKIE_DOMAIN:-}
-      Authentication__AllowLegacyPlaintextPasswords: ${SMARTDOCSCAN_ALLOW_LEGACY_PLAINTEXT_PASSWORDS:-false}
-    ports:
-      - "127.0.0.1:5080:8080"
     volumes:
-      - ${SMARTDOCSCAN_STORE_PATH:-./Store}:/data/store
+      - D:/DMS/store:/data/store
       - ./DataProtection-Keys:/root/.aspnet/DataProtection-Keys
+    restart: unless-stopped
 
   web:
     build:
       context: .
       dockerfile: SmartDocScan.Web/Dockerfile
       args:
-        VITE_API_BASE_URL: /api
+        VITE_API_BASE_URL: https://scanapi.ashunya.com/api
         VITE_DEFAULT_COMPANY_ID: ${SMARTDOCSCAN_DEFAULT_COMPANY_ID:-7}
+    container_name: smrtdocscan-web
     depends_on:
       - api
-    ports:
-      - "127.0.0.1:8088:80"
     volumes:
       - ./SmartDocScan/Resources:/usr/share/nginx/html/Resources:ro
+    restart: unless-stopped
 
   caddy:
     image: caddy:2
+    container_name: smrtdocscan-caddy
     depends_on:
       - api
       - web
     ports:
       - "80:80"
       - "443:443"
-      - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-
-volumes:
-  caddy_data:
-  caddy_config:
+      - ./CaddyData:/data
+      - ./CaddyConfig:/config
+    restart: unless-stopped
