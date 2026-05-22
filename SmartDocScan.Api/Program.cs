@@ -583,7 +583,7 @@ app.MapGet("/api/documents/{documentId:int}/download", async (int documentId, Cl
         return Results.NotFound(new { message = "Document not found." });
     }
 
-    if (!CanAccessCompany(principal, document.CompanyId) || (!ReadBoolClaim(principal, "download_document") && !IsElevated(principal)))
+    if (!CanAccessCompany(principal, document.CompanyId) || !CanDownloadDocuments(principal))
     {
         return Results.Forbid();
     }
@@ -1298,6 +1298,11 @@ static bool CanViewReports(ClaimsPrincipal principal)
     return IsElevated(principal) || ReadBoolClaim(principal, "report");
 }
 
+static bool CanDownloadDocuments(ClaimsPrincipal principal)
+{
+    return IsElevated(principal) || ReadBoolClaim(principal, "download_document");
+}
+
 static void AddSecurityHeaders(HttpResponse response)
 {
     response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
@@ -1478,7 +1483,7 @@ static async Task<IResult> PreviewDocumentAsync(int documentId, string? routeFil
         return Results.NotFound(new { message = "Document not found." });
     }
 
-    if (!CanAccessCompany(httpContext.User, document.CompanyId))
+    if (!CanAccessCompany(httpContext.User, document.CompanyId) || !CanDownloadDocuments(httpContext.User))
     {
         return Results.Forbid();
     }
@@ -1512,7 +1517,7 @@ static async Task<IResult> PreviewTiffPageAsync(int documentId, int page, HttpCo
         return Results.NotFound(new { message = "Document not found." });
     }
 
-    if (!CanAccessCompany(httpContext.User, document.CompanyId))
+    if (!CanAccessCompany(httpContext.User, document.CompanyId) || !CanDownloadDocuments(httpContext.User))
     {
         return Results.Forbid();
     }
