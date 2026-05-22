@@ -1540,7 +1540,9 @@ static async Task<IResult> PreviewTiffPageAsync(int documentId, int page, HttpCo
     var pageFileName = $"{Path.GetFileNameWithoutExtension(storedFileName)}-page-{Math.Max(page, 1)}.jpg";
     httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(pageFileName)}\"";
     httpContext.Response.Headers.XContentTypeOptions = "nosniff";
-    httpContext.Response.Headers.CacheControl = "private, max-age=3600";
+    httpContext.Response.Headers.CacheControl = "no-store, no-cache, max-age=0";
+    httpContext.Response.Headers.Pragma = "no-cache";
+    httpContext.Response.Headers.Expires = "0";
     return Results.File(image, "image/jpeg", enableRangeProcessing: false);
 }
 

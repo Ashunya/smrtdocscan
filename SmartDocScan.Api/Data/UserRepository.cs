@@ -7,11 +7,13 @@ namespace SmartDocScan.Api.Data;
 public sealed class UserRepository
 {
     private readonly string _connectionString;
+    private readonly bool _allowLegacyPlaintextPasswords;
 
     public UserRepository(IConfiguration configuration)
     {
         _connectionString = configuration.GetConnectionString("SmartDocScan")
             ?? throw new InvalidOperationException("Connection string 'SmartDocScan' is missing.");
+        _allowLegacyPlaintextPasswords = configuration.GetValue<bool>("Authentication:AllowLegacyPlaintextPasswords");
     }
 
     public async Task<IReadOnlyList<UserDto>> GetByCompanyAsync(int companyId, CancellationToken cancellationToken = default)
@@ -70,7 +72,7 @@ public sealed class UserRepository
             user = MapUser(reader);
         }
 
-        if (!VerifyPassword(password.Trim(), storedPassword, out var needsRehash))
+        if (!VerifyPassword(password.Trim(), storedPassword, _allowLegacyPlaintextPasswords, out var needsRehash))
         {
             await RecordFailedLoginAsync(connection, username.Trim(), cancellationToken);
             return null;
@@ -153,7 +155,7 @@ public sealed class UserRepository
         await connection.OpenAsync(cancellationToken);
 
         var storedPassword = await GetStoredPasswordAsync(connection, username.Trim(), cancellationToken);
-        if (!VerifyPassword(currentPassword.Trim(), storedPassword, out _))
+        if (!VerifyPassword(currentPassword.Trim(), storedPassword, _allowLegacyPlaintextPasswords, out _))
         {
             return false;
         }
@@ -352,7 +354,7 @@ public sealed class UserRepository
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static bool VerifyPassword(string password, string? storedPassword, out bool needsRehash)
+    private static bool VerifyPassword(string password, string? storedPassword, bool allowLegacyPlaintextPasswords, out bool needsRehash)
     {
         needsRehash = false;
         if (string.IsNullOrEmpty(storedPassword))
@@ -362,8 +364,8 @@ public sealed class UserRepository
 
         if (!storedPassword.StartsWith(PasswordHashPrefix, StringComparison.Ordinal))
         {
-            needsRehash = true;
-            return string.Equals(password, storedPassword, StringComparison.Ordinal);
+            needsRehash = allowLegacyPlaintextPasswords;
+            return allowLegacyPlaintextPasswords && string.Equals(password, storedPassword, StringComparison.Ordinal);
         }
 
         var parts = storedPassword.Split('$');
