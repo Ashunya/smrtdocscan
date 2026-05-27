@@ -4,4 +4,5 @@
 **/obj
 **/node_modules
 **/dist
+!SmartDocScan/Resources/dist
 packages
