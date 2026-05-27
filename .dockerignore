@@ -5,7 +5,3 @@
 **/node_modules
 **/dist
 packages
-SmartDocScan/Resources/dist/*.msi
-SmartDocScan/Resources/dist/*.pkg
-SmartDocScan/Resources/dist/*.deb
-SmartDocScan/Resources/dist/*.rpm
