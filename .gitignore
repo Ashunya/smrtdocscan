@@ -13,6 +13,7 @@ Store/
 
 node_modules/
 /SmartDocScan.Web/dist/
+/SmartDocScan.Web/public/Resources/
 
 *.user
 *.suo
