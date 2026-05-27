@@ -7,8 +7,9 @@ const webRoot = resolve(scriptDir, "..");
 const source = resolve(webRoot, "..", "SmartDocScan", "Resources");
 const destination = resolve(webRoot, "public", "Resources");
 const requiredFile = "dynamsoft.webtwain.config.js";
+const destinationFile = resolve(destination, requiredFile);
 
-if (existsSync(resolve(destination, requiredFile))) {
+if (existsSync(destinationFile)) {
   process.exit(0);
 }
 

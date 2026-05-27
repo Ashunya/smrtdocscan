@@ -5,8 +5,8 @@ COPY SmartDocScan.Web/package.json ./
 RUN npm install
 
 COPY SmartDocScan.Web/ ./
-COPY SmartDocScan/Resources /SmartDocScan/Resources
 COPY SmartDocScan/Resources ./public/Resources
+RUN test -f ./public/Resources/dynamsoft.webtwain.config.js
 ARG VITE_API_BASE_URL=/api
 ARG VITE_DEFAULT_COMPANY_ID=7
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
