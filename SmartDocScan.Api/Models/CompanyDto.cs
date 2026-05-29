@@ -13,4 +13,5 @@ public sealed class CompanyDto
     public string? MicrosoftTenantId { get; set; }
     public string? MicrosoftTenantName { get; set; }
     public bool MicrosoftTenantEnabled { get; set; }
+    public List<CompanyTenantDto> Tenants { get; set; } = new();
 }

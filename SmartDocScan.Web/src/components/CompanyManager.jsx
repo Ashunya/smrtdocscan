@@ -13,6 +13,7 @@ const blankCompany = {
   microsoftTenantId: "",
   microsoftTenantName: "",
   microsoftTenantEnabled: true,
+  tenants: [],
 };
 
 export function CompanyManager({ companyId, onCompanyChange, onNotice }) {
@@ -46,7 +47,20 @@ export function CompanyManager({ companyId, onCompanyChange, onNotice }) {
   }, [onNotice]);
 
   function editCompany(company) {
-    setForm(company);
+    let tenants = company.tenants || [];
+    if (tenants.length === 0 && company.microsoftTenantId) {
+      tenants = [
+        {
+          tenantId: company.microsoftTenantId,
+          tenantName: company.microsoftTenantName || "",
+          enabled: company.microsoftTenantEnabled !== false,
+        }
+      ];
+    }
+    setForm({
+      ...company,
+      tenants,
+    });
   }
 
   function updateField(field, value) {
@@ -120,31 +134,70 @@ export function CompanyManager({ companyId, onCompanyChange, onNotice }) {
           <input type="checkbox" checked={Boolean(form.inactive)} onChange={(event) => updateField("inactive", event.target.checked)} />
           Inactive
         </label>
-        <div className="form-section-title">Microsoft SSO Tenant</div>
-        <label>
-          Tenant ID
-          <input
-            value={form.microsoftTenantId || ""}
-            onChange={(event) => updateField("microsoftTenantId", event.target.value)}
-            placeholder="Customer Entra tenant GUID"
-          />
-        </label>
-        <label>
-          Tenant Name
-          <input
-            value={form.microsoftTenantName || ""}
-            onChange={(event) => updateField("microsoftTenantName", event.target.value)}
-            placeholder="Customer display name"
-          />
-        </label>
-        <label className="check-row company-check">
-          <input
-            type="checkbox"
-            checked={form.microsoftTenantEnabled !== false}
-            onChange={(event) => updateField("microsoftTenantEnabled", event.target.checked)}
-          />
-          Enable Microsoft SSO
-        </label>
+        <div className="form-section-title">Microsoft SSO Tenants</div>
+        <div className="tenants-list-container" style={{ marginBottom: "15px" }}>
+          {(form.tenants || []).map((tenant, index) => (
+            <div key={index} className="tenant-row" style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "10px" }}>
+              <input
+                style={{ flex: 3 }}
+                value={tenant.tenantId || ""}
+                onChange={(event) => {
+                  const updated = [...(form.tenants || [])];
+                  updated[index] = { ...updated[index], tenantId: event.target.value };
+                  updateField("tenants", updated);
+                }}
+                placeholder="Entra tenant GUID"
+                required
+              />
+              <input
+                style={{ flex: 3 }}
+                value={tenant.tenantName || ""}
+                onChange={(event) => {
+                  const updated = [...(form.tenants || [])];
+                  updated[index] = { ...updated[index], tenantName: event.target.value };
+                  updateField("tenants", updated);
+                }}
+                placeholder="Tenant display name"
+              />
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap", margin: 0, fontSize: "0.95em", userSelect: "none" }}>
+                <input
+                  type="checkbox"
+                  style={{ width: "auto", margin: 0 }}
+                  checked={tenant.enabled !== false}
+                  onChange={(event) => {
+                    const updated = [...(form.tenants || [])];
+                    updated[index] = { ...updated[index], enabled: event.target.checked };
+                    updateField("tenants", updated);
+                  }}
+                />
+                Enabled
+              </label>
+              <button
+                type="button"
+                className="icon-button danger"
+                style={{ padding: "8px", minWidth: "auto", height: "auto" }}
+                onClick={() => {
+                  const updated = (form.tenants || []).filter((_, i) => i !== index);
+                  updateField("tenants", updated);
+                }}
+                title="Remove Tenant"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="secondary-button"
+            style={{ padding: "6px 12px", fontSize: "0.9em" }}
+            onClick={() => {
+              const updated = [...(form.tenants || []), { tenantId: "", tenantName: "", enabled: true }];
+              updateField("tenants", updated);
+            }}
+          >
+            Add Microsoft Tenant ID
+          </button>
+        </div>
         <div className="form-actions inline">
           <button className="primary-button" type="submit" disabled={saving}>{saving ? "Saving..." : "Save Company"}</button>
         </div>
@@ -180,7 +233,21 @@ export function CompanyManager({ companyId, onCompanyChange, onNotice }) {
                   <td>{company.owner || ""}</td>
                   <td>{company.location || company.address || ""}</td>
                   <td>{company.phone || ""}</td>
-                  <td>{company.microsoftTenantId ? `${company.microsoftTenantName || "Microsoft"} (${company.microsoftTenantEnabled ? "Enabled" : "Disabled"})` : ""}</td>
+                  <td>
+                    {company.tenants && company.tenants.length > 0 ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        {company.tenants.map((t, idx) => (
+                          <div key={idx} style={{ fontSize: "0.85em", opacity: t.enabled ? 1 : 0.6, lineHeight: "1.2" }}>
+                            • {t.tenantName || "Microsoft"} ({t.tenantId.substring(0, 8)}...) {t.enabled ? "" : "(Disabled)"}
+                          </div>
+                        ))}
+                      </div>
+                    ) : company.microsoftTenantId ? (
+                      `${company.microsoftTenantName || "Microsoft"} (${company.microsoftTenantEnabled ? "Enabled" : "Disabled"})`
+                    ) : (
+                      ""
+                    )}
+                  </td>
                   <td>{company.inactive ? "Inactive" : "Active"}</td>
                   <td className="row-actions">
                     <button

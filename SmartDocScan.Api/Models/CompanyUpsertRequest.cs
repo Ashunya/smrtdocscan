@@ -13,4 +13,5 @@ public sealed class CompanyUpsertRequest
     public string? MicrosoftTenantId { get; set; }
     public string? MicrosoftTenantName { get; set; }
     public bool MicrosoftTenantEnabled { get; set; } = true;
+    public List<CompanyTenantDto> Tenants { get; set; } = new();
 }
