@@ -1,4 +1,4 @@
-import { CheckCircle2, Trash2 } from "lucide-react";
+import { CheckCircle2, Edit2, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { deleteCompany, listCompanies, saveCompany } from "../api/client";
 
@@ -215,16 +215,17 @@ export function CompanyManager({ companyId, onCompanyChange, onNotice }) {
               <th>Status</th>
               <th />
               <th />
+              <th />
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="8">Loading companies...</td>
+                <td colSpan="9">Loading companies...</td>
               </tr>
             ) : companies.length === 0 ? (
               <tr>
-                <td colSpan="8">No companies found</td>
+                <td colSpan="9">No companies found</td>
               </tr>
             ) : (
               companies.map((company) => (
@@ -257,6 +258,16 @@ export function CompanyManager({ companyId, onCompanyChange, onNotice }) {
                     >
                       <CheckCircle2 size={16} />
                       {company.companyId === companyId ? "Selected" : "Select"}
+                    </button>
+                  </td>
+                  <td className="row-actions">
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={() => editCompany(company)}
+                    >
+                      <Edit2 size={16} />
+                      Edit
                     </button>
                   </td>
                   <td className="row-actions">
