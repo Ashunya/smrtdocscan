@@ -63,7 +63,7 @@ export function SignIn({ onSignedIn, logoUrl }) {
             Sign in with Microsoft
           </a>
           <p className="signin-help">Need help signing in? Contact your company administrator.</p>
-          <p className="signin-copyright">Copyright © 2019 <span>Ashunya</span>. All Rights Reserved.</p>
+          <p className="signin-copyright">Copyright © 2026 <span>Ashunya</span>. All Rights Reserved.</p>
         </div>
       </section>
     </main>

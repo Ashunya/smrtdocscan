@@ -23,6 +23,19 @@ const blankUser = {
   name: "",
   password: "",
   confirmPassword: "",
+  uploadDocument: true,
+  scanDocument: true,
+  deleteDocument: true,
+  printDocument: true,
+  downloadDocument: true,
+  addCategory: true,
+  addUsers: false,
+  addPatients: true,
+  box: true,
+  report: true,
+  superUser: false,
+  isAdmin: false,
+  disabled: false,
 };
 
 export function UserManager({ companyId, onNotice }) {
