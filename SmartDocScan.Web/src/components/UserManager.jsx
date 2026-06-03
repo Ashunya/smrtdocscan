@@ -79,10 +79,6 @@ export function UserManager({ companyId, onNotice }) {
   async function handleSubmit(event) {
     event.preventDefault();
     const editingExisting = users.some((user) => user.username === form.username);
-    if (!editingExisting && !form.password) {
-      onNotice({ type: "error", text: "Password is required for new users." });
-      return;
-    }
     if (form.password || form.confirmPassword) {
       if (form.password !== form.confirmPassword) {
         onNotice({ type: "error", text: "Passwords do not match." });
@@ -99,9 +95,15 @@ export function UserManager({ companyId, onNotice }) {
         delete payload.confirmPassword;
       }
       const saved = await saveUser(payload);
-      setUsers((current) => [saved, ...current.filter((user) => user.username !== saved.username)]);
+      const { generatedPassword, ...savedUser } = saved;
+      setUsers((current) => [savedUser, ...current.filter((user) => user.username !== savedUser.username)]);
       setForm(blankUser);
-      onNotice({ type: "success", text: "User saved." });
+      onNotice({
+        type: "success",
+        text: generatedPassword
+          ? `User saved. Temporary password: ${generatedPassword}`
+          : "User saved.",
+      });
     } catch (error) {
       onNotice({ type: "error", text: error.message });
     } finally {
@@ -146,7 +148,7 @@ export function UserManager({ companyId, onNotice }) {
             type="password"
             value={form.password || ""}
             onChange={(event) => updateField("password", event.target.value)}
-            placeholder={users.some((user) => user.username === form.username) ? "Leave blank to keep current password" : ""}
+            placeholder={users.some((user) => user.username === form.username) ? "Leave blank to keep current password" : "Leave blank to auto-generate"}
             autoComplete="new-password"
           />
         </label>
@@ -156,6 +158,7 @@ export function UserManager({ companyId, onNotice }) {
             type="password"
             value={form.confirmPassword || ""}
             onChange={(event) => updateField("confirmPassword", event.target.value)}
+            placeholder="Only needed when setting password"
             autoComplete="new-password"
           />
         </label>

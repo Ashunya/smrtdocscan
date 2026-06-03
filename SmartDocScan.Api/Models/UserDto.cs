@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace SmartDocScan.Api.Models;
 
 public sealed class UserDto
@@ -19,4 +21,6 @@ public sealed class UserDto
     public bool SuperUser { get; set; }
     public bool Disabled { get; set; }
     public bool IsAdmin { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? GeneratedPassword { get; set; }
 }

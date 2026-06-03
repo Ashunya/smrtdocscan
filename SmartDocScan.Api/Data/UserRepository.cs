@@ -100,10 +100,12 @@ public sealed class UserRepository
 
         var exists = await ExistsAsync(connection, request.Username.Trim(), cancellationToken);
         var passwordProvided = !string.IsNullOrWhiteSpace(request.Password);
-        if (!exists && !passwordProvided)
-        {
-            throw new InvalidOperationException("Password is required for new users.");
-        }
+        var generatedPassword = !exists && !passwordProvided
+            ? GenerateTemporaryPassword()
+            : null;
+        var passwordToSave = passwordProvided
+            ? request.Password!.Trim()
+            : generatedPassword;
 
         if (passwordProvided
             && !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal))
@@ -111,7 +113,7 @@ public sealed class UserRepository
             throw new InvalidOperationException("Passwords do not match.");
         }
 
-        if (passwordProvided && !IsPasswordLongEnough(request.Password))
+        if (!string.IsNullOrWhiteSpace(passwordToSave) && !IsPasswordLongEnough(passwordToSave))
         {
             throw new InvalidOperationException($"Password must be at least {MinimumPasswordLength} characters.");
         }
@@ -120,11 +122,13 @@ public sealed class UserRepository
         command.CommandText = exists
             ? (passwordProvided ? UpdateSql : UpdateSqlWithoutPassword)
             : InsertSql;
-        AddUpsertParameters(command, request, passwordProvided ? HashPassword(request.Password!.Trim()) : null);
+        AddUpsertParameters(command, request, passwordToSave is not null ? HashPassword(passwordToSave) : null);
         await command.ExecuteNonQueryAsync(cancellationToken);
 
-        return await GetByUsernameAsync(request.Username.Trim(), cancellationToken)
+        var savedUser = await GetByUsernameAsync(request.Username.Trim(), cancellationToken)
             ?? throw new InvalidOperationException("User was saved but could not be loaded.");
+        savedUser.GeneratedPassword = generatedPassword;
+        return savedUser;
     }
 
     public async Task<bool> DeleteAsync(string username, int companyId, CancellationToken cancellationToken = default)
@@ -399,6 +403,33 @@ public sealed class UserRepository
     private static bool IsPasswordLongEnough(string? password)
     {
         return password?.Trim().Length >= MinimumPasswordLength;
+    }
+
+    private static string GenerateTemporaryPassword()
+    {
+        const string uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        const string lowercase = "abcdefghijkmnopqrstuvwxyz";
+        const string digits = "23456789";
+        const string symbols = "!@#$%";
+        const string all = uppercase + lowercase + digits + symbols;
+        Span<char> password = stackalloc char[14];
+        password[0] = uppercase[RandomNumberGenerator.GetInt32(uppercase.Length)];
+        password[1] = lowercase[RandomNumberGenerator.GetInt32(lowercase.Length)];
+        password[2] = digits[RandomNumberGenerator.GetInt32(digits.Length)];
+        password[3] = symbols[RandomNumberGenerator.GetInt32(symbols.Length)];
+
+        for (var index = 4; index < password.Length; index++)
+        {
+            password[index] = all[RandomNumberGenerator.GetInt32(all.Length)];
+        }
+
+        for (var index = password.Length - 1; index > 0; index--)
+        {
+            var swapIndex = RandomNumberGenerator.GetInt32(index + 1);
+            (password[index], password[swapIndex]) = (password[swapIndex], password[index]);
+        }
+
+        return new string(password);
     }
 
     private const string UserSelectSql = """
