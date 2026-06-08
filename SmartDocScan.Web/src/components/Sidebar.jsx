@@ -9,7 +9,7 @@ import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { Box, Divider, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar } from "@mui/material";
 
-export function Sidebar({ activeView, onNavigate, user, logoUrl, open = true }) {
+export function Sidebar({ activeView, onNavigate, user, logoUrl, open = true, variant = "permanent", onClose }) {
   const items = [
     { id: "find", label: "Find Patient", icon: SearchOutlinedIcon },
     { id: "add", label: "Add Patient", icon: PersonAddAltOutlinedIcon, permission: "addPatients" },
@@ -23,7 +23,14 @@ export function Sidebar({ activeView, onNavigate, user, logoUrl, open = true }) 
   ].filter((item) => canShow(item, user));
 
   return (
-    <Drawer className={`sidebar${open ? "" : " sidebar--closed"}`} variant="permanent" PaperProps={{ className: "sidebar-paper" }}>
+    <Drawer
+      className={`sidebar${open ? "" : " sidebar--closed"}${variant === "temporary" ? " sidebar--temporary" : ""}`}
+      variant={variant}
+      open={open}
+      onClose={onClose}
+      ModalProps={{ keepMounted: true }}
+      PaperProps={{ className: "sidebar-paper" }}
+    >
       <Toolbar className="brand">
         <Box component="img" className="brand-logo" src={logoUrl || "/smartdocscan-logo.svg"} alt="Smart Doc Scan" />
       </Toolbar>

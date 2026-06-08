@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Building2, Key, LogOut, Menu as MenuIcon, Moon, Sun } from "lucide-react";
-import { AppBar, Avatar, Box, CssBaseline, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Menu as MuiMenu, MenuItem, Stack, ThemeProvider, Toolbar, Typography, createTheme } from "@mui/material";
+import { AppBar, Avatar, Box, CssBaseline, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Menu as MuiMenu, MenuItem, Stack, ThemeProvider, Toolbar, Typography, createTheme, useMediaQuery } from "@mui/material";
 import { changePassword, createPatient, deletePatient, getBrandingSettings, getCurrentUser, listCompanies, logout, searchPatients, updatePatient } from "./api/client";
 import { AuditLogManager } from "./components/AuditLogManager";
 import { BoxManager } from "./components/BoxManager";
@@ -76,6 +76,7 @@ export default function App() {
 
   const debouncedSearch = useDebouncedValue(search, 300);
   const muiTheme = useMemo(() => createSmartDocTheme(colorMode), [colorMode]);
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("md"));
   const activeCompanyName = useMemo(
     () => companies.find(c => c.companyId === companyId)?.companyName || null,
     [companies, companyId]
@@ -169,6 +170,10 @@ export default function App() {
     window.localStorage.setItem("smartdocscan-theme", colorMode);
     document.documentElement.dataset.theme = colorMode;
   }, [colorMode]);
+
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile]);
 
   useEffect(() => {
     if (!window.history.state?.smartdocscan) {
@@ -349,11 +354,14 @@ export default function App() {
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <Box className="app-shell">
-      <Sidebar activeView={activeView} user={currentUser} logoUrl={logoUrl} open={sidebarOpen} onNavigate={(view) => {
+      <Sidebar activeView={activeView} user={currentUser} logoUrl={logoUrl} open={sidebarOpen} variant={isMobile ? "temporary" : "permanent"} onClose={() => setSidebarOpen(false)} onNavigate={(view) => {
         if (view === "add") {
           setSelectedPatient(null);
         }
         setActiveView(view);
+        if (isMobile) {
+          setSidebarOpen(false);
+        }
       }} />
       <Box component="main" className="workspace">
         <AppBar className="topbar" position="sticky" color="inherit" elevation={0}>

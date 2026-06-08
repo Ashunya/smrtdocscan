@@ -2113,3 +2113,328 @@ tbody tr:nth-child(odd) {
     justify-content: flex-start;
   }
 }
+
+@media (max-width: 900px) {
+  body {
+    min-width: 0;
+  }
+
+  .app-shell {
+    display: block;
+    min-height: 100dvh;
+  }
+
+  .workspace {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sidebar.sidebar--temporary {
+    width: 0;
+  }
+
+  .sidebar.sidebar--temporary .sidebar-paper {
+    width: min(82vw, 290px);
+    max-width: 100vw;
+  }
+
+  .sidebar.sidebar--temporary.sidebar--closed .sidebar-paper {
+    width: min(82vw, 290px);
+  }
+
+  .sidebar.sidebar--temporary .brand {
+    min-height: 72px !important;
+    justify-content: flex-start;
+    padding: 0 18px !important;
+  }
+
+  .sidebar.sidebar--temporary .brand-logo {
+    width: 220px;
+    max-width: calc(82vw - 36px);
+  }
+
+  .sidebar.sidebar--temporary .side-nav {
+    display: block;
+    padding: 14px 10px !important;
+  }
+
+  .sidebar.sidebar--temporary .nav-item {
+    justify-content: flex-start;
+    padding: 10px 14px !important;
+  }
+
+  .sidebar.sidebar--temporary .nav-icon {
+    min-width: 38px !important;
+  }
+
+  .sidebar.sidebar--temporary .MuiListItemText-root {
+    display: block;
+  }
+
+  .topbar {
+    min-height: 64px;
+  }
+
+  .topbar .MuiToolbar-root {
+    min-height: 64px !important;
+    padding: 0 12px !important;
+  }
+
+  .topbar-company-name {
+    max-width: 46vw;
+    font-size: 12px !important;
+  }
+
+  .page-heading {
+    margin-top: 18px;
+    padding: 0 12px;
+  }
+
+  .page-heading h1 {
+    font-size: 19px;
+  }
+
+  .notice {
+    margin: 12px;
+    max-width: none;
+  }
+
+  .panel {
+    width: auto;
+    max-width: none;
+    margin: 12px;
+    border-radius: 6px;
+  }
+
+  .panel-header {
+    min-height: 0;
+    padding: 16px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .panel-header h2 {
+    font-size: 17px;
+  }
+
+  .panel-actions,
+  .view-toggle {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .panel-actions .primary-button,
+  .panel-actions .secondary-button {
+    flex: 1 1 120px;
+    justify-content: center;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  .table-wrap,
+  .audit-table-wrap {
+    padding: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 720px;
+  }
+
+  th,
+  td {
+    padding: 10px 12px;
+  }
+
+  .row-actions {
+    width: auto;
+  }
+
+  .form-grid,
+  .box-form,
+  .document-upload,
+  .user-form,
+  .company-form,
+  .category-form,
+  .report-form,
+  .audit-filter-form,
+  .settings-form fieldset,
+  .scanner-fields,
+  .barcode-toolbar,
+  .barcode-category-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid,
+  .box-form,
+  .document-upload,
+  .user-form,
+  .company-form,
+  .category-form,
+  .report-form,
+  .audit-filter-form,
+  .settings-form,
+  .scanner-toolbar,
+  .document-list {
+    padding: 16px;
+  }
+
+  .form-actions {
+    padding: 0 16px;
+    justify-content: stretch;
+  }
+
+  .form-actions.inline,
+  .form-actions .primary-button,
+  .form-actions .secondary-button,
+  .document-upload .primary-button,
+  .box-form .primary-button,
+  .category-form .primary-button,
+  .report-form .primary-button,
+  .audit-filter-form .primary-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .permission-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .document-card-grid,
+  .document-thumb-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .document-thumb-preview {
+    height: clamp(180px, 54vw, 260px);
+  }
+
+  .scanner-actions {
+    justify-content: stretch;
+  }
+
+  .scanner-actions .primary-button,
+  .scanner-actions .secondary-button,
+  .scanner-count-pill {
+    flex: 1 1 150px;
+    justify-content: center;
+  }
+
+  .scan-review-note {
+    padding: 12px 16px;
+  }
+
+  .scanner-frame {
+    min-height: 360px;
+    padding: 12px;
+    overflow: auto;
+  }
+
+  .barcode-toolbar {
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .barcode-page-preview {
+    width: 100%;
+    height: 420px;
+  }
+
+  .barcode-sheet {
+    transform: scale(0.72);
+    transform-origin: top left;
+  }
+
+  .signin-page {
+    min-height: 100dvh;
+    padding: 18px;
+    place-items: start center;
+  }
+
+  .signin-card {
+    width: 100%;
+    min-height: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .signin-story {
+    padding: 34px 24px;
+  }
+
+  .signin-logo {
+    width: 190px;
+    margin-bottom: 30px;
+  }
+
+  .signin-story h1 {
+    font-size: 34px;
+  }
+
+  .signin-copy {
+    margin: 16px 0 24px !important;
+  }
+
+  .signin-card .signin-panel {
+    padding: 34px 24px 28px;
+  }
+}
+
+@media (max-width: 520px) {
+  .topbar-company-name {
+    max-width: 38vw;
+  }
+
+  .menu-button,
+  .icon-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .panel {
+    margin: 10px 8px;
+  }
+
+  .page-heading {
+    padding: 0 8px;
+  }
+
+  .permission-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .primary-button,
+  .secondary-button {
+    min-height: 42px;
+  }
+
+  .row-actions .icon-button + .icon-button {
+    margin-left: 5px;
+  }
+
+  table {
+    min-width: 640px;
+  }
+
+  .signin-page {
+    padding: 10px;
+  }
+
+  .signin-story {
+    padding: 28px 20px;
+  }
+
+  .signin-story h1 {
+    font-size: 30px;
+  }
+
+  .signin-points {
+    gap: 12px;
+  }
+
+  .signin-card .signin-panel {
+    padding: 28px 20px 24px;
+  }
+}
