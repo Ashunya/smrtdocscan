@@ -14,6 +14,17 @@ BEGIN
         ON dbo.auth_otp_challenge(username, purpose, expires_on);
 END;
 
+IF OBJECT_ID('dbo.auth_login_attempt', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.auth_login_attempt (
+        username varchar(50) NOT NULL CONSTRAINT PK_auth_login_attempt PRIMARY KEY,
+        failed_count int NOT NULL,
+        first_failed_on datetime2 NOT NULL,
+        last_failed_on datetime2 NOT NULL,
+        locked_until datetime2 NULL
+    );
+END;
+
 IF OBJECT_ID('dbo.company_identity_tenant', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.company_identity_tenant (

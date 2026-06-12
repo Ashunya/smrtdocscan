@@ -45,8 +45,9 @@ public sealed class UserRepository
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await EnsureLoginAttemptTableAsync(connection, cancellationToken);
-        if (await IsLoginLockedAsync(connection, username.Trim(), cancellationToken))
+        var normalizedUsername = username.Trim();
+        var loginAttemptTrackingAvailable = await TryEnsureLoginAttemptTableAsync(connection, cancellationToken);
+        if (loginAttemptTrackingAvailable && await IsLoginLockedAsync(connection, normalizedUsername, cancellationToken))
         {
             return null;
         }
@@ -59,12 +60,15 @@ public sealed class UserRepository
              WHERE username = @username
                AND disabled = 0;
             """;
-            command.Parameters.AddWithValue("@username", username.Trim());
+            command.Parameters.AddWithValue("@username", normalizedUsername);
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             if (!await reader.ReadAsync(cancellationToken))
             {
-                await RecordFailedLoginAsync(connection, username.Trim(), cancellationToken);
+                if (loginAttemptTrackingAvailable)
+                {
+                    await RecordFailedLoginAsync(connection, normalizedUsername, cancellationToken);
+                }
                 return null;
             }
 
@@ -74,15 +78,21 @@ public sealed class UserRepository
 
         if (!VerifyPassword(password.Trim(), storedPassword, _allowLegacyPlaintextPasswords, out var needsRehash))
         {
-            await RecordFailedLoginAsync(connection, username.Trim(), cancellationToken);
+            if (loginAttemptTrackingAvailable)
+            {
+                await RecordFailedLoginAsync(connection, normalizedUsername, cancellationToken);
+            }
             return null;
         }
 
-        await ClearFailedLoginsAsync(connection, username.Trim(), cancellationToken);
+        if (loginAttemptTrackingAvailable)
+        {
+            await ClearFailedLoginsAsync(connection, normalizedUsername, cancellationToken);
+        }
 
         if (needsRehash)
         {
-            await UpdatePasswordAsync(connection, username.Trim(), HashPassword(password.Trim()), cancellationToken);
+            await UpdatePasswordAsync(connection, normalizedUsername, HashPassword(password.Trim()), cancellationToken);
         }
 
         return user;
@@ -284,22 +294,30 @@ public sealed class UserRepository
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task EnsureLoginAttemptTableAsync(SqlConnection connection, CancellationToken cancellationToken)
+    private static async Task<bool> TryEnsureLoginAttemptTableAsync(SqlConnection connection, CancellationToken cancellationToken)
     {
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            IF OBJECT_ID('dbo.auth_login_attempt', 'U') IS NULL
-            BEGIN
-                CREATE TABLE dbo.auth_login_attempt (
-                    username varchar(50) NOT NULL CONSTRAINT PK_auth_login_attempt PRIMARY KEY,
-                    failed_count int NOT NULL,
-                    first_failed_on datetime2 NOT NULL,
-                    last_failed_on datetime2 NOT NULL,
-                    locked_until datetime2 NULL
-                );
-            END;
-            """;
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                IF OBJECT_ID('dbo.auth_login_attempt', 'U') IS NULL
+                BEGIN
+                    CREATE TABLE dbo.auth_login_attempt (
+                        username varchar(50) NOT NULL CONSTRAINT PK_auth_login_attempt PRIMARY KEY,
+                        failed_count int NOT NULL,
+                        first_failed_on datetime2 NOT NULL,
+                        last_failed_on datetime2 NOT NULL,
+                        locked_until datetime2 NULL
+                    );
+                END;
+                """;
+            await command.ExecuteNonQueryAsync(cancellationToken);
+            return true;
+        }
+        catch (SqlException)
+        {
+            return false;
+        }
     }
 
     private static async Task<bool> IsLoginLockedAsync(SqlConnection connection, string username, CancellationToken cancellationToken)
