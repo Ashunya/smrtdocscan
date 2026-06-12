@@ -206,18 +206,23 @@ app.Use(async (context, next) =>
     AddSecurityHeaders(context.Response);
     AddApiCacheHeaders(context.Request, context.Response);
 
-    if (IsUnsafeMethod(context.Request.Method)
-        && !IsMicrosoftCallbackRequest(context.Request, app.Configuration)
-        && IsCrossSiteBrowserRequest(context.Request))
+    var isUnsafeRequest = IsUnsafeMethod(context.Request.Method);
+    var isMicrosoftCallback = IsMicrosoftCallbackRequest(context.Request, app.Configuration);
+    var isAllowedOrigin = IsAllowedBrowserOrigin(context.Request, allowedOrigins);
+
+    if (isUnsafeRequest
+        && !isMicrosoftCallback
+        && IsCrossSiteBrowserRequest(context.Request)
+        && !isAllowedOrigin)
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         await context.Response.WriteAsJsonAsync(new { message = "Cross-site requests are not allowed." });
         return;
     }
 
-    if (IsUnsafeMethod(context.Request.Method)
-        && !IsMicrosoftCallbackRequest(context.Request, app.Configuration)
-        && !IsAllowedBrowserOrigin(context.Request, allowedOrigins))
+    if (isUnsafeRequest
+        && !isMicrosoftCallback
+        && !isAllowedOrigin)
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         await context.Response.WriteAsJsonAsync(new { message = "Request origin is not allowed." });
