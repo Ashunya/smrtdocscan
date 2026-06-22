@@ -127,20 +127,29 @@ public sealed class PatientRepository
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT COUNT(1)
+            SELECT TOP (1) patient_id, pext_id, first_name, last_name, dob
             FROM patient
             WHERE comp_id = @companyId
-              AND pext_id = @externalPatientId
-              AND (@currentPatientId IS NULL OR patient_id <> @currentPatientId);
+              AND LTRIM(RTRIM(pext_id)) = @externalPatientId
+              AND (@currentPatientId IS NULL OR patient_id <> @currentPatientId)
+            ORDER BY patient_id;
             """;
         command.Parameters.AddWithValue("@companyId", companyId);
         command.Parameters.AddWithValue("@externalPatientId", externalPatientId.Trim());
         command.Parameters.AddWithValue("@currentPatientId", currentPatientId.HasValue ? currentPatientId.Value : DBNull.Value);
 
-        var count = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
-        if (count > 0)
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
         {
-            throw new InvalidOperationException("Patient ID already exists.");
+            var matchingPatientId = reader.GetInt32(reader.GetOrdinal("patient_id"));
+            var matchingExternalId = ReadString(reader, "pext_id")?.Trim() ?? externalPatientId.Trim();
+            var matchingFirstName = ReadString(reader, "first_name")?.Trim();
+            var matchingLastName = ReadString(reader, "last_name")?.Trim();
+            var matchingDob = ReadDateTime(reader, "dob");
+            var matchingName = string.Join(", ", new[] { matchingLastName, matchingFirstName }.Where(value => !string.IsNullOrWhiteSpace(value)));
+            var dobText = matchingDob.HasValue ? $", DOB {matchingDob.Value:MM/dd/yyyy}" : string.Empty;
+            throw new InvalidOperationException(
+                $"Patient ID {matchingExternalId} already belongs to {matchingName} (record {matchingPatientId}{dobText}) in company {companyId}. Open that patient or verify the active company before creating another record.");
         }
     }
 

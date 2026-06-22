@@ -30,7 +30,7 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
         if (!ignore) {
           setCategories(categoryData);
           setDocuments(documentData);
-          setCategoryId(categoryData[0]?.categoryId ? String(categoryData[0].categoryId) : "");
+          setCategoryId((currentCategoryId) => selectAvailableCategory(categoryData, currentCategoryId, companyId));
         }
       })
       .catch((error) => {
@@ -108,6 +108,13 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
     window.open(getDocumentPreviewUrl(document), "_blank", "noopener,noreferrer");
   }
 
+  function changeCategory(nextCategoryId) {
+    setCategoryId(nextCategoryId);
+    if (nextCategoryId) {
+      window.localStorage.setItem(getCategoryPreferenceKey(companyId), String(nextCategoryId));
+    }
+  }
+
   return (
     <section className="panel">
       <div className="panel-header">
@@ -117,7 +124,7 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
         </div>
         <div className="panel-actions">
           {canScan && (
-            <button className="primary-button" type="button" onClick={onScan}>
+            <button className="primary-button" type="button" onClick={() => onScan(categoryId)} disabled={!categoryId}>
               <ScanLine size={18} />
               Scan
             </button>
@@ -136,7 +143,7 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
       {canUpload && <form className="document-upload" onSubmit={handleUpload}>
         <label>
           Category
-          <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+          <select value={categoryId} onChange={(event) => changeCategory(event.target.value)}>
             {categories.length === 0 ? (
               <option value="">No categories</option>
             ) : (
@@ -341,4 +348,22 @@ function getExtension(value) {
   const fileName = cleanValue.split("/").pop() || "";
   const index = fileName.lastIndexOf(".");
   return index >= 0 ? fileName.slice(index + 1).toLowerCase() : "";
+}
+
+function getCategoryPreferenceKey(companyId) {
+  return `smartdocscan-category:${companyId}`;
+}
+
+function selectAvailableCategory(categories, currentCategoryId, companyId) {
+  const availableIds = new Set(categories.map((category) => String(category.categoryId)));
+  if (currentCategoryId && availableIds.has(String(currentCategoryId))) {
+    return String(currentCategoryId);
+  }
+
+  const savedCategoryId = window.localStorage.getItem(getCategoryPreferenceKey(companyId));
+  if (savedCategoryId && availableIds.has(savedCategoryId)) {
+    return savedCategoryId;
+  }
+
+  return categories[0]?.categoryId ? String(categories[0].categoryId) : "";
 }

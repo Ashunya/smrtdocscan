@@ -72,6 +72,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [scanCategoryId, setScanCategoryId] = useState("");
   const isHistoryPopRef = useRef(false);
 
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -100,7 +101,7 @@ export default function App() {
       .then((result) => {
         if (!ignore && result.authenticated && result.user) {
           setCurrentUser(result.user);
-          setCompanyId(result.user.companyId || DEFAULT_COMPANY_ID);
+          setCompanyId(getPreferredCompanyId(result.user));
         }
       })
       .catch(() => {
@@ -154,6 +155,12 @@ export default function App() {
       .then((data) => {
         if (!ignore) {
           setCompanies(data);
+          if (isElevatedUser(currentUser) && data.length > 0 && !data.some((company) => company.companyId === companyId)) {
+            const fallbackCompanyId = data.some((company) => company.companyId === currentUser.companyId)
+              ? currentUser.companyId
+              : data[0].companyId;
+            changeActiveCompany(fallbackCompanyId, { navigate: false, notify: false });
+          }
         }
       })
       .catch(() => {
@@ -164,7 +171,7 @@ export default function App() {
     return () => {
       ignore = true;
     };
-  }, [currentUser]);
+  }, [currentUser, companyId]);
 
   useEffect(() => {
     window.localStorage.setItem("smartdocscan-theme", colorMode);
@@ -250,7 +257,30 @@ export default function App() {
 
   function handleSignedIn(user) {
     setCurrentUser(user);
-    setCompanyId(user.companyId || DEFAULT_COMPANY_ID);
+    setCompanyId(getPreferredCompanyId(user));
+  }
+
+  function changeActiveCompany(nextCompanyId, { navigate = true, notify = true } = {}) {
+    const parsedCompanyId = Number(nextCompanyId);
+    if (!Number.isInteger(parsedCompanyId) || parsedCompanyId <= 0) {
+      return;
+    }
+
+    setCompanyId(parsedCompanyId);
+    setSearch("");
+    setPatients([]);
+    setSelectedPatient(null);
+    setDocumentPatient(null);
+    setScanCategoryId("");
+    if (currentUser) {
+      window.localStorage.setItem(getCompanyPreferenceKey(currentUser), String(parsedCompanyId));
+    }
+    if (notify) {
+      setNotice({ type: "success", text: "Company selected." });
+    }
+    if (navigate) {
+      setActiveView("find");
+    }
   }
 
   async function handleSignOut() {
@@ -468,11 +498,7 @@ export default function App() {
           <CompanyManager
             companyId={companyId}
             onNotice={setNotice}
-            onCompanyChange={(nextCompanyId) => {
-              setCompanyId(nextCompanyId);
-              setNotice({ type: "success", text: "Company selected." });
-              setActiveView("find");
-            }}
+            onCompanyChange={changeActiveCompany}
           />
         ) : activeView === "users" ? (
           <UserManager companyId={companyId} onNotice={setNotice} />
@@ -485,7 +511,7 @@ export default function App() {
         ) : activeView === "audit" && currentUser.superUser ? (
           <AuditLogManager companyId={companyId} onNotice={setNotice} />
         ) : activeView === "scan" ? (
-          <ScannerManager companyId={companyId} patient={documentPatient} onNotice={setNotice} onSaved={() => setActiveView("documents")} />
+          <ScannerManager companyId={companyId} patient={documentPatient} initialCategoryId={scanCategoryId} onNotice={setNotice} onSaved={() => setActiveView("documents")} />
         ) : activeView === "barcode" && documentPatient ? (
           <BarcodeManager companyId={companyId} patient={documentPatient} onNotice={setNotice} onBack={() => setActiveView("documents")} />
         ) : activeView === "documents" && documentPatient ? (
@@ -493,7 +519,10 @@ export default function App() {
             companyId={companyId}
             patient={documentPatient}
             user={currentUser}
-            onScan={() => setActiveView("scan")}
+            onScan={(selectedCategoryId) => {
+              setScanCategoryId(selectedCategoryId ? String(selectedCategoryId) : "");
+              setActiveView("scan");
+            }}
             onBarcode={() => setActiveView("barcode")}
             onNotice={setNotice}
             onBack={() => setActiveView("find")}
@@ -528,4 +557,22 @@ function useDebouncedValue(value, delay) {
   }, [value, delay]);
 
   return debounced;
+}
+
+function isElevatedUser(user) {
+  return Boolean(user?.isAdmin || user?.superUser);
+}
+
+function getCompanyPreferenceKey(user) {
+  return `smartdocscan-company:${String(user?.username || "anonymous").toLowerCase()}`;
+}
+
+function getPreferredCompanyId(user) {
+  const assignedCompanyId = Number(user?.companyId) || DEFAULT_COMPANY_ID;
+  if (!isElevatedUser(user)) {
+    return assignedCompanyId;
+  }
+
+  const savedCompanyId = Number(window.localStorage.getItem(getCompanyPreferenceKey(user)));
+  return Number.isInteger(savedCompanyId) && savedCompanyId > 0 ? savedCompanyId : assignedCompanyId;
 }

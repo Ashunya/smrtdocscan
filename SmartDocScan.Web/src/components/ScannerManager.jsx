@@ -1,8 +1,8 @@
-import { ScanLine, Trash2, Upload, XCircle } from "lucide-react";
+import { ScanLine, Settings2, Trash2, Upload, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { listCategories, uploadDocument } from "../api/client";
 
-export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
+export function ScannerManager({ companyId, patient, initialCategoryId, onNotice, onSaved }) {
   const webTwainRef = useRef(null);
   const productKeyRef = useRef("");
   const lastPageCountRef = useRef(0);
@@ -13,6 +13,7 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
   const [documentName, setDocumentName] = useState("");
   const [dateOfService, setDateOfService] = useState("");
   const [saving, setSaving] = useState(false);
+  const [acquiring, setAcquiring] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -20,14 +21,14 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
       .then((data) => {
         if (!ignore) {
           setCategories(data);
-          setCategoryId(data[0]?.categoryId ? String(data[0].categoryId) : "");
+          setCategoryId((currentCategoryId) => selectAvailableCategory(data, initialCategoryId || currentCategoryId, companyId));
         }
       })
       .catch((error) => !ignore && onNotice({ type: "error", text: error.message }));
     return () => {
       ignore = true;
     };
-  }, [companyId, onNotice]);
+  }, [companyId, initialCategoryId, onNotice]);
 
   useEffect(() => {
     loadScript("/Resources/dynamsoft.webtwain.config.js")
@@ -124,38 +125,51 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
     return webTwainRef.current || window.Dynamsoft?.DWT?.GetWebTwain?.("dwtcontrolContainer") || null;
   }
 
-  function acquireImage() {
+  async function acquireImage() {
     const webTwain = getWebTwain();
-    if (!webTwain) {
+    if (!webTwain || acquiring) {
       onNotice({ type: "error", text: "Scanner control is not ready." });
       return;
     }
 
-    const onFailure = (errorCode, errorString) => onNotice({ type: "error", text: errorString || `Scanner failed (${errorCode}).` });
+    setAcquiring(true);
+    onNotice(null);
+    try {
+      await selectScannerSource(webTwain, false);
+      await acquireFromSelectedSource(webTwain);
+      showViewer(webTwain);
+      webTwain.Viewer?.gotoPage?.(Math.max(webTwain.HowManyImagesInBuffer - 1, 0));
+      updatePageCount(webTwain);
+    } catch (error) {
+      onNotice({ type: "error", text: error?.message || "Scanner acquisition failed." });
+    } finally {
+      setAcquiring(false);
+    }
+  }
 
-    if (webTwain.SelectSourceAsync && webTwain.AcquireImageAsync) {
-      webTwain.SelectSourceAsync()
-        .then(() => webTwain.AcquireImageAsync({ IfCloseSourceAfterAcquire: true }))
-        .then(() => {
-          showViewer(webTwain);
-          webTwain.Viewer?.gotoPage?.(Math.max(webTwain.HowManyImagesInBuffer - 1, 0));
-          updatePageCount(webTwain);
-        })
-        .catch((error) => onNotice({ type: "error", text: error?.message || "Scanner acquisition failed." }));
+  async function changeScanner() {
+    const webTwain = getWebTwain();
+    if (!webTwain || acquiring) {
       return;
     }
 
-    webTwain.SelectSource(
-      () => {
-        webTwain.OpenSource();
-        webTwain.IfDisableSourceAfterAcquire = true;
-        webTwain.AcquireImage(() => {
-          showViewer(webTwain);
-          updatePageCount(webTwain);
-        }, onFailure);
-      },
-      () => onNotice({ type: "error", text: "Scanner source selection failed." })
-    );
+    setAcquiring(true);
+    onNotice(null);
+    try {
+      await selectScannerSource(webTwain, true);
+      onNotice({ type: "success", text: "Scanner selection saved for this workstation." });
+    } catch (error) {
+      onNotice({ type: "error", text: error?.message || "Scanner source selection failed." });
+    } finally {
+      setAcquiring(false);
+    }
+  }
+
+  function changeCategory(nextCategoryId) {
+    setCategoryId(nextCategoryId);
+    if (nextCategoryId) {
+      window.localStorage.setItem(getCategoryPreferenceKey(companyId), String(nextCategoryId));
+    }
   }
 
   async function uploadScannedDocument(format) {
@@ -173,6 +187,7 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
     const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
     const isTiff = format === "tif";
     const currentPageCount = Number(webTwain.HowManyImagesInBuffer) || 0;
+    const selectedCategoryId = Number(categoryId);
     const uploadName = buildDocumentFileName(documentName, `ScanImage_${stamp}`, isTiff ? "tif" : "pdf");
 
     setSaving(true);
@@ -182,7 +197,7 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
       await uploadDocument({
         companyId,
         patientId: patient.patientId,
-        categoryId,
+        categoryId: selectedCategoryId,
         documentName: uploadName,
         dateOfService,
         pages: currentPageCount,
@@ -264,7 +279,7 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
         <div className="scanner-fields">
           <label>
             Category
-            <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+            <select value={categoryId} onChange={(event) => changeCategory(event.target.value)} disabled={categories.length === 0 || saving || acquiring}>
               {categories.map((category) => (
                 <option key={category.categoryId} value={category.categoryId}>{category.categoryName}</option>
               ))}
@@ -283,9 +298,13 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
           <div className="scanner-count-pill" aria-live="polite">
             {pageCount} {pageCount === 1 ? "page" : "pages"}
           </div>
-          <button className="primary-button" type="button" onClick={acquireImage} disabled={!ready || !patient || saving}>
+          <button className="primary-button" type="button" onClick={acquireImage} disabled={!ready || !patient || !categoryId || saving || acquiring}>
             <ScanLine size={18} />
-            Scan
+            {acquiring ? "Starting..." : "Scan"}
+          </button>
+          <button className="secondary-button" type="button" onClick={changeScanner} disabled={!ready || saving || acquiring}>
+            <Settings2 size={18} />
+            Change scanner
           </button>
           <button className="secondary-button danger-text" type="button" onClick={deleteCurrentPage} disabled={!ready || !patient || pageCount === 0 || saving}>
             <Trash2 size={18} />
@@ -311,6 +330,104 @@ export function ScannerManager({ companyId, patient, onNotice, onSaved }) {
       <div className="scanner-frame" id="dwtcontrolContainer" />
     </section>
   );
+}
+
+function getCategoryPreferenceKey(companyId) {
+  return `smartdocscan-category:${companyId}`;
+}
+
+function selectAvailableCategory(categories, preferredCategoryId, companyId) {
+  const availableIds = new Set(categories.map((category) => String(category.categoryId)));
+  if (preferredCategoryId && availableIds.has(String(preferredCategoryId))) {
+    return String(preferredCategoryId);
+  }
+
+  const savedCategoryId = window.localStorage.getItem(getCategoryPreferenceKey(companyId));
+  if (savedCategoryId && availableIds.has(savedCategoryId)) {
+    return savedCategoryId;
+  }
+
+  return categories[0]?.categoryId ? String(categories[0].categoryId) : "";
+}
+
+const SCANNER_SOURCE_KEY = "smartdocscan-scanner-source-index";
+
+async function selectScannerSource(webTwain, forceSelection) {
+  const savedSourceValue = window.localStorage.getItem(SCANNER_SOURCE_KEY);
+  const savedSourceIndex = Number(savedSourceValue);
+  const sourceCount = Number(webTwain.SourceCount) || 0;
+  const canUseSavedSource = !forceSelection
+    && savedSourceValue !== null
+    && Number.isInteger(savedSourceIndex)
+    && savedSourceIndex >= 0
+    && (sourceCount === 0 || savedSourceIndex < sourceCount);
+
+  if (canUseSavedSource) {
+    try {
+      if (typeof webTwain.SelectSourceByIndexAsync === "function") {
+        await webTwain.SelectSourceByIndexAsync(savedSourceIndex);
+      } else if (typeof webTwain.SelectSourceByIndex === "function") {
+        const selected = webTwain.SelectSourceByIndex(savedSourceIndex);
+        if (selected === false) {
+          throw new Error("Saved scanner is unavailable.");
+        }
+      } else {
+        throw new Error("Saved scanner selection is not supported.");
+      }
+      return;
+    } catch {
+      window.localStorage.removeItem(SCANNER_SOURCE_KEY);
+    }
+  }
+
+  await showSourceSelector(webTwain);
+  const selectedSourceIndex = findSelectedSourceIndex(webTwain);
+  if (selectedSourceIndex >= 0) {
+    window.localStorage.setItem(SCANNER_SOURCE_KEY, String(selectedSourceIndex));
+  }
+}
+
+function showSourceSelector(webTwain) {
+  if (typeof webTwain.SelectSourceAsync === "function") {
+    return webTwain.SelectSourceAsync();
+  }
+
+  return new Promise((resolve, reject) => {
+    webTwain.SelectSource(
+      resolve,
+      (_code, message) => reject(new Error(message || "Scanner source selection was cancelled."))
+    );
+  });
+}
+
+function findSelectedSourceIndex(webTwain) {
+  const currentSourceName = String(webTwain.CurrentSourceName || "");
+  const sourceCount = Number(webTwain.SourceCount) || 0;
+  for (let index = 0; index < sourceCount; index += 1) {
+    if (String(webTwain.GetSourceNameItems?.(index) || "") === currentSourceName) {
+      return index;
+    }
+  }
+  return Number.isInteger(webTwain.CurrentSourceIndex) ? webTwain.CurrentSourceIndex : -1;
+}
+
+function acquireFromSelectedSource(webTwain) {
+  if (typeof webTwain.AcquireImageAsync === "function") {
+    return webTwain.AcquireImageAsync({ IfCloseSourceAfterAcquire: true });
+  }
+
+  return new Promise((resolve, reject) => {
+    try {
+      webTwain.OpenSource();
+      webTwain.IfDisableSourceAfterAcquire = true;
+      webTwain.AcquireImage(
+        resolve,
+        (errorCode, errorString) => reject(new Error(errorString || `Scanner failed (${errorCode}).`))
+      );
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 function buildDocumentFileName(name, fallback, extension) {
