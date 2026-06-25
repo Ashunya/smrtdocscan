@@ -88,6 +88,7 @@ Production recommendations:
 
 The production Caddy configuration sends these browser hardening headers:
 
+- `Content-Security-Policy`
 - `Strict-Transport-Security`
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`
@@ -97,6 +98,8 @@ The production Caddy configuration sends these browser hardening headers:
 - `X-Permitted-Cross-Domain-Policies: none`
 
 The API also sends matching security headers for API responses.
+
+The frontend CSP is intentionally compatible with SmartDocScan scanning workflows. It permits same-origin assets, the SmartDocScan API, Dynamsoft licensing endpoints, local Dynamsoft scanner service communication, blob/data previews, and Microsoft sign-in form navigation. The API hostname uses a restrictive `default-src 'none'` policy because it serves API responses rather than a browser application.
 
 ## Operational Security Requirements
 

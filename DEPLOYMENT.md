@@ -150,6 +150,7 @@ Create `~/docker/smrtdocscan/Caddyfile`:
 ```caddyfile
 scan.ashunya.com {
     header {
+        Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://login.microsoftonline.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://scanapi.ashunya.com https://*.dynamsoft.com https://*.dynamsoftonline.com http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; worker-src 'self' blob:; frame-src 'self' blob: data:; media-src 'self' blob: data:; manifest-src 'self'; upgrade-insecure-requests"
         Strict-Transport-Security "max-age=31536000"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
@@ -158,6 +159,8 @@ scan.ashunya.com {
         Cross-Origin-Resource-Policy "same-site"
         X-Permitted-Cross-Domain-Policies "none"
         -Server
+        -Via
+        -X-Powered-By
     }
 
     reverse_proxy web:80
@@ -165,13 +168,17 @@ scan.ashunya.com {
 
 scanapi.ashunya.com {
     header {
+        Content-Security-Policy "default-src 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'"
         Strict-Transport-Security "max-age=31536000"
         X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
         Cross-Origin-Resource-Policy "same-site"
         X-Permitted-Cross-Domain-Policies "none"
         -Server
+        -Via
+        -X-Powered-By
     }
 
     reverse_proxy api:8080
