@@ -8,12 +8,14 @@ public sealed class UserRepository
 {
     private readonly string _connectionString;
     private readonly bool _allowLegacyPlaintextPasswords;
+    private readonly bool _autoEnsureSchema;
 
     public UserRepository(IConfiguration configuration)
     {
         _connectionString = configuration.GetConnectionString("SmartDocScan")
             ?? throw new InvalidOperationException("Connection string 'SmartDocScan' is missing.");
         _allowLegacyPlaintextPasswords = configuration.GetValue<bool>("Authentication:AllowLegacyPlaintextPasswords");
+        _autoEnsureSchema = DatabaseSchemaOptions.AutoEnsureSchema(configuration);
     }
 
     public async Task<IReadOnlyList<UserDto>> GetByCompanyAsync(int companyId, CancellationToken cancellationToken = default)
@@ -46,7 +48,7 @@ public sealed class UserRepository
         await connection.OpenAsync(cancellationToken);
 
         var normalizedUsername = username.Trim();
-        var loginAttemptTrackingAvailable = await TryEnsureLoginAttemptTableAsync(connection, cancellationToken);
+        var loginAttemptTrackingAvailable = await TryEnsureLoginAttemptTableAsync(connection, _autoEnsureSchema, cancellationToken);
         if (loginAttemptTrackingAvailable && await IsLoginLockedAsync(connection, normalizedUsername, cancellationToken))
         {
             return null;
@@ -294,25 +296,31 @@ public sealed class UserRepository
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task<bool> TryEnsureLoginAttemptTableAsync(SqlConnection connection, CancellationToken cancellationToken)
+    private static async Task<bool> TryEnsureLoginAttemptTableAsync(SqlConnection connection, bool autoEnsureSchema, CancellationToken cancellationToken)
     {
         try
         {
             await using var command = connection.CreateCommand();
-            command.CommandText = """
-                IF OBJECT_ID('dbo.auth_login_attempt', 'U') IS NULL
-                BEGIN
-                    CREATE TABLE dbo.auth_login_attempt (
-                        username varchar(50) NOT NULL CONSTRAINT PK_auth_login_attempt PRIMARY KEY,
-                        failed_count int NOT NULL,
-                        first_failed_on datetime2 NOT NULL,
-                        last_failed_on datetime2 NOT NULL,
-                        locked_until datetime2 NULL
-                    );
-                END;
-                """;
-            await command.ExecuteNonQueryAsync(cancellationToken);
-            return true;
+            if (autoEnsureSchema)
+            {
+                command.CommandText = """
+                    IF OBJECT_ID('dbo.auth_login_attempt', 'U') IS NULL
+                    BEGIN
+                        CREATE TABLE dbo.auth_login_attempt (
+                            username varchar(50) NOT NULL CONSTRAINT PK_auth_login_attempt PRIMARY KEY,
+                            failed_count int NOT NULL,
+                            first_failed_on datetime2 NOT NULL,
+                            last_failed_on datetime2 NOT NULL,
+                            locked_until datetime2 NULL
+                        );
+                    END;
+                    """;
+                await command.ExecuteNonQueryAsync(cancellationToken);
+                return true;
+            }
+
+            command.CommandText = "SELECT CASE WHEN OBJECT_ID('dbo.auth_login_attempt', 'U') IS NULL THEN 0 ELSE 1 END;";
+            return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken)) == 1;
         }
         catch (SqlException)
         {

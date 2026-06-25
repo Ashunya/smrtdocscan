@@ -8,19 +8,21 @@ public sealed class SettingsRepository
 {
     private readonly string _connectionString;
     private readonly IDataProtector _secretProtector;
+    private readonly bool _autoEnsureSchema;
 
     public SettingsRepository(IConfiguration configuration, IDataProtectionProvider dataProtectionProvider)
     {
         _connectionString = configuration.GetConnectionString("SmartDocScan")
             ?? throw new InvalidOperationException("Connection string 'SmartDocScan' is missing.");
         _secretProtector = dataProtectionProvider.CreateProtector("SmartDocScan.Settings.Secrets.v1");
+        _autoEnsureSchema = DatabaseSchemaOptions.AutoEnsureSchema(configuration);
     }
 
     public async Task<SecuritySettingsDto> GetSecuritySettingsAsync(IConfiguration configuration, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
-        await EnsureTableAsync(connection, cancellationToken);
+        await EnsureTableAsync(connection, _autoEnsureSchema, cancellationToken);
         var values = await ReadSettingsAsync(connection, cancellationToken);
 
         return new SecuritySettingsDto
@@ -53,7 +55,7 @@ public sealed class SettingsRepository
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
-        await EnsureTableAsync(connection, cancellationToken);
+        await EnsureTableAsync(connection, _autoEnsureSchema, cancellationToken);
         var values = await ReadSettingsAsync(connection, cancellationToken);
         return new BrandingSettingsDto
         {
@@ -65,7 +67,7 @@ public sealed class SettingsRepository
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
-        await EnsureTableAsync(connection, cancellationToken);
+        await EnsureTableAsync(connection, _autoEnsureSchema, cancellationToken);
         var values = await ReadSettingsAsync(connection, cancellationToken);
 
         return new MicrosoftSsoSettingsDto
@@ -81,7 +83,7 @@ public sealed class SettingsRepository
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
-        await EnsureTableAsync(connection, cancellationToken);
+        await EnsureTableAsync(connection, _autoEnsureSchema, cancellationToken);
         var values = await ReadSettingsAsync(connection, cancellationToken);
 
         return new SmtpSettingsDto
@@ -100,7 +102,7 @@ public sealed class SettingsRepository
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
-        await EnsureTableAsync(connection, cancellationToken);
+        await EnsureTableAsync(connection, _autoEnsureSchema, cancellationToken);
 
         await UpsertAsync(connection, "Authentication:Microsoft:ClientId", settings.Microsoft.ClientId, cancellationToken);
         await UpsertSecretAsync(connection, "Authentication:Microsoft:ClientSecret", settings.Microsoft.ClientSecret, cancellationToken);
@@ -126,9 +128,12 @@ public sealed class SettingsRepository
         {
             using var connection = new SqlConnection(connectionString);
             connection.Open();
-            using var ensure = connection.CreateCommand();
-            ensure.CommandText = EnsureTableSql;
-            ensure.ExecuteNonQuery();
+            if (DatabaseSchemaOptions.AutoEnsureSchema(configuration))
+            {
+                using var ensure = connection.CreateCommand();
+                ensure.CommandText = EnsureTableSql;
+                ensure.ExecuteNonQuery();
+            }
 
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT setting_key, setting_value FROM app_setting;";
@@ -159,8 +164,13 @@ public sealed class SettingsRepository
         return values;
     }
 
-    private static async Task EnsureTableAsync(SqlConnection connection, CancellationToken cancellationToken)
+    private static async Task EnsureTableAsync(SqlConnection connection, bool autoEnsureSchema, CancellationToken cancellationToken)
     {
+        if (!autoEnsureSchema)
+        {
+            return;
+        }
+
         await using var command = connection.CreateCommand();
         command.CommandText = EnsureTableSql;
         await command.ExecuteNonQueryAsync(cancellationToken);

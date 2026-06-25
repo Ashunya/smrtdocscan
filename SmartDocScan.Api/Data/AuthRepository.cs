@@ -10,12 +10,14 @@ public sealed class AuthRepository
 {
     private readonly string _connectionString;
     private readonly IEmailSender _emailSender;
+    private readonly bool _autoEnsureSchema;
 
     public AuthRepository(IConfiguration configuration, IEmailSender emailSender)
     {
         _connectionString = configuration.GetConnectionString("SmartDocScan")
             ?? throw new InvalidOperationException("Connection string 'SmartDocScan' is missing.");
         _emailSender = emailSender;
+        _autoEnsureSchema = DatabaseSchemaOptions.AutoEnsureSchema(configuration);
     }
 
     public async Task<bool> IsTenantAllowedAsync(int companyId, string provider, string tenantId, CancellationToken cancellationToken = default)
@@ -81,7 +83,7 @@ public sealed class AuthRepository
         var challengeId = Guid.NewGuid();
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
-        await EnsureOtpTableAsync(connection, cancellationToken);
+        await EnsureOtpTableAsync(connection, _autoEnsureSchema, cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO auth_otp_challenge (challenge_id, username, code_hash, purpose, expires_on)
@@ -149,8 +151,13 @@ public sealed class AuthRepository
         return user?.Disabled == true ? null : user;
     }
 
-    private static async Task EnsureOtpTableAsync(SqlConnection connection, CancellationToken cancellationToken)
+    private static async Task EnsureOtpTableAsync(SqlConnection connection, bool autoEnsureSchema, CancellationToken cancellationToken)
     {
+        if (!autoEnsureSchema)
+        {
+            return;
+        }
+
         await using var command = connection.CreateCommand();
         command.CommandText = """
             IF OBJECT_ID('dbo.auth_otp_challenge', 'U') IS NULL

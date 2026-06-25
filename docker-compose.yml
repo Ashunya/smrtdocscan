@@ -25,6 +25,8 @@ services:
     container_name: smrtdocscan-web
     depends_on:
       - api
+    volumes:
+      - ./SmartDocScan/Resources:/usr/share/nginx/html/Resources:ro
     restart: unless-stopped
 
   caddy:

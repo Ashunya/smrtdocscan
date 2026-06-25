@@ -6,6 +6,7 @@ namespace SmartDocScan.Api.Data;
 public sealed class AuditRepository
 {
     private readonly string _connectionString;
+    private readonly bool _autoEnsureSchema;
     private static readonly SemaphoreSlim SchemaLock = new(1, 1);
     private static bool _schemaChecked;
 
@@ -13,6 +14,7 @@ public sealed class AuditRepository
     {
         _connectionString = configuration.GetConnectionString("SmartDocScan")
             ?? throw new InvalidOperationException("Connection string 'SmartDocScan' is missing.");
+        _autoEnsureSchema = DatabaseSchemaOptions.AutoEnsureSchema(configuration);
     }
 
     public async Task LogAsync(
@@ -155,6 +157,12 @@ public sealed class AuditRepository
     {
         if (_schemaChecked)
         {
+            return;
+        }
+
+        if (!_autoEnsureSchema)
+        {
+            _schemaChecked = true;
             return;
         }
 
