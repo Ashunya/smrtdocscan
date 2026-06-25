@@ -2,6 +2,8 @@
 
 This guide covers the recommended production deployment for the React + .NET SmartDocScan app on a Linux server using Docker Engine and Caddy.
 
+For customer security review evidence, see `SECURITY.md`. Do not describe the deployment as "128-bit SSL"; use current wording such as "HTTPS with modern TLS through Caddy and Let's Encrypt."
+
 ## Recommended Architecture
 
 ```text
