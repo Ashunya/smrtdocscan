@@ -158,6 +158,11 @@ scan.ashunya.com {
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
         Cross-Origin-Resource-Policy "same-site"
         X-Permitted-Cross-Domain-Policies "none"
+        Cache-Control "no-cache, no-store, must-revalidate"
+        Pragma "no-cache"
+        Expires "0"
+        -Etag
+        -Last-Modified
         -Server
         -Via
         -X-Powered-By
@@ -176,6 +181,11 @@ scanapi.ashunya.com {
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
         Cross-Origin-Resource-Policy "same-site"
         X-Permitted-Cross-Domain-Policies "none"
+        Cache-Control "no-cache, no-store, must-revalidate"
+        Pragma "no-cache"
+        Expires "0"
+        -Etag
+        -Last-Modified
         -Server
         -Via
         -X-Powered-By
