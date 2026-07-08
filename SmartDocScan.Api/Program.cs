@@ -1578,6 +1578,7 @@ static IResult PreviewTiffAsHtml(DocumentDto document, string displayFileName, s
 
     httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(Path.ChangeExtension(displayFileName, ".html") ?? "preview.html")}\"";
     httpContext.Response.Headers.XContentTypeOptions = "nosniff";
+    httpContext.Response.Headers.ContentSecurityPolicy = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'";
     return Results.Text(builder.ToString(), "text/html", Encoding.UTF8);
 }
 
