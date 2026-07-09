@@ -412,14 +412,28 @@ function findSelectedSourceIndex(webTwain) {
 }
 
 function acquireFromSelectedSource(webTwain) {
+  const settings = {
+    IfShowUI: false,
+    IfCloseSourceAfterAcquire: true,
+    IfFeederEnabled: true,
+    IfDuplexEnabled: true,
+    PixelType: 0,
+    Resolution: 300,
+  };
+
   if (typeof webTwain.AcquireImageAsync === "function") {
-    return webTwain.AcquireImageAsync({ IfCloseSourceAfterAcquire: true });
+    return webTwain.AcquireImageAsync(settings);
   }
 
   return new Promise((resolve, reject) => {
     try {
       webTwain.OpenSource();
+      webTwain.IfShowUI = false;
       webTwain.IfDisableSourceAfterAcquire = true;
+      webTwain.IfFeederEnabled = true;
+      webTwain.IfDuplexEnabled = true;
+      webTwain.PixelType = 0;
+      webTwain.Resolution = 300;
       webTwain.AcquireImage(
         resolve,
         (errorCode, errorString) => reject(new Error(errorString || `Scanner failed (${errorCode}).`))

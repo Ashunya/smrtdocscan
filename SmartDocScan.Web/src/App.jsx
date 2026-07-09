@@ -216,14 +216,16 @@ export default function App() {
     setNotice(null);
     try {
       if (selectedPatient) {
-        await updatePatient(selectedPatient.patientId, form);
+        const updatedPatient = await updatePatient(selectedPatient.patientId, form);
+        setDocumentPatient(updatedPatient);
         setNotice({ type: "success", text: "Patient updated." });
       } else {
-        await createPatient(form);
+        const createdPatient = await createPatient(form);
+        setDocumentPatient(createdPatient);
         setNotice({ type: "success", text: "Patient added." });
       }
       setSelectedPatient(null);
-      setActiveView("find");
+      setActiveView("documents");
       setPatients(await searchPatients({ companyId, search }));
     } catch (error) {
       setNotice({ type: "error", text: error.message });

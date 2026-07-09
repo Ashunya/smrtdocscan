@@ -1,6 +1,6 @@
 scan.ashunya.com {
 	header {
-		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://login.microsoftonline.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://scanapi.ashunya.com https://*.dynamsoft.com https://*.dynamsoftonline.com http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; worker-src 'self' blob:; frame-src 'self' blob: data:; media-src 'self' blob: data:; manifest-src 'self'; upgrade-insecure-requests"
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://login.microsoftonline.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.dynamsoft.com https://*.dynamsoftonline.com http://127.0.0.1:* http://localhost:*; font-src 'self' data:; connect-src 'self' blob: https://scanapi.ashunya.com https://*.dynamsoft.com https://*.dynamsoftonline.com http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; worker-src 'self' blob:; frame-src 'self' blob: data:; media-src 'self' blob: data:; manifest-src 'self'; upgrade-insecure-requests"
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
