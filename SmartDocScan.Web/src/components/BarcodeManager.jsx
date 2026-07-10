@@ -19,6 +19,37 @@ export function BarcodeManager({ companyId, patient, onBack, onNotice }) {
   const patientDisplayId = patient?.externalPatientId || String(patient?.patientId || "");
   const barcodeValue = patient?.patientId && categoryId ? `${patient.patientId}-${categoryId}` : "";
 
+  const formattedCategoryOptions = useMemo(() => {
+    const roots = categories.filter((c) => !c.parentId);
+    const subGroups = [];
+    roots.forEach((parent) => {
+      const children = categories.filter((c) => c.parentId === parent.categoryId);
+      if (children.length > 0) {
+        subGroups.push({
+          type: "group",
+          label: parent.categoryName,
+          options: children
+        });
+      } else {
+        subGroups.push({
+          type: "option",
+          categoryId: parent.categoryId,
+          categoryName: parent.categoryName
+        });
+      }
+    });
+    categories.forEach((c) => {
+      if (c.parentId && !categories.some((p) => p.categoryId === c.parentId)) {
+        subGroups.push({
+          type: "option",
+          categoryId: c.categoryId,
+          categoryName: c.categoryName
+        });
+      }
+    });
+    return subGroups;
+  }, [categories]);
+
   useEffect(() => {
     let ignore = false;
     listCategories({ companyId })
@@ -67,11 +98,27 @@ export function BarcodeManager({ companyId, patient, onBack, onNotice }) {
             {categories.length === 0 ? (
               <option value="">No categories</option>
             ) : (
-              categories.map((category) => (
-                <option key={category.categoryId} value={category.categoryId}>
-                  {category.categoryName}
-                </option>
-              ))
+              <>
+                <option value="">Select Category...</option>
+                {formattedCategoryOptions.map((item, idx) => {
+                  if (item.type === "group") {
+                    return (
+                      <optgroup key={idx} label={item.label}>
+                        {item.options.map((opt) => (
+                          <option key={opt.categoryId} value={opt.categoryId}>
+                            {opt.categoryName}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  }
+                  return (
+                    <option key={item.categoryId} value={item.categoryId}>
+                      {item.categoryName}
+                    </option>
+                  );
+                })}
+              </>
             )}
           </select>
         </label>

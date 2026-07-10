@@ -6,25 +6,31 @@ namespace SmartDocScan.Api.Data;
 public sealed class CategoryRepository
 {
     private readonly string _connectionString;
+    private readonly bool _autoEnsureSchema;
+    private static readonly SemaphoreSlim SchemaLock = new(1, 1);
+    private static bool _schemaChecked;
 
     public CategoryRepository(IConfiguration configuration)
     {
         _connectionString = configuration.GetConnectionString("SmartDocScan")
             ?? throw new InvalidOperationException("Connection string 'SmartDocScan' is missing.");
+        _autoEnsureSchema = DatabaseSchemaOptions.AutoEnsureSchema(configuration);
     }
 
     public async Task<IReadOnlyList<CategoryDto>> GetByCompanyAsync(int companyId, CancellationToken cancellationToken = default)
     {
+        await EnsureSchemaAsync(cancellationToken);
         var categories = new List<CategoryDto>();
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT cat_id, comp_id, cat_name, access
-            FROM category
-            WHERE comp_id = @companyId
-            ORDER BY cat_name;
+            SELECT c.cat_id, c.comp_id, c.cat_name, c.access, c.parent_id, p.cat_name AS parent_name
+            FROM category c
+            LEFT JOIN category p ON c.parent_id = p.cat_id
+            WHERE c.comp_id = @companyId
+            ORDER BY c.cat_name;
             """;
         command.Parameters.AddWithValue("@companyId", companyId);
 
@@ -36,7 +42,9 @@ public sealed class CategoryRepository
                 CategoryId = reader.GetInt32(reader.GetOrdinal("cat_id")),
                 CompanyId = reader.GetInt32(reader.GetOrdinal("comp_id")),
                 CategoryName = ReadString(reader, "cat_name"),
-                Access = ReadString(reader, "access")
+                Access = ReadString(reader, "access"),
+                ParentId = ReadNullableInt(reader, "parent_id"),
+                ParentName = ReadString(reader, "parent_name")
             });
         }
 
@@ -45,6 +53,7 @@ public sealed class CategoryRepository
 
     public async Task<CategoryDto> CreateAsync(CategoryUpsertRequest request, CancellationToken cancellationToken = default)
     {
+        await EnsureSchemaAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(request.CategoryName))
         {
             throw new InvalidOperationException("Category name is required.");
@@ -55,26 +64,24 @@ public sealed class CategoryRepository
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO category (cat_name, comp_id, access)
+            INSERT INTO category (cat_name, comp_id, access, parent_id)
             OUTPUT INSERTED.cat_id
-            VALUES (@categoryName, @companyId, @access);
+            VALUES (@categoryName, @companyId, @access, @parentId);
             """;
         command.Parameters.AddWithValue("@categoryName", request.CategoryName.Trim());
         command.Parameters.AddWithValue("@companyId", request.CompanyId);
         command.Parameters.AddWithValue("@access", string.IsNullOrWhiteSpace(request.Access) ? DBNull.Value : request.Access.Trim());
+        command.Parameters.AddWithValue("@parentId", request.ParentId.HasValue ? request.ParentId.Value : DBNull.Value);
+        
         var categoryId = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
 
-        return new CategoryDto
-        {
-            CategoryId = categoryId,
-            CompanyId = request.CompanyId,
-            CategoryName = request.CategoryName.Trim(),
-            Access = request.Access
-        };
+        return await GetAsync(categoryId, cancellationToken)
+            ?? throw new InvalidOperationException("Category was created but could not be loaded.");
     }
 
     public async Task<bool> DeleteAsync(int categoryId, int companyId, CancellationToken cancellationToken = default)
     {
+        await EnsureSchemaAsync(cancellationToken);
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
@@ -87,14 +94,16 @@ public sealed class CategoryRepository
 
     public async Task<CategoryDto?> GetAsync(int categoryId, CancellationToken cancellationToken = default)
     {
+        await EnsureSchemaAsync(cancellationToken);
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT cat_id, comp_id, cat_name, access
-            FROM category
-            WHERE cat_id = @categoryId;
+            SELECT c.cat_id, c.comp_id, c.cat_name, c.access, c.parent_id, p.cat_name AS parent_name
+            FROM category c
+            LEFT JOIN category p ON c.parent_id = p.cat_id
+            WHERE c.cat_id = @categoryId;
             """;
         command.Parameters.AddWithValue("@categoryId", categoryId);
 
@@ -105,14 +114,61 @@ public sealed class CategoryRepository
                 CategoryId = reader.GetInt32(reader.GetOrdinal("cat_id")),
                 CompanyId = reader.GetInt32(reader.GetOrdinal("comp_id")),
                 CategoryName = ReadString(reader, "cat_name"),
-                Access = ReadString(reader, "access")
+                Access = ReadString(reader, "access"),
+                ParentId = ReadNullableInt(reader, "parent_id"),
+                ParentName = ReadString(reader, "parent_name")
             }
             : null;
+    }
+
+    private async Task EnsureSchemaAsync(CancellationToken cancellationToken)
+    {
+        if (_schemaChecked)
+        {
+            return;
+        }
+
+        if (!_autoEnsureSchema)
+        {
+            _schemaChecked = true;
+            return;
+        }
+
+        await SchemaLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_schemaChecked)
+            {
+                return;
+            }
+
+            await using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                IF COL_LENGTH('dbo.category', 'parent_id') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.category ADD parent_id INT NULL CONSTRAINT FK_category_parent FOREIGN KEY REFERENCES dbo.category(cat_id);
+                END
+                """;
+            await command.ExecuteNonQueryAsync(cancellationToken);
+            _schemaChecked = true;
+        }
+        finally
+        {
+            SchemaLock.Release();
+        }
     }
 
     private static string? ReadString(SqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
+    }
+
+    private static int? ReadNullableInt(SqlDataReader reader, string name)
+    {
+        var ordinal = reader.GetOrdinal(name);
+        return reader.IsDBNull(ordinal) ? null : reader.GetInt32(ordinal);
     }
 }

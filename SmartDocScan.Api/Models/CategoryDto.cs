@@ -6,4 +6,6 @@ public sealed class CategoryDto
     public int CompanyId { get; set; }
     public string? CategoryName { get; set; }
     public string? Access { get; set; }
+    public int? ParentId { get; set; }
+    public string? ParentName { get; set; }
 }

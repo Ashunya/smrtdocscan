@@ -5,4 +5,5 @@ public sealed class CategoryUpsertRequest
     public int CompanyId { get; set; }
     public string? CategoryName { get; set; }
     public string? Access { get; set; }
+    public int? ParentId { get; set; }
 }

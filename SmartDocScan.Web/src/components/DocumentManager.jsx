@@ -48,6 +48,37 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
     };
   }, [companyId, patient.patientId, onNotice]);
 
+  const formattedCategoryOptions = useMemo(() => {
+    const roots = categories.filter((c) => !c.parentId);
+    const subGroups = [];
+    roots.forEach((parent) => {
+      const children = categories.filter((c) => c.parentId === parent.categoryId);
+      if (children.length > 0) {
+        subGroups.push({
+          type: "group",
+          label: parent.categoryName,
+          options: children
+        });
+      } else {
+        subGroups.push({
+          type: "option",
+          categoryId: parent.categoryId,
+          categoryName: parent.categoryName
+        });
+      }
+    });
+    categories.forEach((c) => {
+      if (c.parentId && !categories.some((p) => p.categoryId === c.parentId)) {
+        subGroups.push({
+          type: "option",
+          categoryId: c.categoryId,
+          categoryName: c.categoryName
+        });
+      }
+    });
+    return subGroups;
+  }, [categories]);
+
   const groupedDocuments = useMemo(() => {
     return documents.reduce((groups, document) => {
       const key = document.categoryName || "Uncategorized";
@@ -147,11 +178,27 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
             {categories.length === 0 ? (
               <option value="">No categories</option>
             ) : (
-              categories.map((category) => (
-                <option key={category.categoryId} value={category.categoryId}>
-                  {category.categoryName}
-                </option>
-              ))
+              <>
+                <option value="">Select Category...</option>
+                {formattedCategoryOptions.map((item, idx) => {
+                  if (item.type === "group") {
+                    return (
+                      <optgroup key={idx} label={item.label}>
+                        {item.options.map((opt) => (
+                          <option key={opt.categoryId} value={opt.categoryId}>
+                            {opt.categoryName}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  }
+                  return (
+                    <option key={item.categoryId} value={item.categoryId}>
+                      {item.categoryName}
+                    </option>
+                  );
+                })}
+              </>
             )}
           </select>
         </label>
