@@ -64,6 +64,12 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
       return;
     }
 
+    const trimmedDocumentName = documentName.trim();
+    if (!trimmedDocumentName) {
+      onNotice({ type: "error", text: "Document name is required." });
+      return;
+    }
+
     setUploading(true);
     onNotice(null);
     try {
@@ -72,7 +78,7 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
         patientId: patient.patientId,
         categoryId: Number(categoryId),
         file,
-        documentName,
+        documentName: trimmedDocumentName,
         dateOfService,
       });
       setDocuments((current) => [document, ...current]);
@@ -161,13 +167,13 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
         </label>
         <label>
           Document Name
-          <input type="text" value={documentName} onChange={(event) => setDocumentName(event.target.value)} placeholder={file?.name || "Optional name"} />
+          <input type="text" value={documentName} onChange={(event) => setDocumentName(event.target.value)} placeholder="Required name" required />
         </label>
         <label>
           Date of Service
           <input type="date" value={dateOfService} onChange={(event) => setDateOfService(event.target.value)} />
         </label>
-        <button className="primary-button" type="submit" disabled={uploading || !file || !categoryId}>
+        <button className="primary-button" type="submit" disabled={uploading || !file || !categoryId || !documentName.trim()}>
           <Upload size={18} />
           {uploading ? "Uploading..." : "Upload"}
         </button>

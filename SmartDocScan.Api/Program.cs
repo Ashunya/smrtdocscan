@@ -511,7 +511,13 @@ app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal pr
         return ownershipValidation;
     }
 
-    var safeName = BuildStoredDocumentName(form["documentName"], file.FileName);
+    var requestedDocumentName = RequireDocumentName(form["documentName"]);
+    if (requestedDocumentName is null)
+    {
+        return Results.BadRequest(new { message = "Document name is required." });
+    }
+
+    var safeName = BuildStoredDocumentName(requestedDocumentName, file.FileName);
     var validationResult = await ValidateUploadedDocumentAsync(file, safeName, maxDocumentUploadBytes, cancellationToken);
     if (validationResult is not null)
     {
@@ -563,7 +569,13 @@ app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincip
         return ownershipValidation;
     }
 
-    var safeName = BuildStoredDocumentName(httpRequest.Query["documentName"], file.FileName);
+    var requestedDocumentName = RequireDocumentName(httpRequest.Query["documentName"]);
+    if (requestedDocumentName is null)
+    {
+        return Results.BadRequest(new { message = "Document name is required." });
+    }
+
+    var safeName = BuildStoredDocumentName(requestedDocumentName, file.FileName);
     var validationResult = await ValidateUploadedDocumentAsync(file, safeName, maxDocumentUploadBytes, cancellationToken);
     if (validationResult is not null)
     {
@@ -1685,6 +1697,11 @@ static string BuildDownloadFileName(string? documentName, string? storedUrl)
 static DateTime? ParseDateOnly(string? value)
 {
     return DateTime.TryParse(value, out var parsed) ? parsed.Date : null;
+}
+
+static string? RequireDocumentName(string? value)
+{
+    return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
 static string BuildStoredDocumentName(string? requestedName, string originalFileName)

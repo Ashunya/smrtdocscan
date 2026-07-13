@@ -58,7 +58,7 @@ public sealed class PatientRepository
 
     public async Task<PatientDto> CreateAsync(PatientUpsertRequest request, CancellationToken cancellationToken = default)
     {
-        await EnsureExternalPatientIdIsUniqueAsync(request.CompanyId, request.ExternalPatientId, null, cancellationToken);
+        await EnsureExternalPatientIdIsUniqueWithinCompanyAsync(request.CompanyId, request.ExternalPatientId, null, cancellationToken);
 
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -76,7 +76,7 @@ public sealed class PatientRepository
 
     public async Task<PatientDto?> UpdateAsync(int patientId, PatientUpsertRequest request, int existingCompanyId, CancellationToken cancellationToken = default)
     {
-        await EnsureExternalPatientIdIsUniqueAsync(request.CompanyId, request.ExternalPatientId, patientId, cancellationToken);
+        await EnsureExternalPatientIdIsUniqueWithinCompanyAsync(request.CompanyId, request.ExternalPatientId, patientId, cancellationToken);
 
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -115,7 +115,7 @@ public sealed class PatientRepository
         return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
     }
 
-    private async Task EnsureExternalPatientIdIsUniqueAsync(int companyId, string? externalPatientId, int? currentPatientId, CancellationToken cancellationToken)
+    private async Task EnsureExternalPatientIdIsUniqueWithinCompanyAsync(int companyId, string? externalPatientId, int? currentPatientId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(externalPatientId))
         {
@@ -130,7 +130,7 @@ public sealed class PatientRepository
             SELECT TOP (1) patient_id, pext_id, first_name, last_name, dob
             FROM patient
             WHERE comp_id = @companyId
-              AND LTRIM(RTRIM(pext_id)) = @externalPatientId
+              AND NULLIF(LTRIM(RTRIM(pext_id)), '') = @externalPatientId
               AND (@currentPatientId IS NULL OR patient_id <> @currentPatientId)
             ORDER BY patient_id;
             """;
@@ -149,7 +149,7 @@ public sealed class PatientRepository
             var matchingName = string.Join(", ", new[] { matchingLastName, matchingFirstName }.Where(value => !string.IsNullOrWhiteSpace(value)));
             var dobText = matchingDob.HasValue ? $", DOB {matchingDob.Value:MM/dd/yyyy}" : string.Empty;
             throw new InvalidOperationException(
-                $"Patient ID {matchingExternalId} already belongs to {matchingName} (record {matchingPatientId}{dobText}) in company {companyId}. Open that patient or verify the active company before creating another record.");
+                $"Patient ID {matchingExternalId} already belongs to {matchingName} (record {matchingPatientId}{dobText}) in company {companyId}. The same patient ID can be used in another company, but must be unique within the active company.");
         }
     }
 

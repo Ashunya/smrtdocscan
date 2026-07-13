@@ -184,11 +184,17 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
       return;
     }
 
+    const trimmedDocumentName = documentName.trim();
+    if (!trimmedDocumentName) {
+      onNotice({ type: "error", text: "Document name is required." });
+      return;
+    }
+
     const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
     const isTiff = format === "tif";
     const currentPageCount = Number(webTwain.HowManyImagesInBuffer) || 0;
     const selectedCategoryId = Number(categoryId);
-    const uploadName = buildDocumentFileName(documentName, `ScanImage_${stamp}`, isTiff ? "tif" : "pdf");
+    const uploadName = buildDocumentFileName(trimmedDocumentName, `ScanImage_${stamp}`, isTiff ? "tif" : "pdf");
 
     setSaving(true);
     try {
@@ -287,7 +293,7 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
           </label>
           <label>
             Document Name
-            <input type="text" value={documentName} onChange={(event) => setDocumentName(event.target.value)} placeholder="Optional name" />
+            <input type="text" value={documentName} onChange={(event) => setDocumentName(event.target.value)} placeholder="Required name" required />
           </label>
           <label>
             Date of Service
@@ -314,11 +320,11 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
             <XCircle size={18} />
             Clear
           </button>
-          <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("pdf")} disabled={!ready || !patient || pageCount === 0 || saving}>
+          <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("pdf")} disabled={!ready || !patient || pageCount === 0 || saving || !documentName.trim()}>
             <Upload size={18} />
             {saving ? "Saving..." : "Save as PDF"}
           </button>
-          <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("tif")} disabled={!ready || !patient || pageCount === 0 || saving}>
+          <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("tif")} disabled={!ready || !patient || pageCount === 0 || saving || !documentName.trim()}>
             <Upload size={18} />
             {saving ? "Saving..." : "Save as TIF"}
           </button>

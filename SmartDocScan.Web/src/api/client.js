@@ -132,9 +132,7 @@ export function uploadDocument({ companyId, patientId, categoryId, file, documen
   formData.set("patientId", String(patientId));
   formData.set("categoryId", String(categoryId));
   formData.set("uploadedBy", uploadedBy);
-  if (documentName) {
-    formData.set("documentName", documentName);
-  }
+  formData.set("documentName", (documentName || "").trim());
   if (dateOfService) {
     formData.set("dateOfService", dateOfService);
   }
