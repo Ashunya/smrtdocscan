@@ -149,7 +149,7 @@ public sealed class PatientRepository
             var matchingName = string.Join(", ", new[] { matchingLastName, matchingFirstName }.Where(value => !string.IsNullOrWhiteSpace(value)));
             var dobText = matchingDob.HasValue ? $", DOB {matchingDob.Value:MM/dd/yyyy}" : string.Empty;
             throw new InvalidOperationException(
-                $"Patient ID {matchingExternalId} already belongs to {matchingName} (record {matchingPatientId}{dobText}) in company {companyId}. The same patient ID can be used in another company, but must be unique within the active company.");
+                $"Patient ID {matchingExternalId} already belongs to {matchingName} (record {matchingPatientId}{dobText}). The same patient ID can be used in another company, but must be unique within the active company.");
         }
     }
 
