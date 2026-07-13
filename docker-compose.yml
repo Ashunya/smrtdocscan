@@ -8,7 +8,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       ConnectionStrings__SmartDocScan: ${SMARTDOCSCAN_CONNECTION_STRING}
-      Cors__AllowedOrigins__0: https://scan.ashunya.com
+      Cors__AllowedOrigins__0: https://scandev.ashunya.com
       Store__RootPath: /data/store
     volumes:
       - D:/DMS/store:/data/store
@@ -20,7 +20,7 @@ services:
       context: .
       dockerfile: SmartDocScan.Web/Dockerfile
       args:
-        VITE_API_BASE_URL: https://scanapi.ashunya.com/api
+        VITE_API_BASE_URL: https://scandevapi.ashunya.com/api
         VITE_DEFAULT_COMPANY_ID: ${SMARTDOCSCAN_DEFAULT_COMPANY_ID:-7}
     container_name: smrtdocscan-web
     depends_on:
