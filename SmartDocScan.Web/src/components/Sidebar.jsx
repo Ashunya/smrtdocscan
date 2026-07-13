@@ -1,3 +1,4 @@
+import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
 import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
@@ -5,6 +6,7 @@ import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
+import PinDropOutlinedIcon from "@mui/icons-material/PinDropOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import { Box, Divider, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar } from "@mui/material";
@@ -14,6 +16,8 @@ export function Sidebar({ activeView, onNavigate, user, logoUrl, open = true, va
     { id: "find", label: "Find Patient", icon: SearchOutlinedIcon },
     { id: "add", label: "Add Patient", icon: PersonAddAltOutlinedIcon, permission: "addPatients" },
     { id: "box", label: "Add Box", icon: ArchiveOutlinedIcon, permission: "box" },
+    { id: "business", label: "Business Admin", icon: AccountBalanceOutlinedIcon },
+    { id: "locations", label: "Locations", icon: PinDropOutlinedIcon, adminOnly: true },
     { id: "companies", label: "Companies", icon: BusinessOutlinedIcon, adminOnly: true },
     { id: "users", label: "Users", icon: GroupOutlinedIcon, permission: "addUsers" },
     { id: "categories", label: "Categories", icon: CategoryOutlinedIcon, permission: "addCategory" },

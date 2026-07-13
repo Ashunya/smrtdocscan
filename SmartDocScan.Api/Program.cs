@@ -35,6 +35,8 @@ builder.Services.AddSingleton<PatientRepository>();
 builder.Services.AddSingleton<BoxRepository>();
 builder.Services.AddSingleton<CategoryRepository>();
 builder.Services.AddSingleton<DocumentRepository>();
+builder.Services.AddSingleton<LocationRepository>();
+builder.Services.AddSingleton<BusinessDocumentRepository>();
 builder.Services.AddSingleton<CompanyRepository>();
 builder.Services.AddSingleton<UserRepository>();
 builder.Services.AddSingleton<AuthRepository>();
@@ -404,14 +406,14 @@ app.MapDelete("/api/boxes/{boxId:int}", async (int boxId, ClaimsPrincipal princi
     }
 }).RequireAuthorization();
 
-app.MapGet("/api/categories", async (int companyId, ClaimsPrincipal principal, CategoryRepository repository, CancellationToken cancellationToken) =>
+app.MapGet("/api/categories", async (int companyId, string? type, ClaimsPrincipal principal, CategoryRepository repository, CancellationToken cancellationToken) =>
 {
     if (!CanAccessCompany(principal, companyId))
     {
         return Results.Forbid();
     }
 
-    var categories = await repository.GetByCompanyAsync(companyId, cancellationToken);
+    var categories = await repository.GetByCompanyAsync(companyId, type, cancellationToken);
     return Results.Ok(categories);
 }).RequireAuthorization();
 
@@ -701,6 +703,225 @@ app.MapDelete("/api/companies/{companyId:int}", async (int companyId, ClaimsPrin
     {
         return Results.Conflict(new { message = "Company cannot be deleted because related records exist." });
     }
+}).RequireAuthorization();
+
+// -------------------------------------------------------------
+// Dialysis Center Locations Endpoints
+// -------------------------------------------------------------
+app.MapGet("/api/locations", async (int companyId, ClaimsPrincipal principal, LocationRepository repository, CancellationToken cancellationToken) =>
+{
+    if (!CanAccessCompany(principal, companyId))
+    {
+        return Results.Forbid();
+    }
+    var locations = await repository.GetByCompanyAsync(companyId, cancellationToken);
+    return Results.Ok(locations);
+}).RequireAuthorization();
+
+app.MapPost("/api/locations", async (LocationUpsertRequest request, ClaimsPrincipal principal, LocationRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
+{
+    if (!CanAccessCompany(principal, request.CompanyId) || !IsElevated(principal))
+    {
+        return Results.Forbid();
+    }
+    try
+    {
+        var location = await repository.UpsertAsync(request, cancellationToken);
+        await AuditAsync(auditRepository, "location.upsert", GetActor(principal), request.CompanyId, "location", location.LocationId.ToString(), "success", httpContext);
+        return Results.Ok(location);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { message = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapDelete("/api/locations/{locationId:int}", async (int locationId, int companyId, ClaimsPrincipal principal, LocationRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
+{
+    if (!CanAccessCompany(principal, companyId) || !IsElevated(principal))
+    {
+        return Results.Forbid();
+    }
+    try
+    {
+        var deleted = await repository.DeleteAsync(locationId, companyId, cancellationToken);
+        if (deleted)
+        {
+            await AuditAsync(auditRepository, "location.delete", GetActor(principal), companyId, "location", locationId.ToString(), "success", httpContext);
+        }
+        return deleted ? Results.NoContent() : Results.NotFound(new { message = "Location not found." });
+    }
+    catch (SqlException)
+    {
+        return Results.Conflict(new { message = "Location cannot be deleted because related records exist." });
+    }
+}).RequireAuthorization();
+
+// -------------------------------------------------------------
+// Business Documents (Finance & Administration) Endpoints
+// -------------------------------------------------------------
+app.MapGet("/api/business-documents", async (int companyId, int? locationId, int? categoryId, ClaimsPrincipal principal, BusinessDocumentRepository repository, CancellationToken cancellationToken) =>
+{
+    if (!CanAccessCompany(principal, companyId))
+    {
+        return Results.Forbid();
+    }
+    var documents = await repository.GetByCompanyAsync(companyId, locationId, categoryId, cancellationToken);
+    return Results.Ok(documents);
+}).RequireAuthorization();
+
+app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPrincipal principal, BusinessDocumentRepository repository, CategoryRepository categoryRepository, LocationRepository locationRepository, AuditRepository auditRepository, IConfiguration configuration, CancellationToken cancellationToken) =>
+{
+    if (!httpRequest.HasFormContentType)
+    {
+        return Results.BadRequest(new { message = "Multipart form data is required." });
+    }
+
+    var form = await httpRequest.ReadFormAsync(cancellationToken);
+    var file = form.Files["file"];
+    if (file is null || file.Length == 0)
+    {
+        return Results.BadRequest(new { message = "Please select a document to upload." });
+    }
+
+    if (!int.TryParse(form["companyId"], out var companyId) ||
+        !int.TryParse(form["categoryId"], out var categoryId))
+    {
+        return Results.BadRequest(new { message = "Company and category are required." });
+    }
+    if (!CanAccessCompany(principal, companyId))
+    {
+        return Results.Forbid();
+    }
+
+    int? locationId = null;
+    if (int.TryParse(form["locationId"], out var locId))
+    {
+        locationId = locId;
+    }
+
+    var category = await categoryRepository.GetAsync(categoryId, cancellationToken);
+    if (category is null || category.CompanyId != companyId)
+    {
+        return Results.BadRequest(new { message = "Invalid category." });
+    }
+
+    if (locationId.HasValue)
+    {
+        var location = await locationRepository.GetAsync(locationId.Value, cancellationToken);
+        if (location is null || location.CompanyId != companyId)
+        {
+            return Results.BadRequest(new { message = "Invalid location." });
+        }
+    }
+
+    var safeName = BuildStoredDocumentName(form["documentName"], file.FileName);
+    var validationResult = await ValidateUploadedDocumentAsync(file, safeName, maxDocumentUploadBytes, cancellationToken);
+    if (validationResult is not null)
+    {
+        return validationResult;
+    }
+
+    var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
+    var relativeFolder = Path.Combine(companyId.ToString(), "business", locationId?.ToString() ?? "global");
+    var targetFolder = Path.Combine(storeRoot, relativeFolder);
+    Directory.CreateDirectory(targetFolder);
+
+    var targetPath = Path.Combine(targetFolder, safeName);
+    await using (var stream = File.Create(targetPath))
+    {
+        await file.CopyToAsync(stream, cancellationToken);
+    }
+    var relativeUrl = Path.Combine(relativeFolder, safeName).Replace('\\', '/');
+
+    var pages = int.TryParse(form["pages"], out var parsedPages) ? Math.Max(parsedPages, 1) : 1;
+    DateTime? documentDate = null;
+    if (DateTime.TryParse(form["documentDate"], out var docDate))
+    {
+        documentDate = docDate;
+    }
+    string? vendorName = form["vendorName"];
+    decimal? amount = null;
+    if (decimal.TryParse(form["amount"], out var amt))
+    {
+        amount = amt;
+    }
+
+    var document = await repository.CreateAsync(
+        companyId,
+        locationId,
+        categoryId,
+        safeName,
+        relativeUrl,
+        pages,
+        form["uploadedBy"].FirstOrDefault() ?? GetActor(principal),
+        documentDate,
+        vendorName,
+        amount,
+        cancellationToken);
+
+    await AuditAsync(auditRepository, "business_document.upload", GetActor(principal), companyId, "business_document", document.DocumentId.ToString(), "success", httpRequest.HttpContext);
+    return Results.Created($"/api/business-documents/{document.DocumentId}", document);
+}).RequireAuthorization();
+
+app.MapGet("/api/business-documents/{documentId:int}/download", async (int documentId, ClaimsPrincipal principal, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+{
+    var document = await repository.GetAsync(documentId, cancellationToken);
+    if (document?.Url is null)
+    {
+        return Results.NotFound(new { message = "Document not found." });
+    }
+
+    if (!CanAccessCompany(principal, document.CompanyId))
+    {
+        return Results.Forbid();
+    }
+
+    var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
+    var fullPath = Path.GetFullPath(Path.Combine(storeRoot, document.Url.Replace('/', Path.DirectorySeparatorChar)));
+    var fullStoreRoot = Path.GetFullPath(storeRoot);
+    if (!IsPathUnderRoot(fullPath, fullStoreRoot) || !File.Exists(fullPath))
+    {
+        return Results.NotFound(new { message = "Document file not found." });
+    }
+
+    return Results.File(fullPath, "application/octet-stream", BuildDownloadFileName(document.DocumentName, document.Url));
+}).RequireAuthorization();
+
+app.MapGet("/api/business-documents/{documentId:int}/preview", (int documentId, HttpContext httpContext, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+    PreviewBusinessDocumentAsync(documentId, null, httpContext, repository, configuration, cancellationToken)).RequireAuthorization();
+
+app.MapGet("/api/business-documents/{documentId:int}/preview/{fileName}", (int documentId, string fileName, HttpContext httpContext, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+    PreviewBusinessDocumentAsync(documentId, fileName, httpContext, repository, configuration, cancellationToken)).RequireAuthorization();
+
+app.MapGet("/api/business-documents/{documentId:int}/page/{page:int}", (int documentId, int page, HttpContext httpContext, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+    PreviewBusinessTiffPageAsync(documentId, page, httpContext, repository, configuration, cancellationToken)).RequireAuthorization();
+
+app.MapGet("/api/business-documents/{documentId:int}/thumbnail", (int documentId, HttpContext httpContext, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+    PreviewBusinessTiffPageAsync(documentId, 1, httpContext, repository, configuration, cancellationToken)).RequireAuthorization();
+
+app.MapDelete("/api/business-documents/{documentId:int}", async (int documentId, ClaimsPrincipal principal, BusinessDocumentRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
+{
+    var document = await repository.GetAsync(documentId, cancellationToken);
+    if (document is null)
+    {
+        return Results.NotFound(new { message = "Document not found." });
+    }
+
+    if (!CanAccessCompany(principal, document.CompanyId))
+    {
+        await AuditForbiddenAsync(auditRepository, "business_document.delete", principal, document.CompanyId, "business_document", documentId.ToString(), httpContext);
+        return Results.Forbid();
+    }
+
+    var deleted = await repository.DeleteAsync(documentId, document.CompanyId, principal.FindFirst("username")?.Value, cancellationToken);
+    if (!deleted)
+    {
+        return Results.NotFound(new { message = "Document not found." });
+    }
+
+    await AuditAsync(auditRepository, "business_document.delete", GetActor(principal), document.CompanyId, "business_document", documentId.ToString(), "success", httpContext);
+    return Results.NoContent();
 }).RequireAuthorization();
 
 app.MapGet("/api/reports/documents", async (int companyId, DateTime? fromDate, DateTime? toDate, int? take, ClaimsPrincipal principal, DocumentRepository repository, CancellationToken cancellationToken) =>
@@ -1836,4 +2057,106 @@ static bool StartsWithAscii(ReadOnlySpan<byte> value, string expected)
 static bool StartsWith(ReadOnlySpan<byte> value, ReadOnlySpan<byte> expected)
 {
     return value.Length >= expected.Length && value[..expected.Length].SequenceEqual(expected);
+}
+
+static async Task<IResult> PreviewBusinessDocumentAsync(int documentId, string? routeFileName, HttpContext httpContext, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken)
+{
+    var document = await repository.GetAsync(documentId, cancellationToken);
+    if (document?.Url is null)
+    {
+        return Results.NotFound(new { message = "Document not found." });
+    }
+
+    if (!CanAccessCompany(httpContext.User, document.CompanyId))
+    {
+        return Results.Forbid();
+    }
+
+    var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
+    var fullPath = Path.GetFullPath(Path.Combine(storeRoot, document.Url.Replace('/', Path.DirectorySeparatorChar)));
+    var fullStoreRoot = Path.GetFullPath(storeRoot);
+    if (!IsPathUnderRoot(fullPath, fullStoreRoot) || !File.Exists(fullPath))
+    {
+        return Results.NotFound(new { message = "Document file not found." });
+    }
+
+    var storedFileName = Path.GetFileName(document.Url);
+    var displayFileName = string.IsNullOrWhiteSpace(routeFileName) ? storedFileName : routeFileName;
+    if (IsTiffFile(storedFileName))
+    {
+        return PreviewBusinessTiffAsHtml(document, displayFileName, fullPath, httpContext);
+    }
+
+    var contentType = GetContentType(storedFileName);
+    httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(displayFileName)}\"";
+    httpContext.Response.Headers.XContentTypeOptions = "nosniff";
+    return Results.File(fullPath, contentType, enableRangeProcessing: true);
+}
+
+static async Task<IResult> PreviewBusinessTiffPageAsync(int documentId, int page, HttpContext httpContext, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken)
+{
+    var document = await repository.GetAsync(documentId, cancellationToken);
+    if (document?.Url is null)
+    {
+        return Results.NotFound(new { message = "Document not found." });
+    }
+
+    if (!CanAccessCompany(httpContext.User, document.CompanyId))
+    {
+        return Results.Forbid();
+    }
+
+    var resolved = ResolveStoredDocumentPath(configuration, document.Url);
+    if (resolved is null)
+    {
+        return Results.NotFound(new { message = "Document file not found." });
+    }
+
+    var storedFileName = Path.GetFileName(document.Url);
+    if (!IsTiffFile(storedFileName))
+    {
+        return Results.BadRequest(new { message = "Document is not a TIFF file." });
+    }
+
+    var width = ParsePositiveQueryInt(httpContext, "width", 1400);
+    var height = ParsePositiveQueryInt(httpContext, "height", 1800);
+    var image = RenderTiffPageAsJpeg(resolved, page, width, height);
+    var pageFileName = $"{Path.GetFileNameWithoutExtension(storedFileName)}-page-{Math.Max(page, 1)}.jpg";
+    httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(pageFileName)}\"";
+    httpContext.Response.Headers.XContentTypeOptions = "nosniff";
+    httpContext.Response.Headers.CacheControl = "no-store, no-cache, max-age=0";
+    httpContext.Response.Headers.Pragma = "no-cache";
+    httpContext.Response.Headers.Expires = "0";
+    return Results.File(image, "image/jpeg", enableRangeProcessing: false);
+}
+
+static IResult PreviewBusinessTiffAsHtml(BusinessDocumentDto document, string displayFileName, string fullPath, HttpContext httpContext)
+{
+    using var images = new MagickImageCollection(fullPath);
+    var pageCount = Math.Max(document.NumberOfPages, images.Count);
+    if (pageCount <= 0)
+    {
+        return Results.Problem("The TIFF file does not contain any readable pages.", statusCode: StatusCodes.Status422UnprocessableEntity);
+    }
+
+    var title = HtmlEncode(displayFileName);
+    var basePath = httpContext.Request.PathBase.ToString();
+    var builder = new StringBuilder();
+    builder.AppendLine("<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
+    builder.Append("<title>").Append(title).AppendLine("</title>");
+    builder.AppendLine("<style>body{margin:0;background:#262626;color:#fff;font-family:Segoe UI,Arial,sans-serif}.toolbar{position:sticky;top:0;z-index:2;display:flex;gap:12px;align-items:center;padding:10px 16px;background:#1f1f1f;border-bottom:1px solid #3a3a3a}.toolbar strong{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.toolbar button{border:1px solid #777;background:#fff;color:#111;border-radius:4px;padding:7px 12px;font-weight:600;cursor:pointer}.pages{padding:24px 12px}.page{display:block;max-width:min(96vw,1400px);width:auto;height:auto;margin:0 auto 24px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.45)}@media print{.toolbar{display:none}.pages{padding:0;background:#fff}.page{width:100%;max-width:100%;margin:0;box-shadow:none;page-break-after:always}}</style>");
+    builder.AppendLine("</head><body>");
+    builder.Append("<div class=\"toolbar\"><strong>").Append(title).Append("</strong><span>").Append(pageCount).Append(" pages</span><button onclick=\"window.print()\">Print</button></div><main class=\"pages\">");
+    for (var page = 1; page <= pageCount; page++)
+    {
+        builder.Append("<img class=\"page\" alt=\"Page ").Append(page).Append("\" src=\"")
+            .Append(basePath).Append("/api/business-documents/").Append(document.DocumentId).Append("/page/").Append(page)
+            .Append("?width=1400&height=1800\">");
+    }
+    builder.AppendLine("</main></body></html>");
+
+    httpContext.Response.Headers.ContentDisposition = $"inline; filename=\"{SanitizeHeaderFileName(Path.ChangeExtension(displayFileName, ".html") ?? "preview.html")}\"";
+    httpContext.Response.Headers.XContentTypeOptions = "nosniff";
+    httpContext.Response.Headers.ContentSecurityPolicy = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'";
+    return Results.Text(builder.ToString(), "text/html", Encoding.UTF8);
 }

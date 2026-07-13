@@ -100,10 +100,13 @@ export function deleteBox(boxId) {
   return request(`/boxes/${boxId}`, { method: "DELETE" });
 }
 
-export function listCategories({ companyId }) {
+export function listCategories({ companyId, type }) {
   const params = new URLSearchParams({
     companyId: String(companyId),
   });
+  if (type) {
+    params.set("type", type);
+  }
   return request(`/categories?${params.toString()}`);
 }
 
@@ -265,4 +268,70 @@ export function getAuditLogs({ companyId, actor, action, outcome, fromDate, toDa
   if (fromDate) params.set("fromDate", fromDate);
   if (toDate) params.set("toDate", toDate);
   return request(`/audit-logs?${params.toString()}`);
+}
+
+export function listLocations({ companyId }) {
+  const params = new URLSearchParams({
+    companyId: String(companyId),
+  });
+  return request(`/locations?${params.toString()}`);
+}
+
+export function saveLocation(location) {
+  return request("/locations", {
+    method: "POST",
+    body: JSON.stringify(location),
+  });
+}
+
+export function deleteLocation(locationId, companyId) {
+  const params = new URLSearchParams({
+    companyId: String(companyId),
+  });
+  return request(`/locations/${locationId}?${params.toString()}`, { method: "DELETE" });
+}
+
+export function listBusinessDocuments({ companyId, locationId, categoryId }) {
+  const params = new URLSearchParams({
+    companyId: String(companyId),
+  });
+  if (locationId) params.set("locationId", String(locationId));
+  if (categoryId) params.set("categoryId", String(categoryId));
+  return request(`/business-documents?${params.toString()}`);
+}
+
+export function uploadBusinessDocument({ companyId, locationId, categoryId, file, documentName, documentDate, vendorName, amount, pages }) {
+  const formData = new FormData();
+  formData.set("companyId", String(companyId));
+  if (locationId) formData.set("locationId", String(locationId));
+  formData.set("categoryId", String(categoryId));
+  if (documentName) formData.set("documentName", documentName);
+  if (documentDate) formData.set("documentDate", documentDate);
+  if (vendorName) formData.set("vendorName", vendorName);
+  if (amount) formData.set("amount", String(amount));
+  if (pages) formData.set("pages", String(pages));
+  formData.set("file", file);
+  return requestForm("/business-documents", formData);
+}
+
+export function getBusinessDocumentDownloadUrl(documentId) {
+  return `${API_BASE_URL}/business-documents/${documentId}/download`;
+}
+
+export function getBusinessDocumentPreviewUrl(document) {
+  const documentId = typeof document === "object" ? document.documentId : document;
+  const sourceName = typeof document === "object" ? (document.url || document.documentName || "document") : "document";
+  const fileName = String(sourceName).split("?")[0].split("/").pop() || "document";
+  return `${API_BASE_URL}/business-documents/${documentId}/preview/${encodeURIComponent(fileName)}`;
+}
+
+export function getBusinessDocumentThumbnailUrl(document) {
+  const documentId = typeof document === "object" ? document.documentId : document;
+  return `${API_BASE_URL}/business-documents/${documentId}/thumbnail`;
+}
+
+export function deleteBusinessDocument(documentId) {
+  return request(`/business-documents/${documentId}`, {
+    method: "DELETE",
+  });
 }

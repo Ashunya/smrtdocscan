@@ -8,4 +8,5 @@ public sealed class CategoryDto
     public string? Access { get; set; }
     public int? ParentId { get; set; }
     public string? ParentName { get; set; }
+    public string CategoryType { get; set; } = "patient";
 }
