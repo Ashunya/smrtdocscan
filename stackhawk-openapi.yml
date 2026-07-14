@@ -1,0 +1,119 @@
+openapi: 3.0.3
+info:
+  title: SmartDocScan Safe Scan API
+  version: 1.0.0
+servers:
+  - url: https://scanapi.ashunya.com
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      responses:
+        "200":
+          description: Health status
+  /api/auth/me:
+    get:
+      operationId: getCurrentUser
+      responses:
+        "200":
+          description: Current authenticated user
+  /api/settings/branding:
+    get:
+      operationId: getBrandingSettings
+      responses:
+        "200":
+          description: Public branding settings
+  /api/settings/security:
+    get:
+      operationId: getSecuritySettings
+      responses:
+        "200":
+          description: Security settings for administrators
+  /api/companies:
+    get:
+      operationId: listCompanies
+      responses:
+        "200":
+          description: Companies visible to the user
+  /api/users:
+    get:
+      operationId: listUsers
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Users in the selected company
+  /api/patients:
+    get:
+      operationId: searchPatients
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          schema:
+            type: integer
+            default: 1
+        - name: take
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching patients
+  /api/boxes:
+    get:
+      operationId: listBoxes
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Boxes in the selected company
+  /api/categories:
+    get:
+      operationId: listCategories
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Categories in the selected company
+  /api/reports/documents:
+    get:
+      operationId: getDocumentReport
+      parameters:
+        - name: companyId
+          in: query
+          required: true
+          schema:
+            type: integer
+            default: 1
+        - name: take
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 25
+      responses:
+        "200":
+          description: Document report rows

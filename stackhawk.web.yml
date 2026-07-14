@@ -1,0 +1,22 @@
+app:
+  applicationId: b4cae55d-ba12-4013-adc9-bcdde44e86a1
+  env: Production
+  host: https://scan.ashunya.com
+
+  excludePaths:
+    - ^/api/patients/[0-9]+$
+    - ^/api/boxes/[0-9]+$
+    - ^/api/categories/[0-9]+$
+    - ^/api/documents/[0-9]+$
+    - ^/api/companies/[0-9]+$
+    - ^/api/users/.*$
+    - ^/api/audit-logs.*$
+    - ^/api/auth/login$
+    - ^/api/auth/logout$
+
+hawkAddOn:
+  replacer:
+    rules:
+      - matchString: "Origin"
+        replacement: "https://scan.ashunya.com"
+        replaceOnly: false

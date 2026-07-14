@@ -1,0 +1,53 @@
+app:
+  applicationId: "${HAWK_APP_ID}"
+  env: Production
+  host: https://scanapi.ashunya.com
+  openApiConf:
+    filePath: stackhawk-openapi.yml
+
+  # Paths excluded entirely (no spider, no active attack) because a DELETE
+  # operation shares the path with a safe verb (e.g. GET /api/documents/{id}
+  # vs DELETE /api/documents/{id}). HawkScan's excludePaths is path-level, not
+  # method-level, so excluding the path is the only way to keep the active
+  # scan from ever reaching the destructive verb. Coverage of the safe verb
+  # on these paths is intentionally sacrificed for scan safety on production.
+  excludePaths:
+    - ^/api/patients/[0-9]+$
+    - ^/api/boxes/[0-9]+$
+    - ^/api/categories/[0-9]+$
+    - ^/api/documents/[0-9]+$
+    - ^/api/companies/[0-9]+$
+    - ^/api/users/.*$
+    - ^/api/audit-logs.*$
+    - ^/api/auth/login$
+    - ^/api/auth/logout$
+
+  authentication:
+    loggedInIndicator: '.*"authenticated":true.*'
+    loggedOutIndicator: '.*"authenticated":false.*'
+    usernamePassword:
+      type: JSON
+      loginPath: /api/auth/login
+      usernameField: username
+      passwordField: password
+      scanUsername: "${HAWK_USERNAME}"
+      scanPassword: "${HAWK_PASSWORD}"
+    cookieAuthorization:
+      cookieNames:
+        - smartdocscan.session
+    testPath:
+      type: BODY
+      path: /api/auth/me
+      success: '.*"authenticated":true.*'
+      requestMethod: GET
+
+hawkAddOn:
+  # SmartDocScan rejects cross-site unsafe (POST/PUT/DELETE) requests whose
+  # Origin header doesn't match Cors:AllowedOrigins. Without this, HawkScan's
+  # own login/state-changing requests would get blocked before reaching the
+  # app. See SmartDocScan.Api/Program.cs origin-check middleware.
+  replacer:
+    rules:
+      - matchString: "Origin"
+        replacement: "https://scan.ashunya.com"
+        replaceOnly: false

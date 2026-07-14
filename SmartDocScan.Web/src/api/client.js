@@ -300,18 +300,58 @@ export function listBusinessDocuments({ companyId, locationId, categoryId }) {
   return request(`/business-documents?${params.toString()}`);
 }
 
-export function uploadBusinessDocument({ companyId, locationId, categoryId, file, documentName, documentDate, vendorName, amount, pages }) {
-  const formData = new FormData();
-  formData.set("companyId", String(companyId));
-  if (locationId) formData.set("locationId", String(locationId));
-  formData.set("categoryId", String(categoryId));
-  if (documentName) formData.set("documentName", documentName);
-  if (documentDate) formData.set("documentDate", documentDate);
-  if (vendorName) formData.set("vendorName", vendorName);
-  if (amount) formData.set("amount", String(amount));
-  if (pages) formData.set("pages", String(pages));
-  formData.set("file", file);
-  return requestForm("/business-documents", formData);
+export function uploadBusinessDocument({ companyId, locationId, categoryId, file, documentName, documentDate, vendorName, amount, pages, onProgress }) {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.set("companyId", String(companyId));
+    if (locationId) formData.set("locationId", String(locationId));
+    formData.set("categoryId", String(categoryId));
+    if (documentName) formData.set("documentName", documentName);
+    if (documentDate) formData.set("documentDate", documentDate);
+    if (vendorName) formData.set("vendorName", vendorName);
+    if (amount) formData.set("amount", String(amount));
+    if (pages) formData.set("pages", String(pages));
+    formData.set("file", file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE_URL}/business-documents`, true);
+    xhr.withCredentials = true;
+
+    if (onProgress && xhr.upload) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          onProgress(percentComplete);
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch (e) {
+          resolve(xhr.responseText);
+        }
+      } else {
+        let message = `Request failed with status ${xhr.status}`;
+        try {
+          const body = JSON.parse(xhr.responseText);
+          message = body.detail || body.message || body.title || message;
+        } catch (e) {}
+        reject(new Error(message));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Network Error"));
+    xhr.send(formData);
+  });
+}
+
+export function moveBusinessDocument(documentId, categoryId) {
+  return request(`/business-documents/${documentId}/category`, {
+    method: "PUT",
+    body: JSON.stringify({ categoryId }),
+  });
 }
 
 export function getBusinessDocumentDownloadUrl(documentId) {

@@ -1,6 +1,6 @@
 import { Folder, Upload, Download, Trash2, Eye, FolderPlus, DollarSign, Calendar, Building, FileText, Plus, X, FolderOpen } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Tooltip, Box, Typography } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Tooltip, Box, Typography, LinearProgress } from "@mui/material";
 import {
   listLocations,
   listCategories,
@@ -11,6 +11,7 @@ import {
   getBusinessDocumentDownloadUrl,
   getBusinessDocumentPreviewUrl,
   getBusinessDocumentThumbnailUrl,
+  moveBusinessDocument,
 } from "../api/client";
 
 function getExtension(value) {
@@ -101,7 +102,9 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [savingCategory, setSavingCategory] = useState(false);
+  const [dragOverCatId, setDragOverCatId] = useState(null);
 
   // Load Locations and Business Categories on load
   useEffect(() => {
@@ -208,6 +211,7 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
       return;
     }
     setUploading(true);
+    setUploadProgress(0);
     onNotice(null);
     try {
       const document = await uploadBusinessDocument({
@@ -220,6 +224,7 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
         vendorName: vendorName || null,
         amount: amount ? Number(amount) : null,
         pages: Number(pages) || 1,
+        onProgress: setUploadProgress,
       });
 
       setDocuments((current) => [document, ...current]);
@@ -236,6 +241,24 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
       onNotice({ type: "error", text: error.message });
     } finally {
       setUploading(false);
+      setUploadProgress(0);
+    }
+  }
+
+  async function handleDropOnCategory(e, categoryId) {
+    e.preventDefault();
+    setDragOverCatId(null);
+    if (String(categoryId) === String(selectedCategoryId)) return;
+    
+    const docId = e.dataTransfer.getData("text/plain");
+    if (!docId) return;
+
+    try {
+      await moveBusinessDocument(docId, categoryId);
+      setDocuments((current) => current.filter((doc) => String(doc.documentId) !== String(docId)));
+      onNotice({ type: "success", text: "Document moved successfully." });
+    } catch (error) {
+      onNotice({ type: "error", text: "Failed to move document: " + error.message });
     }
   }
 
@@ -332,11 +355,18 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
             <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
               {orderedCategories.map((cat) => {
                 const isSelected = selectedCategoryId === String(cat.categoryId);
+                const isDragOver = dragOverCatId === String(cat.categoryId);
                 return (
                   <button
                     key={cat.categoryId}
                     type="button"
                     onClick={() => setSelectedCategoryId(String(cat.categoryId))}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      if (!isDragOver) setDragOverCatId(String(cat.categoryId));
+                    }}
+                    onDragLeave={() => setDragOverCatId(null)}
+                    onDrop={(e) => handleDropOnCategory(e, cat.categoryId)}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -346,7 +376,7 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
                       textAlign: "left",
                       border: "none",
                       borderRadius: "6px",
-                      background: isSelected ? "#fff2ea" : "transparent",
+                      background: isDragOver ? "#e2e8f0" : (isSelected ? "#fff2ea" : "transparent"),
                       color: isSelected ? "#a05522" : "#334155",
                       paddingLeft: cat.level === 1 ? "32px" : "12px",
                       cursor: "pointer",
@@ -354,8 +384,8 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
                       transition: "all 0.2s ease",
                       fontWeight: isSelected ? "600" : "500",
                     }}
-                    onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#f8fafc"; }}
-                    onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                    onMouseEnter={(e) => { if (!isSelected && !isDragOver) e.currentTarget.style.background = "#f8fafc"; }}
+                    onMouseLeave={(e) => { if (!isSelected && !isDragOver) e.currentTarget.style.background = "transparent"; }}
                   >
                     {isSelected ? (
                       <FolderOpen size={18} style={{ color: "#c1692a", flexShrink: 0 }} />
@@ -424,6 +454,11 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
                 return (
                   <article
                     key={doc.documentId}
+                    draggable={true}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/plain", doc.documentId);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
                     style={{
                       background: "#ffffff",
                       borderRadius: "4px",
@@ -433,7 +468,7 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
                       boxShadow: stackShadow,
                       position: "relative",
                       border: "1px solid #e2e8f0",
-                      cursor: "pointer",
+                      cursor: "grab",
                       overflow: "hidden"
                     }}
                     onClick={() => openDocument(doc)}
@@ -627,6 +662,14 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
               </div>
             </div>
           </form>
+          {uploading && (
+            <Box sx={{ width: '100%', mt: 3 }}>
+              <LinearProgress variant="determinate" value={uploadProgress} sx={{ height: 6, borderRadius: 3 }} />
+              <Typography variant="body2" color="text.secondary" align="center" mt={1}>
+                {uploadProgress}%
+              </Typography>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions sx={{ p: 2, px: 3 }}>
           <Button onClick={() => setIsUploadModalOpen(false)} sx={{ color: "#64748b" }}>Cancel</Button>

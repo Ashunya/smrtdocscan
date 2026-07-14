@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SmartDocScan Security Overview</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #5a6577;
+      --line: #d9e0ea;
+      --panel: #f6f8fb;
+      --brand: #164e63;
+      --accent: #0f766e;
+    }
+
+    @page {
+      size: Letter;
+      margin: 0.45in 0.55in 0.55in;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Aptos", "Segoe UI", Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.48;
+      background: white;
+    }
+
+    .cover {
+      min-height: 8.65in;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+      page-break-after: always;
+    }
+
+    .cover::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 0.18in;
+      background: linear-gradient(90deg, var(--brand), var(--accent));
+    }
+
+    .cover-inner {
+      padding: 0.72in 0.62in;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .kicker {
+      color: var(--accent);
+      font-size: 9pt;
+      font-weight: 700;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      margin-bottom: 0.28in;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--brand);
+      font-size: 30pt;
+      line-height: 1.08;
+      letter-spacing: 0;
+      max-width: 6.5in;
+    }
+
+    .subtitle {
+      margin-top: 0.22in;
+      color: var(--muted);
+      font-size: 13pt;
+      max-width: 5.8in;
+    }
+
+    .meta-grid {
+      margin-top: auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.14in;
+    }
+
+    .meta-card {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 0.18in;
+      min-height: 0.72in;
+    }
+
+    .meta-label {
+      color: var(--muted);
+      font-size: 8.4pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .meta-value {
+      margin-top: 0.06in;
+      color: var(--ink);
+      font-size: 10.2pt;
+      font-weight: 600;
+    }
+
+    .content {
+      counter-reset: section;
+    }
+
+    h2 {
+      color: var(--brand);
+      font-size: 15pt;
+      line-height: 1.2;
+      margin: 0.22in 0 0.08in;
+      padding-top: 0.1in;
+      border-top: 1px solid var(--line);
+      break-after: avoid;
+    }
+
+    h2:first-child {
+      margin-top: 0;
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    p {
+      margin: 0 0 0.08in;
+    }
+
+    ul {
+      margin: 0.04in 0 0.12in 0.22in;
+      padding: 0;
+    }
+
+    li {
+      margin: 0.022in 0;
+    }
+
+    code {
+      color: #0f3f46;
+      background: #eef7f6;
+      border: 1px solid #cfe4e1;
+      padding: 0.01in 0.045in;
+      border-radius: 3px;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 9pt;
+    }
+
+    .section {
+      break-inside: avoid-page;
+    }
+
+    .footer-note {
+      margin-top: 0.22in;
+      color: var(--muted);
+      font-size: 8.6pt;
+      border-top: 1px solid var(--line);
+      padding-top: 0.1in;
+    }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="cover-inner">
+      <div class="kicker">Security Review Summary</div>
+      <h1>SmartDocScan Security Overview</h1>
+      <p class="subtitle">Application security posture summary.</p>
+      <div class="meta-grid">
+        <div class="meta-card">
+          <div class="meta-label">Application</div>
+          <div class="meta-value">SmartDocScan</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">Document Date</div>
+          <div class="meta-value">June 25, 2026</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">Generated</div>
+          <div class="meta-value">June 25, 2026</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <main class="content">
+    <h2>Overview</h2>
+<p>SmartDocScan is a web application used to scan, store, retrieve, and manage medical document records. The current production architecture uses a React web frontend, .NET 8 API, Microsoft SQL Server database, file-based document storage, Docker containers, Caddy reverse proxy, and Dynamsoft Web TWAIN scanner integration.</p>
+<p>Current public endpoints:</p>
+<ul>
+<li>Web application: <code>https://scan.ashunya.com</code></li>
+<li>API: <code>https://scanapi.ashunya.com</code></li>
+<li>Microsoft Entra redirect URI: <code>https://scanapi.ashunya.com/api/auth/microsoft/callback</code></li>
+</ul>
+<h2>Authentication</h2>
+<p>SmartDocScan supports local username/password authentication and Microsoft Entra ID single sign-on using OpenID Connect.</p>
+<p>Authentication uses secure server-side ASP.NET cookie sessions:</p>
+<ul>
+<li>Cookie name: <code>smartdocscan.session</code></li>
+<li><code>HttpOnly</code> enabled</li>
+<li><code>Secure</code> required outside development</li>
+<li><code>SameSite=Lax</code></li>
+<li>Sliding expiration</li>
+<li>Server-side logout support</li>
+</ul>
+<p>Authentication endpoints include rate limiting. Authentication activity is included in audit logging.</p>
+<h2>Authorization</h2>
+<p>SmartDocScan enforces company-level access boundaries in API operations. Users are associated with a company, and elevated access is controlled through explicit permission claims.</p>
+<p>Permission areas include:</p>
+<ul>
+<li>Document upload</li>
+<li>Document scanning</li>
+<li>Document download</li>
+<li>Document deletion</li>
+<li>Document printing</li>
+<li>Category management</li>
+<li>User management</li>
+<li>Patient management</li>
+<li>Box/storage management</li>
+<li>Reporting</li>
+<li>Administrative access</li>
+</ul>
+<p>Document preview and download operations require authentication and enforce tenant access checks.</p>
+<h2>Audit Logging</h2>
+<p>SmartDocScan records security-sensitive activity, including:</p>
+<ul>
+<li>Authentication success and failure</li>
+<li>Patient changes</li>
+<li>Document activity</li>
+<li>Settings updates</li>
+<li>Forbidden access attempts</li>
+<li>Administrative operations</li>
+</ul>
+<p>Audit logs are available in the application to authorized administrators.</p>
+<p>Audit log retention is configured through application security settings. The current default retention period is 365 days, with automated cleanup of audit records older than the configured retention window.</p>
+<h2>Transport Security</h2>
+<p>SmartDocScan is served over HTTPS. The production reverse proxy uses Caddy with public TLS certificates.</p>
+<p>Live verification on June 25, 2026 showed:</p>
+<ul>
+<li><code>https://scan.ashunya.com</code> responded over HTTPS.</li>
+<li>TLS 1.0 failed negotiation.</li>
+<li>TLS 1.1 failed negotiation.</li>
+<li>TLS 1.2 successfully negotiated.</li>
+<li>Security response headers were present on the public endpoint.</li>
+</ul>
+<h2>Security Headers</h2>
+<p>The production deployment sends browser and API hardening headers, including:</p>
+<ul>
+<li><code>Content-Security-Policy</code></li>
+<li><code>Strict-Transport-Security</code></li>
+<li><code>X-Content-Type-Options: nosniff</code></li>
+<li><code>X-Frame-Options: DENY</code></li>
+<li><code>Referrer-Policy: strict-origin-when-cross-origin</code></li>
+<li><code>Permissions-Policy</code></li>
+<li><code>Cross-Origin-Resource-Policy: same-site</code></li>
+<li><code>X-Permitted-Cross-Domain-Policies: none</code></li>
+<li><code>Cache-Control: no-cache, no-store, must-revalidate</code></li>
+<li><code>Pragma: no-cache</code></li>
+<li><code>Expires: 0</code></li>
+</ul>
+<p>The frontend Content Security Policy includes allowances required by Dynamsoft Web TWAIN scanning workflows, including scanner-service communication and browser behavior required by the scanner integration.</p>
+<h2>CORS And Cross-Site Request Protection</h2>
+<p>The API restricts browser CORS access to the configured frontend origin:</p>
+<ul>
+<li><code>https://scan.ashunya.com</code></li>
+</ul>
+<p>Unsafe cross-site browser requests are rejected unless they come from an allowed origin or are part of the Microsoft SSO callback flow.</p>
+<h2>Data Storage</h2>
+<p>SmartDocScan stores metadata in Microsoft SQL Server and document files in a configured document storage path.</p>
+<p>The production deployment separates application containers, SQL Server metadata storage, document file storage, TLS certificate data, and ASP.NET data protection keys.</p>
+<p>The server drive that stores SmartDocScan data is protected with BitLocker drive encryption. The document data folder is restricted at the operating-system level so that access is limited to the application runtime and authorized administrative maintenance processes.</p>
+<h2>Backup And Recovery</h2>
+<p>The production environment uses a 3-2-1 backup strategy with air-gapped backup protection and immutable backup retention. This backup posture is designed to maintain multiple recoverable copies across separate storage locations and to protect backup sets from alteration or deletion during the immutability window.</p>
+<p>Backup coverage includes database data, document storage, application configuration, TLS/certificate data, and ASP.NET data protection keys.</p>
+<h2>Endpoint Protection And Monitoring</h2>
+<p>The production server is secured with Sophos Managed Detection and Response. Sophos MDR provides managed endpoint monitoring, threat detection, investigation support, and response assistance for server-level security events.</p>
+<h2>External Components</h2>
+<p>SmartDocScan uses the following notable external components:</p>
+<ul>
+<li>Microsoft Entra ID for SSO</li>
+<li>Dynamsoft Web TWAIN for browser-based scanning</li>
+<li>Caddy for HTTPS reverse proxy and certificate automation</li>
+<li>StackHawk for dynamic application security testing</li>
+<li>Microsoft SQL Server for metadata storage</li>
+<li>Sophos MDR for server endpoint protection and managed detection/response</li>
+</ul>
+<h2>Dynamic Security Testing</h2>
+<p>Authenticated StackHawk DAST scanning was configured and run against the production API on June 25, 2026.</p>
+<p>Scan target:</p>
+<ul>
+<li><code>https://scanapi.ashunya.com</code></li>
+</ul>
+<p>Authentication method:</p>
+<ul>
+<li>SmartDocScan local login through <code>POST /api/auth/login</code></li>
+<li>Server-side cookie authorization using <code>smartdocscan.session</code></li>
+<li>Auth validation through <code>GET /api/auth/me</code></li>
+</ul>
+<p>The authenticated scan was expanded with a safe OpenAPI scan definition for authenticated API GET endpoints. Destructive production operations were excluded from active production scanning.</p>
+<p>Observed scan result:</p>
+<ul>
+<li>Authentication succeeded.</li>
+<li>No critical findings were reported.</li>
+<li>No high findings were reported.</li>
+<li>No medium findings were reported.</li>
+<li>Low information-disclosure findings were reported for email-format values returned by authenticated JSON endpoints.</li>
+</ul>
+<p>The low information-disclosure finding was reviewed in context. The affected responses are authenticated application responses and include user or record fields visible to authorized users.</p>
+<h2>Security Posture Summary</h2>
+<p>SmartDocScan currently includes:</p>
+<ul>
+<li>HTTPS transport with modern TLS</li>
+<li>Server-side authenticated sessions</li>
+<li>Microsoft Entra SSO support</li>
+<li>Tenant/company access checks</li>
+<li>Permission-based authorization</li>
+<li>Audit logging for security-sensitive activity</li>
+<li>365-day default audit log retention</li>
+<li>BitLocker-encrypted server storage</li>
+<li>Operating-system restrictions around the document data folder</li>
+<li>Security response headers</li>
+<li>Restricted CORS configuration</li>
+<li>3-2-1 air-gapped backup strategy with immutable retention</li>
+<li>Sophos MDR endpoint protection and managed detection/response</li>
+<li>Authenticated dynamic application security testing</li>
+<li>Controlled production scan scope for non-destructive testing</li>
+</ul>
+<h2>Statement</h2>
+<p>This document summarizes the current SmartDocScan application security posture and supporting technical controls as of June 25, 2026. Compliance posture for a healthcare deployment also depends on the operational environment, customer identity governance, backup procedures, retention policy, access review, incident response processes, and any applicable contractual or regulatory obligations.</p>
+
+    <p class="footer-note">This document summarizes application security controls and technical evidence as of the stated date.</p>
+  </main>
+</body>
+</html>

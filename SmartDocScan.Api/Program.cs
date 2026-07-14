@@ -939,6 +939,30 @@ app.MapDelete("/api/business-documents/{documentId:int}", async (int documentId,
     return Results.NoContent();
 }).RequireAuthorization();
 
+app.MapPut("/api/business-documents/{documentId:int}/category", async (int documentId, [Microsoft.AspNetCore.Mvc.FromBody] UpdateBusinessDocumentCategoryRequest request, ClaimsPrincipal principal, BusinessDocumentRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
+{
+    var document = await repository.GetAsync(documentId, cancellationToken);
+    if (document is null)
+    {
+        return Results.NotFound(new { message = "Document not found." });
+    }
+
+    if (!CanAccessCompany(principal, document.CompanyId))
+    {
+        await AuditForbiddenAsync(auditRepository, "business_document.update", principal, document.CompanyId, "business_document", documentId.ToString(), httpContext);
+        return Results.Forbid();
+    }
+
+    var updated = await repository.UpdateCategoryAsync(documentId, request.CategoryId, document.CompanyId, cancellationToken);
+    if (!updated)
+    {
+        return Results.NotFound(new { message = "Document not found." });
+    }
+
+    await AuditAsync(auditRepository, "business_document.update", GetActor(principal), document.CompanyId, "business_document", documentId.ToString(), "success", httpContext);
+    return Results.NoContent();
+}).RequireAuthorization();
+
 app.MapGet("/api/reports/documents", async (int companyId, DateTime? fromDate, DateTime? toDate, int? take, ClaimsPrincipal principal, DocumentRepository repository, CancellationToken cancellationToken) =>
 {
     if (!CanAccessCompany(principal, companyId) || !CanViewReports(principal))
