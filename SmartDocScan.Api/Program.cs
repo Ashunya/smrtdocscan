@@ -413,8 +413,15 @@ app.MapGet("/api/categories", async (int companyId, string? type, ClaimsPrincipa
         return Results.Forbid();
     }
 
-    var categories = await repository.GetByCompanyAsync(companyId, type, cancellationToken);
-    return Results.Ok(categories);
+    try
+    {
+        var categories = await repository.GetByCompanyAsync(companyId, type, cancellationToken);
+        return Results.Ok(categories);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(detail: ex.ToString(), statusCode: 500, title: "Database Query Error");
+    }
 }).RequireAuthorization();
 
 app.MapPost("/api/categories", async (CategoryUpsertRequest request, ClaimsPrincipal principal, CategoryRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
@@ -714,8 +721,16 @@ app.MapGet("/api/locations", async (int companyId, ClaimsPrincipal principal, Lo
     {
         return Results.Forbid();
     }
-    var locations = await repository.GetByCompanyAsync(companyId, cancellationToken);
-    return Results.Ok(locations);
+
+    try
+    {
+        var locations = await repository.GetByCompanyAsync(companyId, cancellationToken);
+        return Results.Ok(locations);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(detail: ex.ToString(), statusCode: 500, title: "Database Query Error");
+    }
 }).RequireAuthorization();
 
 app.MapPost("/api/locations", async (LocationUpsertRequest request, ClaimsPrincipal principal, LocationRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
