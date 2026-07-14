@@ -18,7 +18,7 @@ async function request(path, options = {}) {
     let message = `Request failed with status ${response.status}`;
     try {
       const body = await response.json();
-      message = body.message || message;
+      message = body.detail || body.message || body.title || message;
     } catch {
       // Keep default message.
     }
@@ -43,7 +43,7 @@ async function requestForm(path, formData) {
     let message = `Request failed with status ${response.status}`;
     try {
       const body = await response.json();
-      message = body.message || message;
+      message = body.detail || body.message || body.title || message;
     } catch {
       // Keep default message.
     }
