@@ -1,5 +1,6 @@
-import { Folder, Upload, Download, Trash2, Eye, Plus, FolderPlus, DollarSign, Calendar, Building, FileText } from "lucide-react";
+import { Folder, Upload, Download, Trash2, Eye, FolderPlus, DollarSign, Calendar, Building, FileText, Plus, X, FolderOpen } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Tooltip, Box, Typography } from "@mui/material";
 import {
   listLocations,
   listCategories,
@@ -26,20 +27,20 @@ function BusinessDocumentThumbnail({ document }) {
 
   const thumbStyle = {
     width: "100%",
-    height: "150px",
+    height: "220px", // Larger modern thumbnail
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    background: "#fdfdfd",
-    borderBottom: "1px solid #e5e5e5",
+    background: "#ffffff",
+    borderBottom: "1px solid #e0e0e0",
     position: "relative",
   };
 
   if (["tif", "tiff"].includes(extension)) {
     return (
       <div style={thumbStyle}>
-        <img src={thumbnailUrl} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+        <img src={thumbnailUrl} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "10px" }} />
       </div>
     );
   }
@@ -47,7 +48,7 @@ function BusinessDocumentThumbnail({ document }) {
   if (["png", "jpg", "jpeg", "gif", "webp"].includes(extension)) {
     return (
       <div style={thumbStyle}>
-        <img src={previewUrl} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+        <img src={previewUrl} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "10px" }} />
       </div>
     );
   }
@@ -67,10 +68,10 @@ function BusinessDocumentThumbnail({ document }) {
   }
 
   return (
-    <div style={{ ...thumbStyle, background: "#f0f0f0" }}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", color: "#888" }}>
-        <FileText size={40} strokeWidth={1.5} />
-        <span style={{ fontSize: "0.8em", fontWeight: "700", textTransform: "uppercase" }}>{extension || "FILE"}</span>
+    <div style={{ ...thumbStyle, background: "#f8fafc" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", color: "#94a3b8" }}>
+        <FileText size={48} strokeWidth={1.5} />
+        <span style={{ fontSize: "0.85em", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>{extension || "DOCUMENT"}</span>
       </div>
     </div>
   );
@@ -84,6 +85,7 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
   const [documents, setDocuments] = useState([]);
 
   // Form states for file upload
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [file, setFile] = useState(null);
   const [documentName, setDocumentName] = useState("");
   const [documentDate, setDocumentDate] = useState("");
@@ -140,13 +142,15 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
       return;
     }
     let ignore = false;
+    setLoading(true);
     listBusinessDocuments({
       companyId,
       locationId: Number(selectedLocationId),
       categoryId: Number(selectedCategoryId),
     })
       .then((data) => !ignore && setDocuments(data))
-      .catch((error) => !ignore && onNotice({ type: "error", text: error.message }));
+      .catch((error) => !ignore && onNotice({ type: "error", text: error.message }))
+      .finally(() => !ignore && setLoading(false));
 
     return () => {
       ignore = true;
@@ -158,15 +162,15 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
     const roots = categories.filter((c) => !c.parentId);
     const result = [];
     roots.forEach((parent) => {
-      result.push(parent);
+      result.push({ ...parent, level: 0 });
       categories
         .filter((c) => c.parentId === parent.categoryId)
-        .forEach((child) => result.push(child));
+        .forEach((child) => result.push({ ...child, level: 1 }));
     });
     // Append orphans
     categories.forEach((c) => {
       if (c.parentId && !result.some((r) => r.categoryId === c.categoryId)) {
-        result.push(c);
+        result.push({ ...c, level: 0 });
       }
     });
     return result;
@@ -188,7 +192,7 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
       setNewCatName("");
       setNewCatParentId("");
       setShowAddCategory(false);
-      onNotice({ type: "success", text: "Business category added." });
+      onNotice({ type: "success", text: "Business folder created." });
       setSelectedCategoryId(String(category.categoryId));
     } catch (error) {
       onNotice({ type: "error", text: error.message });
@@ -226,7 +230,8 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
       setAmount("");
       setPages("1");
       setFileInputKey((k) => k + 1);
-      onNotice({ type: "success", text: "Business document uploaded successfully." });
+      setIsUploadModalOpen(false);
+      onNotice({ type: "success", text: "Document uploaded to folder successfully." });
     } catch (error) {
       onNotice({ type: "error", text: error.message });
     } finally {
@@ -235,7 +240,7 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
   }
 
   async function handleDelete(doc) {
-    const ok = window.confirm(`Delete business document "${doc.documentName}"?`);
+    const ok = window.confirm(`Delete document "${doc.documentName}"?`);
     if (!ok) return;
     onNotice(null);
     try {
@@ -252,101 +257,79 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
   }
 
   return (
-    <div className="business-workspace" style={{ display: "flex", gap: "20px", height: "calc(100vh - 120px)" }}>
-      {/* Left Sidebar: Locations & Folder Structure */}
-      <aside className="panel" style={{ width: "300px", display: "flex", flexDirection: "column", padding: "15px", flexShrink: 0 }}>
-        <h3>Location / Center</h3>
-        <select
-          value={selectedLocationId}
-          onChange={(e) => setSelectedLocationId(e.target.value)}
-          style={{ width: "100%", padding: "8px", marginBottom: "20px", fontSize: "14px" }}
-        >
-          {locations.length === 0 ? (
-            <option value="">No centers active</option>
-          ) : (
-            locations.map((loc) => (
-              <option key={loc.locationId} value={loc.locationId}>
-                {loc.locationName}
-              </option>
-            ))
-          )}
-        </select>
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-          <h3 style={{ margin: 0 }}>Categories</h3>
-          <button
-            type="button"
-            className="icon-button"
-            onClick={() => setShowAddCategory(!showAddCategory)}
-            title="Add business category"
+    <div style={{ display: "flex", height: "calc(100vh - 120px)", borderRadius: "8px", overflow: "hidden", background: "#f1f5f9", border: "1px solid #e2e8f0" }}>
+      {/* Left Sidebar: Modern Folder Tree */}
+      <aside style={{ width: "280px", display: "flex", flexDirection: "column", background: "#ffffff", borderRight: "1px solid #e2e8f0", flexShrink: 0 }}>
+        
+        <div style={{ padding: "16px", borderBottom: "1px solid #f1f5f9" }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#475569", mb: 1, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.5px" }}>
+            Location / Center
+          </Typography>
+          <select
+            value={selectedLocationId}
+            onChange={(e) => setSelectedLocationId(e.target.value)}
+            style={{ width: "100%", padding: "10px", fontSize: "14px", borderRadius: "6px", border: "1px solid #cbd5e1", outline: "none", background: "#f8fafc" }}
           >
-            <FolderPlus size={18} />
-          </button>
+            {locations.length === 0 ? (
+              <option value="">No centers active</option>
+            ) : (
+              locations.map((loc) => (
+                <option key={loc.locationId} value={loc.locationId}>
+                  {loc.locationName}
+                </option>
+              ))
+            )}
+          </select>
         </div>
 
-        {showAddCategory && (
-          <form
-            onSubmit={handleAddCategory}
-            style={{
-              padding: "10px",
-              background: "rgba(0,0,0,0.05)",
-              borderRadius: "6px",
-              marginBottom: "15px",
-              fontSize: "0.9em",
-            }}
-          >
-            <label style={{ display: "block", marginBottom: "8px" }}>
-              Category Name
-              <input
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                required
-                style={{ padding: "5px", width: "100%", marginTop: "3px" }}
-              />
-            </label>
-            <label style={{ display: "block", marginBottom: "8px" }}>
-              Parent Category (Optional)
-              <select
-                value={newCatParentId}
-                onChange={(e) => setNewCatParentId(e.target.value)}
-                style={{ padding: "5px", width: "100%", marginTop: "3px" }}
-              >
-                <option value="">None (Top-level)</option>
-                {categories
-                  .filter((c) => !c.parentId)
-                  .map((c) => (
-                    <option key={c.categoryId} value={c.categoryId}>
-                      {c.categoryName}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <div style={{ display: "flex", gap: "5px", justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                className="secondary-button"
-                style={{ padding: "3px 8px", fontSize: "0.85em" }}
-                onClick={() => setShowAddCategory(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="primary-button"
-                style={{ padding: "3px 8px", fontSize: "0.85em" }}
-                disabled={savingCategory}
-              >
-                Save
-              </button>
-            </div>
-          </form>
-        )}
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 8px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", padding: "0 8px" }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#475569", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.5px" }}>
+              Folders
+            </Typography>
+            <Tooltip title="New Folder">
+              <IconButton size="small" onClick={() => setShowAddCategory(!showAddCategory)} sx={{ color: "#c1692a" }}>
+                <FolderPlus size={16} />
+              </IconButton>
+            </Tooltip>
+          </div>
 
-        <div style={{ flex: 1, overflowY: "auto" }}>
+          {showAddCategory && (
+            <div style={{ padding: "12px", background: "#f8fafc", borderRadius: "6px", marginBottom: "16px", margin: "0 8px", border: "1px solid #e2e8f0" }}>
+              <form onSubmit={handleAddCategory}>
+                <input
+                  placeholder="Folder Name"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  required
+                  style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "4px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+                />
+                <select
+                  value={newCatParentId}
+                  onChange={(e) => setNewCatParentId(e.target.value)}
+                  style={{ width: "100%", padding: "8px", marginBottom: "12px", borderRadius: "4px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+                >
+                  <option value="">Top-level folder</option>
+                  {categories
+                    .filter((c) => !c.parentId)
+                    .map((c) => (
+                      <option key={c.categoryId} value={c.categoryId}>
+                        {c.categoryName}
+                      </option>
+                    ))}
+                </select>
+                <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                  <Button size="small" variant="text" onClick={() => setShowAddCategory(false)}>Cancel</Button>
+                  <Button size="small" variant="contained" type="submit" disabled={savingCategory} disableElevation>Create</Button>
+                </div>
+              </form>
+            </div>
+          )}
+
           {orderedCategories.length === 0 ? (
-            <p style={{ color: "#666", fontSize: "0.9em" }}>No business categories found.</p>
+            <Typography variant="body2" sx={{ color: "#94a3b8", px: 1 }}>No folders found.</Typography>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
               {orderedCategories.map((cat) => {
                 const isSelected = selectedCategoryId === String(cat.categoryId);
                 return (
@@ -357,24 +340,30 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "8px",
+                      gap: "10px",
                       width: "100%",
                       padding: "8px 12px",
                       textAlign: "left",
                       border: "none",
                       borderRadius: "6px",
-                      background: isSelected ? "var(--primary-color, #c1692a)" : "transparent",
-                      color: isSelected ? "#fff" : "inherit",
-                      paddingLeft: cat.parentId ? "25px" : "12px",
+                      background: isSelected ? "#fff2ea" : "transparent",
+                      color: isSelected ? "#a05522" : "#334155",
+                      paddingLeft: cat.level === 1 ? "32px" : "12px",
                       cursor: "pointer",
                       fontSize: "14px",
-                      transition: "background 0.2s",
-                      fontWeight: cat.parentId ? "normal" : "600",
+                      transition: "all 0.2s ease",
+                      fontWeight: isSelected ? "600" : "500",
                     }}
+                    onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#f8fafc"; }}
+                    onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
                   >
-                    <Folder size={16} style={{ color: isSelected ? "#fff" : "#c1692a" }} />
+                    {isSelected ? (
+                      <FolderOpen size={18} style={{ color: "#c1692a", flexShrink: 0 }} />
+                    ) : (
+                      <Folder size={18} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                    )}
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {cat.parentId ? `↳ ${cat.categoryName}` : cat.categoryName}
+                      {cat.categoryName}
                     </span>
                   </button>
                 );
@@ -384,252 +373,275 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
         </div>
       </aside>
 
-      {/* Main Panel: Documents display & Upload form */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "20px" }}>
-        {/* Upload Panel */}
-        <section className="panel" style={{ padding: "15px" }}>
-          <h3 style={{ marginTop: 0, marginBottom: "15px" }}>Upload Finance / Administration Document</h3>
-          <form onSubmit={handleUpload} style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "flex-end" }}>
-            <label style={{ flex: "1 1 180px", fontSize: "0.85em" }}>
-              Choose File
+      {/* Main Panel: Modern Desktop Workspace */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
+        
+        {/* Top Toolbar */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px", background: "#ffffff", borderBottom: "1px solid #e2e8f0", zIndex: 10 }}>
+          <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, color: "#1e293b", display: "flex", alignItems: "center", gap: "10px" }}>
+            {categories.find(c => String(c.categoryId) === selectedCategoryId)?.categoryName || "Workspace"}
+          </Typography>
+          
+          <Button
+            variant="contained"
+            disableElevation
+            startIcon={<Upload size={18} />}
+            onClick={() => setIsUploadModalOpen(true)}
+            sx={{ borderRadius: "6px", textTransform: "none", fontWeight: 600 }}
+          >
+            Upload Document
+          </Button>
+        </div>
+
+        {/* Desktop Area */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "30px", background: "#f8fafc" }}>
+          {loading ? (
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+              <Typography variant="body1" color="textSecondary">Loading documents...</Typography>
+            </div>
+          ) : documents.length === 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", color: "#94a3b8" }}>
+              <FolderOpen size={64} style={{ marginBottom: "16px", opacity: 0.5 }} />
+              <Typography variant="h6" sx={{ fontWeight: 500, mb: 1 }}>Empty Folder</Typography>
+              <Typography variant="body2">No documents have been uploaded to this folder yet.</Typography>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                gap: "35px",
+                alignItems: "start"
+              }}
+            >
+              {documents.map((doc) => {
+                const hasMultiplePages = doc.numberOfPages > 1;
+                // Modern paper stack effect
+                const stackShadow = hasMultiplePages
+                  ? "0 1px 1px rgba(0,0,0,0.05), 0 4px 0 -1px #fff, 0 4px 1px -1px rgba(0,0,0,0.1), 0 8px 0 -2px #fff, 0 8px 1px -2px rgba(0,0,0,0.1), 0 12px 24px rgba(0,0,0,0.08)"
+                  : "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)";
+
+                return (
+                  <article
+                    key={doc.documentId}
+                    style={{
+                      background: "#ffffff",
+                      borderRadius: "4px",
+                      display: "flex",
+                      flexDirection: "column",
+                      transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      boxShadow: stackShadow,
+                      position: "relative",
+                      border: "1px solid #e2e8f0",
+                      cursor: "pointer",
+                      overflow: "hidden"
+                    }}
+                    onClick={() => openDocument(doc)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-4px)";
+                      e.currentTarget.style.boxShadow = hasMultiplePages
+                        ? "0 1px 1px rgba(0,0,0,0.05), 0 4px 0 -1px #fff, 0 4px 1px -1px rgba(0,0,0,0.1), 0 8px 0 -2px #fff, 0 8px 1px -2px rgba(0,0,0,0.1), 0 20px 30px rgba(193, 105, 42, 0.15)"
+                        : "0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.05), 0 0 0 1px rgba(193, 105, 42, 0.2)";
+                      e.currentTarget.style.borderColor = "transparent";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "none";
+                      e.currentTarget.style.boxShadow = stackShadow;
+                      e.currentTarget.style.borderColor = "#e2e8f0";
+                    }}
+                  >
+                    {/* Thumbnail frame */}
+                    <div style={{ position: "relative" }}>
+                      <BusinessDocumentThumbnail document={doc} />
+                      {hasMultiplePages && (
+                        <span
+                          style={{
+                            position: "absolute",
+                            bottom: "10px",
+                            right: "10px",
+                            background: "rgba(15, 23, 42, 0.8)",
+                            backdropFilter: "blur(4px)",
+                            color: "#fff",
+                            padding: "4px 8px",
+                            borderRadius: "12px",
+                            fontSize: "0.7rem",
+                            fontWeight: "600",
+                            letterSpacing: "0.5px"
+                          }}
+                        >
+                          {doc.numberOfPages} pgs
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Document Details Info */}
+                    <div style={{ padding: "16px", display: "flex", flexDirection: "column", flex: 1 }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          fontWeight: 600,
+                          lineHeight: 1.3,
+                          color: "#1e293b",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          mb: 1.5,
+                          fontSize: "0.9rem"
+                        }}
+                        title={doc.documentName}
+                      >
+                        {doc.documentName}
+                      </Typography>
+                      
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.75rem", color: "#64748b", marginTop: "auto" }}>
+                        {doc.vendorName && (
+                          <span style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <Building size={14} style={{ color: "#94a3b8", flexShrink: 0 }} /> {doc.vendorName}
+                          </span>
+                        )}
+                        {doc.amount && (
+                          <span style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "600", color: "#166534" }}>
+                            <DollarSign size={14} style={{ flexShrink: 0 }} /> {doc.amount.toFixed(2)}
+                          </span>
+                        )}
+                        {doc.documentDate && (
+                          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <Calendar size={14} style={{ color: "#94a3b8", flexShrink: 0 }} /> {new Date(doc.documentDate).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Action buttons footer */}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          borderTop: "1px solid #f1f5f9",
+                          paddingTop: "12px",
+                          marginTop: "16px",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div style={{ display: "flex", gap: "4px" }}>
+                          <Tooltip title="Preview">
+                            <IconButton size="small" onClick={() => openDocument(doc)} sx={{ color: "#64748b", '&:hover': { color: "#c1692a", background: "#fff2ea" } }}>
+                              <Eye size={16} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Download">
+                            <IconButton size="small" component="a" href={getBusinessDocumentDownloadUrl(doc.documentId)} sx={{ color: "#64748b", '&:hover': { color: "#c1692a", background: "#fff2ea" } }}>
+                              <Download size={16} />
+                            </IconButton>
+                          </Tooltip>
+                        </div>
+                        <Tooltip title="Delete">
+                          <IconButton size="small" onClick={() => handleDelete(doc)} sx={{ color: "#94a3b8", '&:hover': { color: "#ef4444", background: "#fef2f2" } }}>
+                            <Trash2 size={16} />
+                          </IconButton>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modern Upload Modal */}
+      <Dialog open={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: '12px' } }}>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>Upload to {categories.find(c => String(c.categoryId) === selectedCategoryId)?.categoryName}</Typography>
+          <IconButton onClick={() => setIsUploadModalOpen(false)} size="small">
+            <X size={20} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 3 }}>
+          <form id="upload-doc-form" onSubmit={handleUpload} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div style={{ padding: "20px", border: "2px dashed #cbd5e1", borderRadius: "8px", background: "#f8fafc", textAlign: "center", position: "relative" }}>
               <input
                 key={fileInputKey}
                 type="file"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
                 required
-                style={{ display: "block", marginTop: "4px" }}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
               />
-            </label>
-            <label style={{ flex: "1 1 150px", fontSize: "0.85em" }}>
-              Document Name
-              <input
-                type="text"
-                value={documentName}
-                onChange={(e) => setDocumentName(e.target.value)}
-                placeholder={file?.name || "Optional custom name"}
-                style={{ width: "100%", padding: "6px", marginTop: "4px" }}
-              />
-            </label>
-            <label style={{ flex: "1 1 120px", fontSize: "0.85em" }}>
-              Vendor / Party
-              <input
-                type="text"
-                value={vendorName}
-                onChange={(e) => setVendorName(e.target.value)}
-                placeholder="e.g. Bank of America"
-                style={{ width: "100%", padding: "6px", marginTop: "4px" }}
-              />
-            </label>
-            <label style={{ flex: "1 1 100px", fontSize: "0.85em" }}>
-              Amount ($)
-              <input
-                type="number"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                style={{ width: "100%", padding: "6px", marginTop: "4px" }}
-              />
-            </label>
-            <label style={{ flex: "1 1 110px", fontSize: "0.85em" }}>
-              Document Date
-              <input
-                type="date"
-                value={documentDate}
-                onChange={(e) => setDocumentDate(e.target.value)}
-                style={{ width: "100%", padding: "6px", marginTop: "4px" }}
-              />
-            </label>
-            <label style={{ flex: "0 0 60px", fontSize: "0.85em" }}>
-              Pages
-              <input
-                type="number"
-                min="1"
-                value={pages}
-                onChange={(e) => setPages(e.target.value)}
-                style={{ width: "100%", padding: "6px", marginTop: "4px" }}
-              />
-            </label>
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={uploading || !file || !selectedCategoryId || !selectedLocationId}
-              style={{ height: "35px" }}
-            >
-              <Upload size={16} />
-              {uploading ? "Uploading..." : "Upload"}
-            </button>
-          </form>
-        </section>
+              <Upload size={32} style={{ color: "#94a3b8", marginBottom: "8px" }} />
+              <Typography variant="body2" sx={{ color: "#475569", fontWeight: 500 }}>
+                {file ? file.name : "Click or drag file to upload"}
+              </Typography>
+            </div>
 
-        {/* Thumbnail/List Panel */}
-        <section className="panel" style={{ flex: 1, padding: "15px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <h3 style={{ marginTop: 0, marginBottom: "15px" }}>Business Documents</h3>
-          <div style={{ flex: 1, overflowY: "auto" }}>
-            {loading ? (
-              <p>Loading files...</p>
-            ) : documents.length === 0 ? (
-              <p style={{ textAlign: "center", padding: "40px", color: "#666" }}>
-                No business documents uploaded in this folder yet.
-              </p>
-            ) : (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                  gap: "25px",
-                  padding: "10px",
-                }}
-              >
-                {documents.map((doc) => {
-                  const hasMultiplePages = doc.numberOfPages > 1;
-                  // PaperPort stacked pages shadow effect
-                  const cardShadow = hasMultiplePages
-                    ? "2px 2px 0px #e2e2e2, 3px 3px 0px #e2e2e2, 4px 4px 0px #d4d4d4, 5px 5px 0px #d4d4d4, 6px 6px 12px rgba(0,0,0,0.15)"
-                    : "1px 2px 4px rgba(0,0,0,0.08)";
-
-                  return (
-                    <article
-                      key={doc.documentId}
-                      style={{
-                        border: "1px solid #dcdcdc",
-                        borderRadius: "3px",
-                        background: "#ffffff",
-                        display: "flex",
-                        flexDirection: "column",
-                        transition: "transform 0.15s, box-shadow 0.15s",
-                        boxShadow: cardShadow,
-                        position: "relative",
-                        overflow: "hidden",
-                      }}
-                      onClick={() => openDocument(doc)}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "translateY(-2px)";
-                        e.currentTarget.style.boxShadow = hasMultiplePages
-                          ? "2px 2px 0px #e2e2e2, 4px 4px 0px #c1692a, 6px 6px 15px rgba(0,0,0,0.2)"
-                          : "1px 4px 8px rgba(0,0,0,0.15)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "none";
-                        e.currentTarget.style.boxShadow = cardShadow;
-                      }}
-                    >
-                      {/* Thumbnail frame */}
-                      <div style={{ position: "relative" }}>
-                        <BusinessDocumentThumbnail document={doc} />
-                        {hasMultiplePages && (
-                          <span
-                            style={{
-                              position: "absolute",
-                              bottom: "8px",
-                              right: "8px",
-                              background: "rgba(0, 0, 0, 0.75)",
-                              color: "#fff",
-                              padding: "2px 6px",
-                              borderRadius: "3px",
-                              fontSize: "0.75em",
-                              fontWeight: "600",
-                            }}
-                          >
-                            {doc.numberOfPages} Pages
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Document Details Info */}
-                      <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: "6px", flex: 1, justifyContent: "space-between" }}>
-                        <div>
-                          <h4
-                            style={{
-                              margin: "0 0 6px 0",
-                              fontSize: "13px",
-                              fontWeight: "600",
-                              lineHeight: "1.3",
-                              color: "#333",
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                            }}
-                            title={doc.documentName}
-                          >
-                            {doc.documentName}
-                          </h4>
-                          <div
-                            style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "3px",
-                              fontSize: "11px",
-                              color: "#777",
-                            }}
-                          >
-                            {doc.vendorName && (
-                              <span style={{ display: "flex", alignItems: "center", gap: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                <Building size={11} style={{ flexShrink: 0 }} /> {doc.vendorName}
-                              </span>
-                            )}
-                            {doc.amount && (
-                              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontWeight: "600", color: "#2e7d32" }}>
-                                <DollarSign size={11} style={{ flexShrink: 0 }} /> {doc.amount.toFixed(2)}
-                              </span>
-                            )}
-                            {doc.documentDate && (
-                              <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <Calendar size={11} style={{ flexShrink: 0 }} /> {new Date(doc.documentDate).toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Action buttons footer */}
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "flex-end",
-                            gap: "6px",
-                            borderTop: "1px solid #f0f0f0",
-                            paddingTop: "8px",
-                            marginTop: "4px",
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            className="icon-button"
-                            onClick={() => openDocument(doc)}
-                            title="Preview document"
-                            style={{ padding: "4px" }}
-                          >
-                            <Eye size={14} />
-                          </button>
-                          <a
-                            href={getBusinessDocumentDownloadUrl(doc.documentId)}
-                            className="icon-button"
-                            title="Download document"
-                            style={{ padding: "4px" }}
-                          >
-                            <Download size={14} />
-                          </a>
-                          <button
-                            type="button"
-                            className="icon-button danger"
-                            onClick={() => handleDelete(doc)}
-                            title="Delete document"
-                            style={{ padding: "4px" }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 0.5, display: "block" }}>Document Name</Typography>
+                <input
+                  type="text"
+                  value={documentName}
+                  onChange={(e) => setDocumentName(e.target.value)}
+                  placeholder={file?.name || "Optional custom name"}
+                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}
+                />
               </div>
-            )}
-          </div>
-        </section>
-      </div>
+              <div>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 0.5, display: "block" }}>Vendor / Party</Typography>
+                <input
+                  type="text"
+                  value={vendorName}
+                  onChange={(e) => setVendorName(e.target.value)}
+                  placeholder="e.g. Bank of America"
+                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}
+                />
+              </div>
+              <div>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 0.5, display: "block" }}>Amount ($)</Typography>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}
+                />
+              </div>
+              <div>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 0.5, display: "block" }}>Document Date</Typography>
+                <input
+                  type="date"
+                  value={documentDate}
+                  onChange={(e) => setDocumentDate(e.target.value)}
+                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}
+                />
+              </div>
+              <div>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 0.5, display: "block" }}>Pages</Typography>
+                <input
+                  type="number"
+                  min="1"
+                  value={pages}
+                  onChange={(e) => setPages(e.target.value)}
+                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}
+                />
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, px: 3 }}>
+          <Button onClick={() => setIsUploadModalOpen(false)} sx={{ color: "#64748b" }}>Cancel</Button>
+          <Button
+            type="submit"
+            form="upload-doc-form"
+            variant="contained"
+            disableElevation
+            disabled={uploading || !file || !selectedCategoryId || !selectedLocationId}
+            sx={{ borderRadius: "6px", fontWeight: 600 }}
+          >
+            {uploading ? "Uploading..." : "Upload Document"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
