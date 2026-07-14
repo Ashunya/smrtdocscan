@@ -6,4 +6,5 @@ public sealed class CategoryUpsertRequest
     public string? CategoryName { get; set; }
     public string? Access { get; set; }
     public int? ParentId { get; set; }
+    public string CategoryType { get; set; } = "patient";
 }

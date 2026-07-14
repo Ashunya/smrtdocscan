@@ -16,6 +16,8 @@ import { UserManager } from "./components/UserManager";
 import { ReportManager } from "./components/ReportManager";
 import { ScannerManager } from "./components/ScannerManager";
 import { SettingsManager } from "./components/SettingsManager";
+import { LocationManager } from "./components/LocationManager";
+import { BusinessDocumentManager } from "./components/BusinessDocumentManager";
 
 const DEFAULT_COMPANY_ID = Number(import.meta.env.VITE_DEFAULT_COMPANY_ID || 7);
 
@@ -343,6 +345,12 @@ export default function App() {
     if (activeView === "box") {
       return "Box Directory";
     }
+    if (activeView === "business") {
+      return "Business Administration & Finance";
+    }
+    if (activeView === "locations") {
+      return "Locations Management";
+    }
     if (activeView === "documents") {
       return "Patient Documents";
     }
@@ -496,6 +504,10 @@ export default function App() {
           />
         ) : activeView === "box" ? (
           <BoxManager companyId={companyId} onNotice={setNotice} />
+        ) : activeView === "business" ? (
+          <BusinessDocumentManager companyId={companyId} user={currentUser} onNotice={setNotice} />
+        ) : activeView === "locations" ? (
+          <LocationManager companyId={companyId} onNotice={setNotice} />
         ) : activeView === "companies" ? (
           <CompanyManager
             companyId={companyId}
