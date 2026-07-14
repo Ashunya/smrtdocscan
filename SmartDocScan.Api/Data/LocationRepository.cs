@@ -149,24 +149,36 @@ public sealed class LocationRepository
 
             await using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
-            await using var command = connection.CreateCommand();
-            command.CommandText = """
-                IF OBJECT_ID('dbo.company_location', 'U') IS NULL
-                BEGIN
-                    CREATE TABLE dbo.company_location (
-                        location_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_company_location PRIMARY KEY,
-                        comp_id INT NOT NULL,
-                        location_name NVARCHAR(150) NOT NULL,
-                        location_code NVARCHAR(50) NULL,
-                        address NVARCHAR(250) NULL,
-                        phone NVARCHAR(50) NULL,
-                        inactive BIT NOT NULL CONSTRAINT DF_company_location_inactive DEFAULT 0,
-                        created_on DATETIME2 NOT NULL CONSTRAINT DF_company_location_created DEFAULT SYSUTCDATETIME()
-                    );
-                    CREATE INDEX IX_company_location_comp ON dbo.company_location(comp_id);
-                END
-                """;
-            await command.ExecuteNonQueryAsync(cancellationToken);
+            await using (var command = connection.CreateCommand())
+            {
+                command.CommandText = """
+                    IF OBJECT_ID('dbo.company_location', 'U') IS NULL
+                    BEGIN
+                        CREATE TABLE dbo.company_location (
+                            location_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_company_location PRIMARY KEY,
+                            comp_id INT NOT NULL,
+                            location_name NVARCHAR(150) NOT NULL,
+                            location_code NVARCHAR(50) NULL,
+                            address NVARCHAR(250) NULL,
+                            phone NVARCHAR(50) NULL,
+                            inactive BIT NOT NULL CONSTRAINT DF_company_location_inactive DEFAULT 0,
+                            created_on DATETIME2 NOT NULL CONSTRAINT DF_company_location_created DEFAULT SYSUTCDATETIME()
+                        );
+                    END
+                    """;
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await using (var command = connection.CreateCommand())
+            {
+                command.CommandText = """
+                    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_company_location_comp' AND object_id = OBJECT_ID('dbo.company_location'))
+                    BEGIN
+                        CREATE INDEX IX_company_location_comp ON dbo.company_location(comp_id);
+                    END
+                    """;
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
             _schemaChecked = true;
         }
         finally

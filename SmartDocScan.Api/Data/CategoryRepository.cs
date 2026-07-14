@@ -47,7 +47,7 @@ public sealed class CategoryRepository
                 Access = ReadString(reader, "access"),
                 ParentId = ReadNullableInt(reader, "parent_id"),
                 ParentName = ReadString(reader, "parent_name"),
-                CategoryType = reader.GetString(reader.GetOrdinal("category_type"))
+                CategoryType = ReadString(reader, "category_type") ?? "patient"
             });
         }
 
@@ -121,7 +121,7 @@ public sealed class CategoryRepository
                 Access = ReadString(reader, "access"),
                 ParentId = ReadNullableInt(reader, "parent_id"),
                 ParentName = ReadString(reader, "parent_name"),
-                CategoryType = reader.GetString(reader.GetOrdinal("category_type"))
+                CategoryType = ReadString(reader, "category_type") ?? "patient"
             }
             : null;
     }
@@ -155,7 +155,7 @@ public sealed class CategoryRepository
                 command.CommandText = """
                     IF COL_LENGTH('dbo.category', 'parent_id') IS NULL
                     BEGIN
-                        ALTER TABLE dbo.category ADD parent_id INT NULL CONSTRAINT FK_category_parent FOREIGN KEY REFERENCES dbo.category(cat_id);
+                        ALTER TABLE dbo.category ADD parent_id INT NULL CONSTRAINT FK_category_parent REFERENCES dbo.category(cat_id);
                     END
                     """;
                 await command.ExecuteNonQueryAsync(cancellationToken);

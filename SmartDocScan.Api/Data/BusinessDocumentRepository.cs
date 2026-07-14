@@ -162,33 +162,51 @@ public sealed class BusinessDocumentRepository
 
             await using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
-            await using var command = connection.CreateCommand();
-            command.CommandText = """
-                IF OBJECT_ID('dbo.business_documents', 'U') IS NULL
-                BEGIN
-                    CREATE TABLE dbo.business_documents (
-                        doc_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_business_documents PRIMARY KEY,
-                        comp_id INT NOT NULL,
-                        location_id INT NULL,
-                        cat_id INT NOT NULL,
-                        doc_name NVARCHAR(255) NOT NULL,
-                        url NVARCHAR(500) NOT NULL,
-                        num_pages INT NOT NULL,
-                        date DATETIME2 NOT NULL CONSTRAINT DF_business_documents_date DEFAULT SYSUTCDATETIME(),
-                        document_date DATE NULL,
-                        vendor_name NVARCHAR(150) NULL,
-                        amount DECIMAL(18,2) NULL,
-                        uploaded_by NVARCHAR(100) NULL,
-                        deleted BIT NOT NULL CONSTRAINT DF_business_documents_deleted DEFAULT 0,
-                        deleted_on DATETIME2 NULL,
-                        deleted_by NVARCHAR(100) NULL
-                    );
-                    CREATE INDEX IX_business_documents_comp ON dbo.business_documents(comp_id);
-                    CREATE INDEX IX_business_documents_location ON dbo.business_documents(location_id);
-                    CREATE INDEX IX_business_documents_category ON dbo.business_documents(cat_id);
-                END
-                """;
-            await command.ExecuteNonQueryAsync(cancellationToken);
+            await using (var command = connection.CreateCommand())
+            {
+                command.CommandText = """
+                    IF OBJECT_ID('dbo.business_documents', 'U') IS NULL
+                    BEGIN
+                        CREATE TABLE dbo.business_documents (
+                            doc_id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_business_documents PRIMARY KEY,
+                            comp_id INT NOT NULL,
+                            location_id INT NULL,
+                            cat_id INT NOT NULL,
+                            doc_name NVARCHAR(255) NOT NULL,
+                            url NVARCHAR(500) NOT NULL,
+                            num_pages INT NOT NULL,
+                            date DATETIME2 NOT NULL CONSTRAINT DF_business_documents_date DEFAULT SYSUTCDATETIME(),
+                            document_date DATE NULL,
+                            vendor_name NVARCHAR(150) NULL,
+                            amount DECIMAL(18,2) NULL,
+                            uploaded_by NVARCHAR(100) NULL,
+                            deleted BIT NOT NULL CONSTRAINT DF_business_documents_deleted DEFAULT 0,
+                            deleted_on DATETIME2 NULL,
+                            deleted_by NVARCHAR(100) NULL
+                        );
+                    END
+                    """;
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await using (var command = connection.CreateCommand())
+            {
+                command.CommandText = """
+                    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_business_documents_comp' AND object_id = OBJECT_ID('dbo.business_documents'))
+                    BEGIN
+                        CREATE INDEX IX_business_documents_comp ON dbo.business_documents(comp_id);
+                    END
+                    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_business_documents_location' AND object_id = OBJECT_ID('dbo.business_documents'))
+                    BEGIN
+                        CREATE INDEX IX_business_documents_location ON dbo.business_documents(location_id);
+                    END
+                    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_business_documents_category' AND object_id = OBJECT_ID('dbo.business_documents'))
+                    BEGIN
+                        CREATE INDEX IX_business_documents_category ON dbo.business_documents(cat_id);
+                    END
+                    """;
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
             _schemaChecked = true;
         }
         finally

@@ -1,4 +1,4 @@
-import { Folder, Upload, Download, Trash2, Eye, Plus, FolderPlus, DollarSign, Calendar, Building } from "lucide-react";
+import { Folder, Upload, Download, Trash2, Eye, Plus, FolderPlus, DollarSign, Calendar, Building, FileText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   listLocations,
@@ -9,7 +9,72 @@ import {
   deleteBusinessDocument,
   getBusinessDocumentDownloadUrl,
   getBusinessDocumentPreviewUrl,
+  getBusinessDocumentThumbnailUrl,
 } from "../api/client";
+
+function getExtension(value) {
+  const cleanValue = String(value || "").split("?")[0];
+  const fileName = cleanValue.split("/").pop() || "";
+  const index = fileName.lastIndexOf(".");
+  return index >= 0 ? fileName.slice(index + 1).toLowerCase() : "";
+}
+
+function BusinessDocumentThumbnail({ document }) {
+  const previewUrl = getBusinessDocumentPreviewUrl(document);
+  const thumbnailUrl = getBusinessDocumentThumbnailUrl(document);
+  const extension = getExtension(document.url) || getExtension(document.documentName);
+
+  const thumbStyle = {
+    width: "100%",
+    height: "150px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    background: "#fdfdfd",
+    borderBottom: "1px solid #e5e5e5",
+    position: "relative",
+  };
+
+  if (["tif", "tiff"].includes(extension)) {
+    return (
+      <div style={thumbStyle}>
+        <img src={thumbnailUrl} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+      </div>
+    );
+  }
+
+  if (["png", "jpg", "jpeg", "gif", "webp"].includes(extension)) {
+    return (
+      <div style={thumbStyle}>
+        <img src={previewUrl} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+      </div>
+    );
+  }
+
+  if (extension === "pdf") {
+    return (
+      <div style={thumbStyle}>
+        <iframe
+          src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+          title={document.documentName}
+          style={{ width: "100%", height: "100%", border: "none", overflow: "hidden" }}
+          scrolling="no"
+        />
+        <div style={{ position: "absolute", inset: 0, background: "transparent" }} />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ ...thumbStyle, background: "#f0f0f0" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", color: "#888" }}>
+        <FileText size={40} strokeWidth={1.5} />
+        <span style={{ fontSize: "0.8em", fontWeight: "700", textTransform: "uppercase" }}>{extension || "FILE"}</span>
+      </div>
+    </div>
+  );
+}
 
 export function BusinessDocumentManager({ companyId, user, onNotice }) {
   const [locations, setLocations] = useState([]);
@@ -411,102 +476,155 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                  gap: "15px",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                  gap: "25px",
+                  padding: "10px",
                 }}
               >
-                {documents.map((doc) => (
-                  <article
-                    key={doc.documentId}
-                    style={{
-                      border: "1px solid rgba(0,0,0,0.1)",
-                      borderRadius: "8px",
-                      padding: "12px",
-                      background: "var(--background-paper)",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      transition: "box-shadow 0.2s",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => openDocument(doc)}
-                  >
-                    <div>
-                      <h4
-                        style={{
-                          margin: "0 0 8px 0",
-                          wordBreak: "break-all",
-                          fontSize: "14px",
-                          lineHeight: "1.3",
-                        }}
-                      >
-                        {doc.documentName}
-                      </h4>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "4px",
-                          fontSize: "0.85em",
-                          color: "#666",
-                          marginBottom: "10px",
-                        }}
-                      >
-                        {doc.vendorName && (
-                          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                            <Building size={12} /> {doc.vendorName}
-                          </span>
-                        )}
-                        {doc.amount && (
-                          <span style={{ display: "flex", alignItems: "center", gap: "4px", fontWeight: "600", color: "#2e7d32" }}>
-                            <DollarSign size={12} /> {doc.amount.toFixed(2)}
-                          </span>
-                        )}
-                        {doc.documentDate && (
-                          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                            <Calendar size={12} /> {new Date(doc.documentDate).toLocaleDateString()}
-                          </span>
-                        )}
-                        <span>{doc.numberOfPages} pages | Uploaded {new Date(doc.date).toLocaleDateString()}</span>
-                      </div>
-                    </div>
+                {documents.map((doc) => {
+                  const hasMultiplePages = doc.numberOfPages > 1;
+                  // PaperPort stacked pages shadow effect
+                  const cardShadow = hasMultiplePages
+                    ? "2px 2px 0px #e2e2e2, 3px 3px 0px #e2e2e2, 4px 4px 0px #d4d4d4, 5px 5px 0px #d4d4d4, 6px 6px 12px rgba(0,0,0,0.15)"
+                    : "1px 2px 4px rgba(0,0,0,0.08)";
 
-                    <div
+                  return (
+                    <article
+                      key={doc.documentId}
                       style={{
+                        border: "1px solid #dcdcdc",
+                        borderRadius: "3px",
+                        background: "#ffffff",
                         display: "flex",
-                        justifyContent: "flex-end",
-                        gap: "8px",
-                        borderTop: "1px solid rgba(0,0,0,0.05)",
-                        paddingTop: "8px",
+                        flexDirection: "column",
+                        transition: "transform 0.15s, box-shadow 0.15s",
+                        boxShadow: cardShadow,
+                        position: "relative",
+                        overflow: "hidden",
                       }}
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={() => openDocument(doc)}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translateY(-2px)";
+                        e.currentTarget.style.boxShadow = hasMultiplePages
+                          ? "2px 2px 0px #e2e2e2, 4px 4px 0px #c1692a, 6px 6px 15px rgba(0,0,0,0.2)"
+                          : "1px 4px 8px rgba(0,0,0,0.15)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "none";
+                        e.currentTarget.style.boxShadow = cardShadow;
+                      }}
                     >
-                      <button
-                        type="button"
-                        className="icon-button"
-                        onClick={() => openDocument(doc)}
-                        title="Preview document"
-                      >
-                        <Eye size={15} />
-                      </button>
-                      <a
-                        href={getBusinessDocumentDownloadUrl(doc.documentId)}
-                        className="icon-button"
-                        title="Download document"
-                      >
-                        <Download size={15} />
-                      </a>
-                      <button
-                        type="button"
-                        className="icon-button danger"
-                        onClick={() => handleDelete(doc)}
-                        title="Delete document"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </article>
-                ))}
+                      {/* Thumbnail frame */}
+                      <div style={{ position: "relative" }}>
+                        <BusinessDocumentThumbnail document={doc} />
+                        {hasMultiplePages && (
+                          <span
+                            style={{
+                              position: "absolute",
+                              bottom: "8px",
+                              right: "8px",
+                              background: "rgba(0, 0, 0, 0.75)",
+                              color: "#fff",
+                              padding: "2px 6px",
+                              borderRadius: "3px",
+                              fontSize: "0.75em",
+                              fontWeight: "600",
+                            }}
+                          >
+                            {doc.numberOfPages} Pages
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Document Details Info */}
+                      <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: "6px", flex: 1, justifyContent: "space-between" }}>
+                        <div>
+                          <h4
+                            style={{
+                              margin: "0 0 6px 0",
+                              fontSize: "13px",
+                              fontWeight: "600",
+                              lineHeight: "1.3",
+                              color: "#333",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                            title={doc.documentName}
+                          >
+                            {doc.documentName}
+                          </h4>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "3px",
+                              fontSize: "11px",
+                              color: "#777",
+                            }}
+                          >
+                            {doc.vendorName && (
+                              <span style={{ display: "flex", alignItems: "center", gap: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                <Building size={11} style={{ flexShrink: 0 }} /> {doc.vendorName}
+                              </span>
+                            )}
+                            {doc.amount && (
+                              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontWeight: "600", color: "#2e7d32" }}>
+                                <DollarSign size={11} style={{ flexShrink: 0 }} /> {doc.amount.toFixed(2)}
+                              </span>
+                            )}
+                            {doc.documentDate && (
+                              <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <Calendar size={11} style={{ flexShrink: 0 }} /> {new Date(doc.documentDate).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action buttons footer */}
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            gap: "6px",
+                            borderTop: "1px solid #f0f0f0",
+                            paddingTop: "8px",
+                            marginTop: "4px",
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className="icon-button"
+                            onClick={() => openDocument(doc)}
+                            title="Preview document"
+                            style={{ padding: "4px" }}
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <a
+                            href={getBusinessDocumentDownloadUrl(doc.documentId)}
+                            className="icon-button"
+                            title="Download document"
+                            style={{ padding: "4px" }}
+                          >
+                            <Download size={14} />
+                          </a>
+                          <button
+                            type="button"
+                            className="icon-button danger"
+                            onClick={() => handleDelete(doc)}
+                            title="Delete document"
+                            style={{ padding: "4px" }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </div>
