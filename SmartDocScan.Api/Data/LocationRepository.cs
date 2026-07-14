@@ -189,6 +189,9 @@ public sealed class LocationRepository
 
     private static LocationDto MapLocation(SqlDataReader reader)
     {
+        var inactiveOrdinal = reader.GetOrdinal("inactive");
+        var createdOnOrdinal = reader.GetOrdinal("created_on");
+
         return new LocationDto
         {
             LocationId = reader.GetInt32(reader.GetOrdinal("location_id")),
@@ -197,8 +200,8 @@ public sealed class LocationRepository
             LocationCode = ReadString(reader, "location_code"),
             Address = ReadString(reader, "address"),
             Phone = ReadString(reader, "phone"),
-            Inactive = reader.GetBoolean(reader.GetOrdinal("inactive")),
-            CreatedOn = reader.GetDateTime(reader.GetOrdinal("created_on"))
+            Inactive = !reader.IsDBNull(inactiveOrdinal) && reader.GetBoolean(inactiveOrdinal),
+            CreatedOn = reader.IsDBNull(createdOnOrdinal) ? DateTime.UtcNow : reader.GetDateTime(createdOnOrdinal)
         };
     }
 

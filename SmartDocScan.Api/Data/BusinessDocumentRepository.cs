@@ -217,6 +217,11 @@ public sealed class BusinessDocumentRepository
 
     private static BusinessDocumentDto MapDocument(SqlDataReader reader)
     {
+        var docNameOrdinal = reader.GetOrdinal("doc_name");
+        var urlOrdinal = reader.GetOrdinal("url");
+        var numPagesOrdinal = reader.GetOrdinal("num_pages");
+        var dateOrdinal = reader.GetOrdinal("date");
+
         return new BusinessDocumentDto
         {
             DocumentId = reader.GetInt32(reader.GetOrdinal("doc_id")),
@@ -225,10 +230,10 @@ public sealed class BusinessDocumentRepository
             LocationName = ReadString(reader, "location_name"),
             CategoryId = reader.GetInt32(reader.GetOrdinal("cat_id")),
             CategoryName = ReadString(reader, "cat_name"),
-            DocumentName = reader.GetString(reader.GetOrdinal("doc_name")),
-            Url = reader.GetString(reader.GetOrdinal("url")),
-            NumberOfPages = reader.GetInt32(reader.GetOrdinal("num_pages")),
-            Date = reader.GetDateTime(reader.GetOrdinal("date")),
+            DocumentName = reader.IsDBNull(docNameOrdinal) ? "" : reader.GetString(docNameOrdinal),
+            Url = reader.IsDBNull(urlOrdinal) ? "" : reader.GetString(urlOrdinal),
+            NumberOfPages = reader.IsDBNull(numPagesOrdinal) ? 1 : reader.GetInt32(numPagesOrdinal),
+            Date = reader.IsDBNull(dateOrdinal) ? DateTime.UtcNow : reader.GetDateTime(dateOrdinal),
             DocumentDate = ReadNullableDateTime(reader, "document_date"),
             VendorName = ReadString(reader, "vendor_name"),
             Amount = ReadNullableDecimal(reader, "amount"),
