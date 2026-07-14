@@ -247,10 +247,11 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
 
   async function handleDropOnCategory(e, categoryId) {
     e.preventDefault();
+    e.stopPropagation();
     setDragOverCatId(null);
     if (String(categoryId) === String(selectedCategoryId)) return;
     
-    const docId = e.dataTransfer.getData("text/plain");
+    const docId = e.dataTransfer.getData("document-id");
     if (!docId) return;
 
     try {
@@ -456,7 +457,7 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
                     key={doc.documentId}
                     draggable={true}
                     onDragStart={(e) => {
-                      e.dataTransfer.setData("text/plain", doc.documentId);
+                      e.dataTransfer.setData("document-id", String(doc.documentId));
                       e.dataTransfer.effectAllowed = "move";
                     }}
                     style={{
