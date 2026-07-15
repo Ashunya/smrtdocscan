@@ -930,7 +930,7 @@ app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, C
             format = "json"
         };
 
-        using var client = new HttpClient();
+        using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
         var ollamaUrl = configuration["Ai:OllamaUrl"] ?? "http://host.docker.internal:11434/api/generate";
         
         HttpResponseMessage response;
