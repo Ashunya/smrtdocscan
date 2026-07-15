@@ -1,6 +1,6 @@
 import { Folder, Upload, Download, Trash2, Eye, FolderPlus, DollarSign, Calendar, Building, FileText, Plus, X, FolderOpen } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Tooltip, Box, Typography, LinearProgress } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Tooltip, Box, Typography, LinearProgress, CircularProgress } from "@mui/material";
 import {
   listLocations,
   listCategories,
@@ -12,6 +12,7 @@ import {
   getBusinessDocumentPreviewUrl,
   getBusinessDocumentThumbnailUrl,
   moveBusinessDocument,
+  analyzeBusinessDocument,
 } from "../api/client";
 
 function getExtension(value) {
@@ -105,6 +106,39 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [savingCategory, setSavingCategory] = useState(false);
   const [dragOverCatId, setDragOverCatId] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+
+  // Auto-analyze document
+  useEffect(() => {
+    if (!file) {
+      setAnalyzing(false);
+      return;
+    }
+    let ignore = false;
+    setAnalyzing(true);
+    analyzeBusinessDocument(file).then(data => {
+      if (!ignore) {
+        if (data.vendorName) setVendorName(data.vendorName);
+        if (data.amount) setAmount(String(data.amount));
+        if (data.documentDate) {
+          const datePart = String(data.documentDate).split('T')[0];
+          setDocumentDate(datePart);
+        }
+        if (data.suggestedCategoryName && categories.length > 0) {
+          const matchedCat = categories.find(c => c.categoryName.toLowerCase() === data.suggestedCategoryName.toLowerCase());
+          if (matchedCat) {
+            setSelectedCategoryId(String(matchedCat.categoryId));
+          }
+        }
+      }
+    }).catch(err => {
+      console.error("AI Analysis failed:", err);
+      // Fail silently to the user so they can still type manually
+    }).finally(() => {
+      if (!ignore) setAnalyzing(false);
+    });
+    return () => { ignore = true; };
+  }, [file, categories]);
 
   // Load Locations and Business Categories on load
   useEffect(() => {
@@ -604,10 +638,21 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
                 required
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
               />
-              <Upload size={32} style={{ color: "#94a3b8", marginBottom: "8px" }} />
-              <Typography variant="body2" sx={{ color: "#475569", fontWeight: 500 }}>
-                {file ? file.name : "Click or drag file to upload"}
-              </Typography>
+              {analyzing ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={24} sx={{ color: "#c1692a" }} />
+                  <Typography variant="body2" sx={{ color: "#475569", fontWeight: 500 }}>
+                    AI is analyzing document...
+                  </Typography>
+                </Box>
+              ) : (
+                <>
+                  <Upload size={32} style={{ color: "#94a3b8", marginBottom: "8px" }} />
+                  <Typography variant="body2" sx={{ color: "#475569", fontWeight: 500 }}>
+                    {file ? file.name : "Click or drag file to upload"}
+                  </Typography>
+                </>
+              )}
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>

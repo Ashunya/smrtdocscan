@@ -879,6 +879,79 @@ app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPri
     return Results.Created($"/api/business-documents/{document.DocumentId}", document);
 }).RequireAuthorization();
 
+app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, ClaimsPrincipal principal, IConfiguration configuration, CancellationToken cancellationToken) =>
+{
+    if (!httpRequest.HasFormContentType)
+    {
+        return Results.BadRequest(new { message = "Multipart form data is required." });
+    }
+
+    var form = await httpRequest.ReadFormAsync(cancellationToken);
+    var file = form.Files["file"];
+    if (file is null || file.Length == 0)
+    {
+        return Results.BadRequest(new { message = "Please select a document to analyze." });
+    }
+
+    try
+    {
+        using var stream = new MemoryStream();
+        await file.CopyToAsync(stream, cancellationToken);
+        stream.Position = 0;
+
+        string base64Image = "";
+        using (var collection = new ImageMagick.MagickImageCollection())
+        {
+            var readSettings = new ImageMagick.MagickReadSettings { Density = new ImageMagick.Density(150, 150) };
+            collection.Read(stream, readSettings);
+            if (collection.Count > 0)
+            {
+                var image = collection[0];
+                image.Format = ImageMagick.MagickFormat.Jpeg;
+                image.Quality = 80;
+                base64Image = image.ToBase64();
+            }
+        }
+
+        if (string.IsNullOrEmpty(base64Image))
+        {
+            return Results.BadRequest(new { message = "Could not read image or PDF." });
+        }
+
+        var prompt = "Extract the following details from this document and return strictly a JSON object: {\"VendorName\": \"(string or null)\", \"Amount\": (number or null), \"DocumentDate\": \"(YYYY-MM-DD or null)\", \"SuggestedCategoryName\": \"(string, e.g., Invoices, Receipts, Contracts, or null)\"}. Only output the raw JSON object, no markdown blocks, no other text.";
+
+        var payload = new
+        {
+            model = "llama3.2-vision",
+            prompt = prompt,
+            images = new[] { base64Image },
+            stream = false,
+            format = "json"
+        };
+
+        using var client = new HttpClient();
+        var response = await client.PostAsJsonAsync("http://localhost:11434/api/generate", payload, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var ollamaResult = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(cancellationToken: cancellationToken);
+        var responseText = ollamaResult.GetProperty("response").GetString();
+
+        if (string.IsNullOrWhiteSpace(responseText))
+        {
+            return Results.Ok(new SmartDocScan.Api.Models.AiDocumentAnalysisResponse());
+        }
+
+        var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var analysis = System.Text.Json.JsonSerializer.Deserialize<SmartDocScan.Api.Models.AiDocumentAnalysisResponse>(responseText, options);
+
+        return Results.Ok(analysis ?? new SmartDocScan.Api.Models.AiDocumentAnalysisResponse());
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { message = "Failed to analyze document: " + ex.Message });
+    }
+}).RequireAuthorization();
+
 app.MapGet("/api/business-documents/{documentId:int}/download", async (int documentId, ClaimsPrincipal principal, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
     var document = await repository.GetAsync(documentId, cancellationToken);

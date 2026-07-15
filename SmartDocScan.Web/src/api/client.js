@@ -354,6 +354,12 @@ export function moveBusinessDocument(documentId, categoryId) {
   });
 }
 
+export function analyzeBusinessDocument(file) {
+  const formData = new FormData();
+  formData.set("file", file);
+  return requestForm("/business-documents/analyze", formData);
+}
+
 export function getBusinessDocumentDownloadUrl(documentId) {
   return `${API_BASE_URL}/business-documents/${documentId}/download`;
 }
