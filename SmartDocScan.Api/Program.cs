@@ -943,7 +943,11 @@ app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, C
             response = await client.PostAsJsonAsync("http://localhost:11434/api/generate", payload, cancellationToken);
         }
         
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            return Results.BadRequest(new { message = $"Ollama AI Error ({response.StatusCode}): {errorBody}" });
+        }
 
         var ollamaResult = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(cancellationToken: cancellationToken);
         var responseText = ollamaResult.GetProperty("response").GetString();
