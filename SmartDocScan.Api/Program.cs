@@ -930,7 +930,19 @@ app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, C
         };
 
         using var client = new HttpClient();
-        var response = await client.PostAsJsonAsync("http://localhost:11434/api/generate", payload, cancellationToken);
+        var ollamaUrl = configuration["Ai:OllamaUrl"] ?? "http://host.docker.internal:11434/api/generate";
+        
+        HttpResponseMessage response;
+        try 
+        {
+            response = await client.PostAsJsonAsync(ollamaUrl, payload, cancellationToken);
+        } 
+        catch (HttpRequestException)
+        {
+            // Fallback for local testing outside of Docker if host.docker.internal fails
+            response = await client.PostAsJsonAsync("http://localhost:11434/api/generate", payload, cancellationToken);
+        }
+        
         response.EnsureSuccessStatusCode();
 
         var ollamaResult = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(cancellationToken: cancellationToken);
