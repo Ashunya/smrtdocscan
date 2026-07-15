@@ -920,7 +920,7 @@ app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, C
 
         var prompt = "Extract the following details from this document and return strictly a JSON object: {\"VendorName\": \"(string or null)\", \"Amount\": (number or null), \"DocumentDate\": \"(YYYY-MM-DD or null)\", \"SuggestedCategoryName\": \"(string, e.g., Invoices, Receipts, Contracts, or null)\"}. Only output the raw JSON object, no markdown blocks, no other text.";
 
-        var modelName = configuration["Ai:OllamaModel"] ?? "llava";
+        var modelName = configuration["Ai:OllamaModel"] ?? "minicpm-v";
         var payload = new
         {
             model = modelName,
