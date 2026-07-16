@@ -1053,6 +1053,64 @@ app.MapPut("/api/business-documents/{documentId:int}/category", async (int docum
     return Results.NoContent();
 }).RequireAuthorization();
 
+app.MapPut("/api/business-documents/{documentId:int}/rename", async (int documentId, [Microsoft.AspNetCore.Mvc.FromBody] RenameRequest request, ClaimsPrincipal principal, BusinessDocumentRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
+{
+    var document = await repository.GetAsync(documentId, cancellationToken);
+    if (document is null)
+    {
+        return Results.NotFound(new { message = "Document not found." });
+    }
+
+    if (!CanAccessCompany(principal, document.CompanyId))
+    {
+        await AuditForbiddenAsync(auditRepository, "business_document.rename", principal, document.CompanyId, "business_document", documentId.ToString(), httpContext);
+        return Results.Forbid();
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Name))
+    {
+        return Results.BadRequest(new { message = "Name is required." });
+    }
+
+    var updated = await repository.RenameAsync(documentId, request.Name, document.CompanyId, cancellationToken);
+    if (!updated)
+    {
+        return Results.NotFound(new { message = "Document not found." });
+    }
+
+    await AuditAsync(auditRepository, "business_document.rename", GetActor(principal), document.CompanyId, "business_document", documentId.ToString(), "success", httpContext);
+    return Results.NoContent();
+}).RequireAuthorization();
+
+app.MapPut("/api/categories/{categoryId:int}/rename", async (int categoryId, [Microsoft.AspNetCore.Mvc.FromBody] RenameRequest request, ClaimsPrincipal principal, CategoryRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
+{
+    var category = await repository.GetAsync(categoryId, cancellationToken);
+    if (category is null)
+    {
+        return Results.NotFound(new { message = "Category not found." });
+    }
+
+    if (!CanAccessCompany(principal, category.CompanyId))
+    {
+        await AuditForbiddenAsync(auditRepository, "category.rename", principal, category.CompanyId, "category", categoryId.ToString(), httpContext);
+        return Results.Forbid();
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Name))
+    {
+        return Results.BadRequest(new { message = "Name is required." });
+    }
+
+    var updated = await repository.RenameAsync(categoryId, request.Name, category.CompanyId, cancellationToken);
+    if (!updated)
+    {
+        return Results.NotFound(new { message = "Category not found." });
+    }
+
+    await AuditAsync(auditRepository, "category.rename", GetActor(principal), category.CompanyId, "category", categoryId.ToString(), "success", httpContext);
+    return Results.NoContent();
+}).RequireAuthorization();
+
 app.MapGet("/api/reports/documents", async (int companyId, DateTime? fromDate, DateTime? toDate, int? take, ClaimsPrincipal principal, DocumentRepository repository, CancellationToken cancellationToken) =>
 {
     if (!CanAccessCompany(principal, companyId) || !CanViewReports(principal))
@@ -2289,3 +2347,4 @@ static IResult PreviewBusinessTiffAsHtml(BusinessDocumentDto document, string di
     httpContext.Response.Headers.ContentSecurityPolicy = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'";
     return Results.Text(builder.ToString(), "text/html", Encoding.UTF8);
 }
+public record RenameRequest(string Name);

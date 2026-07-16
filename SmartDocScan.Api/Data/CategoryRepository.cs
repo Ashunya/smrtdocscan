@@ -96,6 +96,20 @@ public sealed class CategoryRepository
         return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
     }
 
+    public async Task<bool> RenameAsync(int categoryId, string newName, int companyId, CancellationToken cancellationToken = default)
+    {
+        await EnsureSchemaAsync(cancellationToken);
+        await using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE category SET cat_name = @newName WHERE cat_id = @categoryId AND comp_id = @companyId;";
+        command.Parameters.AddWithValue("@categoryId", categoryId);
+        command.Parameters.AddWithValue("@newName", newName.Trim());
+        command.Parameters.AddWithValue("@companyId", companyId);
+        return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
+    }
+
     public async Task<CategoryDto?> GetAsync(int categoryId, CancellationToken cancellationToken = default)
     {
         await EnsureSchemaAsync(cancellationToken);

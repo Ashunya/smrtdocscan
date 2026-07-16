@@ -377,7 +377,19 @@ export function getBusinessDocumentThumbnailUrl(document) {
 }
 
 export function deleteBusinessDocument(documentId) {
-  return request(`/business-documents/${documentId}`, {
-    method: "DELETE",
+  return request(`/business-documents/${documentId}`, { method: "DELETE" });
+}
+
+export function renameBusinessDocument(documentId, name) {
+  return request(`/business-documents/${documentId}/rename`, {
+    method: "PUT",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function renameCategory(categoryId, name) {
+  return request(`/categories/${categoryId}/rename`, {
+    method: "PUT",
+    body: JSON.stringify({ name }),
   });
 }

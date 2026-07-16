@@ -13,6 +13,8 @@ import {
   getBusinessDocumentThumbnailUrl,
   moveBusinessDocument,
   analyzeBusinessDocument,
+  renameBusinessDocument,
+  renameCategory,
 } from "../api/client";
 
 function getExtension(value) {
@@ -145,7 +147,7 @@ function RibbonMenu({ activeTab, setActiveTab, onAction, disabledActions }) {
             <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", borderRight: "1px solid #e2e8f0", position: "relative", height: "100%" }}>
               <div style={{ display: "flex", gap: "2px", height: "54px" }}>
                 <ActionButton icon={FolderPlus} label="New Folder" action="newFolder" />
-                <ActionButton icon={Edit3} label="Rename" action="rename" disabled={disabledActions.requiresSelection} />
+                <ActionButton icon={Edit3} label="Rename" action="rename" disabled={!disabledActions.canRename} />
               </div>
               <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Organize</span>
             </div>
@@ -201,6 +203,13 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
   const [documents, setDocuments] = useState([]);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState([]);
   const [activeRibbonTab, setActiveRibbonTab] = useState("Home");
+  const [viewMode, setViewMode] = useState("grid"); // 'grid', 'list', 'details'
+
+  // Rename states
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [renameTargetId, setRenameTargetId] = useState(null);
+  const [renameTargetType, setRenameTargetType] = useState(""); // 'document' or 'category'
+  const [renameValue, setRenameValue] = useState("");
 
   // Form states for file upload
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -429,6 +438,27 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
     }
   }
 
+  async function handleRenameSubmit(e) {
+    e.preventDefault();
+    if (!renameValue.trim()) return;
+
+    try {
+      if (renameTargetType === "document") {
+        await renameBusinessDocument(renameTargetId, renameValue);
+        setDocuments(current => current.map(d => d.documentId === renameTargetId ? { ...d, documentName: renameValue } : d));
+        onNotice({ type: "success", text: "Document renamed successfully." });
+      } else if (renameTargetType === "category") {
+        await renameCategory(renameTargetId, renameValue);
+        setCategories(current => current.map(c => c.categoryId === renameTargetId ? { ...c, categoryName: renameValue } : c));
+        onNotice({ type: "success", text: "Folder renamed successfully." });
+      }
+    } catch (error) {
+      onNotice({ type: "error", text: error.message });
+    } finally {
+      setIsRenameModalOpen(false);
+    }
+  }
+
   function handleRibbonAction(action) {
     switch (action) {
       case "upload":
@@ -474,6 +504,54 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
              window.open(url, "_blank");
           }
         }
+        break;
+      case "print":
+        if (selectedDocumentIds.length > 0) {
+          const docToPrint = documents.find(d => d.documentId === selectedDocumentIds[0]);
+          if (docToPrint) {
+             const url = getBusinessDocumentPreviewUrl(docToPrint);
+             window.open(url, "_blank");
+          }
+        }
+        break;
+      case "email":
+        if (selectedDocumentIds.length > 0) {
+          const docToEmail = documents.find(d => d.documentId === selectedDocumentIds[0]);
+          if (docToEmail) {
+             const url = getBusinessDocumentPreviewUrl(docToEmail);
+             const subject = encodeURIComponent(`Document: ${docToEmail.documentName || "File"}`);
+             const body = encodeURIComponent(`Please review the following document:\n\n${url}`);
+             window.location.href = `mailto:?subject=${subject}&body=${body}`;
+          }
+        }
+        break;
+      case "rename":
+        if (selectedDocumentIds.length > 0) {
+          const doc = documents.find(d => d.documentId === selectedDocumentIds[0]);
+          if (doc) {
+            setRenameTargetId(doc.documentId);
+            setRenameTargetType("document");
+            setRenameValue(doc.documentName || "");
+            setIsRenameModalOpen(true);
+          }
+        } else if (selectedCategoryId) {
+          const cat = categories.find(c => String(c.categoryId) === selectedCategoryId);
+          if (cat) {
+            setRenameTargetId(cat.categoryId);
+            setRenameTargetType("category");
+            setRenameValue(cat.categoryName || "");
+            setIsRenameModalOpen(true);
+          }
+        }
+        break;
+      case "grid":
+        setViewMode("grid");
+        break;
+      case "list":
+        setViewMode("list");
+        break;
+      case "details":
+        setViewMode("details");
         break;
       default:
         console.log("Unimplemented action:", action);
@@ -623,7 +701,10 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
           activeTab={activeRibbonTab}
           setActiveTab={setActiveRibbonTab}
           onAction={handleRibbonAction}
-          disabledActions={{ requiresSelection: selectedDocumentIds.length === 0 }}
+          disabledActions={{ 
+            requiresSelection: selectedDocumentIds.length === 0,
+            canRename: selectedDocumentIds.length > 0 || !!selectedCategoryId
+          }}
         />
 
         {/* Current Folder Path / Workspace Label */}
@@ -646,157 +727,241 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
               <Typography variant="body2">No documents have been uploaded to this folder yet.</Typography>
             </div>
           ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                gap: "35px",
-                alignItems: "start"
-              }}
-            >
-              {documents.map((doc) => {
-                const hasMultiplePages = doc.numberOfPages > 1;
-                const isSelected = selectedDocumentIds.includes(doc.documentId);
-                const stackShadow = hasMultiplePages
-                  ? "0 1px 1px rgba(0,0,0,0.05), 0 4px 0 -1px #fff, 0 4px 1px -1px rgba(0,0,0,0.1), 0 8px 0 -2px #fff, 0 8px 1px -2px rgba(0,0,0,0.1), 0 12px 24px rgba(0,0,0,0.08)"
-                  : "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)";
+            <>
+              {viewMode === "grid" && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                    gap: "35px",
+                    alignItems: "start"
+                  }}
+                >
+                  {documents.map((doc) => {
+                    const hasMultiplePages = doc.numberOfPages > 1;
+                    const isSelected = selectedDocumentIds.includes(doc.documentId);
+                    const stackShadow = hasMultiplePages
+                      ? "0 1px 1px rgba(0,0,0,0.05), 0 4px 0 -1px #fff, 0 4px 1px -1px rgba(0,0,0,0.1), 0 8px 0 -2px #fff, 0 8px 1px -2px rgba(0,0,0,0.1), 0 12px 24px rgba(0,0,0,0.08)"
+                      : "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)";
 
-                return (
-                  <article
-                    key={doc.documentId}
-                    draggable={true}
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData("document-id", String(doc.documentId));
-                      e.dataTransfer.effectAllowed = "move";
-                    }}
-                    style={{
-                      background: isSelected ? "#e0f2fe" : "#ffffff",
-                      borderRadius: "4px",
-                      display: "flex",
-                      flexDirection: "column",
-                      transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                      boxShadow: isSelected ? "0 0 0 2px #3b82f6, " + stackShadow : stackShadow,
-                      position: "relative",
-                      border: "1px solid",
-                      borderColor: isSelected ? "#3b82f6" : "#e2e8f0",
-                      cursor: "grab",
-                      overflow: "hidden"
-                    }}
-                    onClick={() => toggleSelection(doc.documentId)}
-                    onDoubleClick={() => openDocument(doc)}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.style.transform = "translateY(-4px)";
-                        e.currentTarget.style.boxShadow = hasMultiplePages
-                          ? "0 1px 1px rgba(0,0,0,0.05), 0 4px 0 -1px #fff, 0 4px 1px -1px rgba(0,0,0,0.1), 0 8px 0 -2px #fff, 0 8px 1px -2px rgba(0,0,0,0.1), 0 20px 30px rgba(193, 105, 42, 0.15)"
-                          : "0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.05), 0 0 0 1px rgba(193, 105, 42, 0.2)";
-                        e.currentTarget.style.borderColor = "transparent";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.style.transform = "none";
-                        e.currentTarget.style.boxShadow = stackShadow;
-                        e.currentTarget.style.borderColor = "#e2e8f0";
-                      }
-                    }}
-                  >
-                    {/* Thumbnail frame */}
-                    <div style={{ position: "relative" }}>
-                      <BusinessDocumentThumbnail document={doc} />
-                      {hasMultiplePages && (
-                        <span
-                          style={{
-                            position: "absolute",
-                            bottom: "10px",
-                            right: "10px",
-                            background: "rgba(15, 23, 42, 0.8)",
-                            backdropFilter: "blur(4px)",
-                            color: "#fff",
-                            padding: "4px 8px",
-                            borderRadius: "12px",
-                            fontSize: "0.7rem",
-                            fontWeight: "600",
-                            letterSpacing: "0.5px"
-                          }}
-                        >
-                          {doc.numberOfPages} pgs
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Document Details Info */}
-                    <div style={{ padding: "16px", display: "flex", flexDirection: "column", flex: 1 }}>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{
-                          fontWeight: 600,
-                          lineHeight: 1.3,
-                          color: "#1e293b",
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                          mb: 1.5,
-                          fontSize: "0.9rem"
+                    return (
+                      <article
+                        key={doc.documentId}
+                        draggable={true}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData("document-id", String(doc.documentId));
+                          e.dataTransfer.effectAllowed = "move";
                         }}
-                        title={doc.documentName}
+                        style={{
+                          background: isSelected ? "#e0f2fe" : "#ffffff",
+                          borderRadius: "4px",
+                          display: "flex",
+                          flexDirection: "column",
+                          transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                          boxShadow: isSelected ? "0 0 0 2px #3b82f6, " + stackShadow : stackShadow,
+                          position: "relative",
+                          border: "1px solid",
+                          borderColor: isSelected ? "#3b82f6" : "#e2e8f0",
+                          cursor: "grab",
+                          overflow: "hidden"
+                        }}
+                        onClick={() => toggleSelection(doc.documentId)}
+                        onDoubleClick={() => openDocument(doc)}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.transform = "translateY(-4px)";
+                            e.currentTarget.style.boxShadow = hasMultiplePages
+                              ? "0 1px 1px rgba(0,0,0,0.05), 0 4px 0 -1px #fff, 0 4px 1px -1px rgba(0,0,0,0.1), 0 8px 0 -2px #fff, 0 8px 1px -2px rgba(0,0,0,0.1), 0 20px 30px rgba(193, 105, 42, 0.15)"
+                              : "0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.05), 0 0 0 1px rgba(193, 105, 42, 0.2)";
+                            e.currentTarget.style.borderColor = "transparent";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.transform = "none";
+                            e.currentTarget.style.boxShadow = stackShadow;
+                            e.currentTarget.style.borderColor = "#e2e8f0";
+                          }
+                        }}
                       >
-                        {doc.documentName}
-                      </Typography>
-                      
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.75rem", color: "#64748b", marginTop: "auto" }}>
-                        {doc.vendorName && (
-                          <span style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            <Building size={14} style={{ color: "#94a3b8", flexShrink: 0 }} /> {doc.vendorName}
-                          </span>
-                        )}
-                        {doc.amount && (
-                          <span style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "600", color: "#166534" }}>
-                            <DollarSign size={14} style={{ flexShrink: 0 }} /> {doc.amount.toFixed(2)}
-                          </span>
-                        )}
-                        {doc.documentDate && (
-                          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <Calendar size={14} style={{ color: "#94a3b8", flexShrink: 0 }} /> {new Date(doc.documentDate).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
+                        {/* Thumbnail frame */}
+                        <div style={{ position: "relative" }}>
+                          <BusinessDocumentThumbnail document={doc} />
+                          {hasMultiplePages && (
+                            <span
+                              style={{
+                                position: "absolute",
+                                bottom: "10px",
+                                right: "10px",
+                                background: "rgba(15, 23, 42, 0.8)",
+                                backdropFilter: "blur(4px)",
+                                color: "#fff",
+                                padding: "4px 8px",
+                                borderRadius: "12px",
+                                fontSize: "0.7rem",
+                                fontWeight: "600",
+                                letterSpacing: "0.5px"
+                              }}
+                            >
+                              {doc.numberOfPages} pgs
+                            </span>
+                          )}
+                        </div>
 
-                      {/* Action buttons footer */}
+                        {/* Document Details Info */}
+                        <div style={{ padding: "16px", display: "flex", flexDirection: "column", flex: 1 }}>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              fontWeight: 600,
+                              lineHeight: 1.3,
+                              color: "#1e293b",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                              mb: 1.5,
+                              fontSize: "0.9rem"
+                            }}
+                            title={doc.documentName}
+                          >
+                            {doc.documentName}
+                          </Typography>
+                          
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.75rem", color: "#64748b", marginTop: "auto" }}>
+                            {doc.vendorName && (
+                              <span style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                <Building size={14} style={{ color: "#94a3b8", flexShrink: 0 }} /> {doc.vendorName}
+                              </span>
+                            )}
+                            {doc.amount && (
+                              <span style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "600", color: "#166534" }}>
+                                <DollarSign size={14} style={{ flexShrink: 0 }} /> {doc.amount.toFixed(2)}
+                              </span>
+                            )}
+                            {doc.documentDate && (
+                              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <Calendar size={14} style={{ color: "#94a3b8", flexShrink: 0 }} /> {new Date(doc.documentDate).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Action buttons footer */}
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              borderTop: "1px solid #f1f5f9",
+                              paddingTop: "12px",
+                              marginTop: "16px",
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div style={{ display: "flex", gap: "4px" }}>
+                              <Tooltip title="Preview">
+                                <IconButton size="small" onClick={() => openDocument(doc)} sx={{ color: "#64748b", '&:hover': { color: "#c1692a", background: "#fff2ea" } }}>
+                                  <Eye size={16} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Download">
+                                <IconButton size="small" component="a" href={getBusinessDocumentDownloadUrl(doc.documentId)} sx={{ color: "#64748b", '&:hover': { color: "#c1692a", background: "#fff2ea" } }}>
+                                  <Download size={16} />
+                                </IconButton>
+                              </Tooltip>
+                            </div>
+                            <Tooltip title="Delete">
+                              <IconButton size="small" onClick={() => handleDelete(doc)} sx={{ color: "#94a3b8", '&:hover': { color: "#ef4444", background: "#fef2f2" } }}>
+                                <Trash2 size={16} />
+                              </IconButton>
+                            </Tooltip>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+
+              {viewMode === "list" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {documents.map((doc) => {
+                    const isSelected = selectedDocumentIds.includes(doc.documentId);
+                    return (
                       <div
+                        key={doc.documentId}
+                        onClick={() => toggleSelection(doc.documentId)}
+                        onDoubleClick={() => openDocument(doc)}
                         style={{
                           display: "flex",
-                          justifyContent: "space-between",
-                          borderTop: "1px solid #f1f5f9",
-                          paddingTop: "12px",
-                          marginTop: "16px",
+                          alignItems: "center",
+                          padding: "12px 16px",
+                          background: isSelected ? "#e0f2fe" : "#fff",
+                          border: "1px solid",
+                          borderColor: isSelected ? "#3b82f6" : "#e2e8f0",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          transition: "background 0.2s"
                         }}
-                        onClick={(e) => e.stopPropagation()}
                       >
-                        <div style={{ display: "flex", gap: "4px" }}>
-                          <Tooltip title="Preview">
-                            <IconButton size="small" onClick={() => openDocument(doc)} sx={{ color: "#64748b", '&:hover': { color: "#c1692a", background: "#fff2ea" } }}>
-                              <Eye size={16} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Download">
-                            <IconButton size="small" component="a" href={getBusinessDocumentDownloadUrl(doc.documentId)} sx={{ color: "#64748b", '&:hover': { color: "#c1692a", background: "#fff2ea" } }}>
-                              <Download size={16} />
-                            </IconButton>
-                          </Tooltip>
+                        <div style={{ width: "40px", height: "40px", flexShrink: 0, marginRight: "16px", overflow: "hidden", borderRadius: "4px", border: "1px solid #cbd5e1" }}>
+                          <BusinessDocumentThumbnail document={doc} />
                         </div>
-                        <Tooltip title="Delete">
-                          <IconButton size="small" onClick={() => handleDelete(doc)} sx={{ color: "#94a3b8", '&:hover': { color: "#ef4444", background: "#fef2f2" } }}>
-                            <Trash2 size={16} />
-                          </IconButton>
-                        </Tooltip>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {doc.documentName}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: "#64748b" }}>
+                            {doc.documentDate ? new Date(doc.documentDate).toLocaleDateString() : "No date"}
+                          </Typography>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {viewMode === "details" && (
+                <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: "6px", overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+                    <thead style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                      <tr>
+                        <th style={{ padding: "12px 16px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>Name</th>
+                        <th style={{ padding: "12px 16px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>Vendor</th>
+                        <th style={{ padding: "12px 16px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>Date</th>
+                        <th style={{ padding: "12px 16px", textAlign: "right", color: "#64748b", fontWeight: 600 }}>Amount</th>
+                        <th style={{ padding: "12px 16px", textAlign: "right", color: "#64748b", fontWeight: 600 }}>Pages</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {documents.map((doc) => {
+                        const isSelected = selectedDocumentIds.includes(doc.documentId);
+                        return (
+                          <tr
+                            key={doc.documentId}
+                            onClick={() => toggleSelection(doc.documentId)}
+                            onDoubleClick={() => openDocument(doc)}
+                            style={{
+                              background: isSelected ? "#e0f2fe" : "transparent",
+                              borderBottom: "1px solid #e2e8f0",
+                              cursor: "pointer",
+                              transition: "background 0.2s"
+                            }}
+                            onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#f8fafc"; }}
+                            onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                          >
+                            <td style={{ padding: "12px 16px", fontWeight: 500, color: "#1e293b" }}>{doc.documentName}</td>
+                            <td style={{ padding: "12px 16px", color: "#475569" }}>{doc.vendorName || "-"}</td>
+                            <td style={{ padding: "12px 16px", color: "#475569" }}>{doc.documentDate ? new Date(doc.documentDate).toLocaleDateString() : "-"}</td>
+                            <td style={{ padding: "12px 16px", textAlign: "right", color: "#166534", fontWeight: 600 }}>{doc.amount ? doc.amount.toFixed(2) : "-"}</td>
+                            <td style={{ padding: "12px 16px", textAlign: "right", color: "#475569" }}>{doc.numberOfPages}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -909,6 +1074,43 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
             sx={{ borderRadius: "6px", fontWeight: 600 }}
           >
             {uploading ? "Uploading..." : "Upload Document"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Rename Modal */}
+      <Dialog open={isRenameModalOpen} onClose={() => setIsRenameModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: "1.1rem" }}>
+            Rename {renameTargetType === "document" ? "Document" : "Folder"}
+          </Typography>
+          <IconButton onClick={() => setIsRenameModalOpen(false)} size="small"><X size={20} /></IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <form id="rename-form" onSubmit={handleRenameSubmit}>
+            <div>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 0.5, display: "block" }}>New Name</Typography>
+              <input
+                type="text"
+                autoFocus
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}
+              />
+            </div>
+          </form>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, px: 3 }}>
+          <Button onClick={() => setIsRenameModalOpen(false)} sx={{ color: "#64748b" }}>Cancel</Button>
+          <Button
+            type="submit"
+            form="rename-form"
+            variant="contained"
+            disableElevation
+            disabled={!renameValue.trim()}
+            sx={{ borderRadius: "6px", fontWeight: 600 }}
+          >
+            Rename
           </Button>
         </DialogActions>
       </Dialog>
