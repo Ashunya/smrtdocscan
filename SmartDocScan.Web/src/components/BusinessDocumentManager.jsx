@@ -70,7 +70,6 @@ function BusinessDocumentThumbnail({ document }) {
   }
 
   return (
-  return (
     <div style={{ ...thumbStyle, background: "#f8fafc" }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", color: "#94a3b8" }}>
         <FileText size={48} strokeWidth={1.5} />
