@@ -1,4 +1,4 @@
-import { Folder, Upload, Download, Trash2, Eye, FolderPlus, DollarSign, Calendar, Building, FileText, Plus, X, FolderOpen } from "lucide-react";
+import { Folder, Upload, Download, Trash2, Eye, FolderPlus, DollarSign, Calendar, Building, FileText, Plus, X, FolderOpen, Scan, Printer, Mail, Edit3, ZoomIn, ZoomOut, RotateCw, RefreshCw, LayoutGrid, List as ListIcon, AlignJustify, Maximize, FilePenLine } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Tooltip, Box, Typography, LinearProgress, CircularProgress } from "@mui/material";
 import {
@@ -70,10 +70,125 @@ function BusinessDocumentThumbnail({ document }) {
   }
 
   return (
+  return (
     <div style={{ ...thumbStyle, background: "#f8fafc" }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", color: "#94a3b8" }}>
         <FileText size={48} strokeWidth={1.5} />
         <span style={{ fontSize: "0.85em", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>{extension || "DOCUMENT"}</span>
+      </div>
+    </div>
+  );
+}
+
+function RibbonMenu({ activeTab, setActiveTab, onAction, disabledActions }) {
+  const tabs = ["Home", "View", "Document", "Tools"];
+
+  const ActionButton = ({ icon: Icon, label, action, disabled }) => (
+    <div
+      onClick={() => !disabled && onAction(action)}
+      style={{
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        padding: "6px 8px", cursor: disabled ? "default" : "pointer", borderRadius: "4px",
+        minWidth: "60px", opacity: disabled ? 0.4 : 1,
+        color: "#334155"
+      }}
+      onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = "#f1f5f9"; }}
+      onMouseLeave={(e) => { if (!disabled) e.currentTarget.style.background = "transparent"; }}
+    >
+      <Icon size={24} strokeWidth={1.5} style={{ marginBottom: "4px", color: "#475569" }} />
+      <span style={{ fontSize: "11px", whiteSpace: "nowrap" }}>{label}</span>
+    </div>
+  );
+
+  return (
+    <div style={{ background: "#ffffff", borderBottom: "1px solid #e2e8f0", display: "flex", flexDirection: "column", width: "100%" }}>
+      {/* Tabs */}
+      <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", padding: "0 8px" }}>
+        {tabs.map(t => (
+          <div
+            key={t}
+            onClick={() => setActiveTab(t)}
+            style={{
+              padding: "6px 16px", fontSize: "13px", cursor: "pointer",
+              color: activeTab === t ? "#2563eb" : "#64748b",
+              borderBottom: activeTab === t ? "2px solid #2563eb" : "2px solid transparent",
+              fontWeight: activeTab === t ? "500" : "400",
+              marginBottom: "-1px"
+            }}
+          >
+            {t}
+          </div>
+        ))}
+      </div>
+      
+      {/* Content */}
+      <div style={{ display: "flex", padding: "6px 8px", height: "80px", overflowX: "auto" }}>
+        {activeTab === "Home" && (
+          <>
+            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", borderRight: "1px solid #e2e8f0", position: "relative", height: "100%" }}>
+              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
+                <ActionButton icon={Scan} label="Scan" action="scan" />
+                <ActionButton icon={Upload} label="Upload" action="upload" />
+              </div>
+              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Acquire</span>
+            </div>
+            
+            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", borderRight: "1px solid #e2e8f0", position: "relative", height: "100%" }}>
+              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
+                <ActionButton icon={Download} label="Download" action="download" disabled={disabledActions.requiresSelection} />
+                <ActionButton icon={Printer} label="Print" action="print" disabled={disabledActions.requiresSelection} />
+                <ActionButton icon={Mail} label="Email" action="email" disabled={disabledActions.requiresSelection} />
+                <ActionButton icon={Trash2} label="Delete" action="delete" disabled={disabledActions.requiresSelection} />
+              </div>
+              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Actions</span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", borderRight: "1px solid #e2e8f0", position: "relative", height: "100%" }}>
+              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
+                <ActionButton icon={FolderPlus} label="New Folder" action="newFolder" />
+                <ActionButton icon={Edit3} label="Rename" action="rename" disabled={disabledActions.requiresSelection} />
+              </div>
+              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Organize</span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", position: "relative", height: "100%" }}>
+              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
+                <ActionButton icon={LayoutGrid} label="Grid" action="viewGrid" />
+                <ActionButton icon={ListIcon} label="List" action="viewList" />
+                <ActionButton icon={AlignJustify} label="Details" action="viewDetails" />
+              </div>
+              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>View</span>
+            </div>
+          </>
+        )}
+        
+        {activeTab === "View" && (
+          <>
+            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", borderRight: "1px solid #e2e8f0", position: "relative", height: "100%" }}>
+              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
+                <ActionButton icon={Eye} label="Open" action="open" disabled={disabledActions.requiresSelection} />
+                <ActionButton icon={FilePenLine} label="Edit" action="edit" disabled={disabledActions.requiresSelection} />
+              </div>
+              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Document</span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", borderRight: "1px solid #e2e8f0", position: "relative", height: "100%" }}>
+              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
+                <ActionButton icon={ZoomIn} label="Zoom In" action="zoomIn" disabled={disabledActions.requiresSelection} />
+                <ActionButton icon={ZoomOut} label="Zoom Out" action="zoomOut" disabled={disabledActions.requiresSelection} />
+                <ActionButton icon={RotateCw} label="Rotate" action="rotate" disabled={disabledActions.requiresSelection} />
+              </div>
+              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Zoom</span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", position: "relative", height: "100%" }}>
+              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
+                <ActionButton icon={RefreshCw} label="Refresh" action="refresh" />
+              </div>
+              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Navigation</span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -85,6 +200,8 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
   const [selectedLocationId, setSelectedLocationId] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [documents, setDocuments] = useState([]);
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState([]);
+  const [activeRibbonTab, setActiveRibbonTab] = useState("Home");
 
   // Form states for file upload
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -176,10 +293,12 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
   useEffect(() => {
     if (!selectedLocationId || !selectedCategoryId) {
       setDocuments([]);
+      setSelectedDocumentIds([]);
       return;
     }
     let ignore = false;
     setLoading(true);
+    setSelectedDocumentIds([]);
     listBusinessDocuments({
       companyId,
       locationId: Number(selectedLocationId),
@@ -303,11 +422,70 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
     onNotice(null);
     try {
       await deleteBusinessDocument(doc.documentId);
-      setDocuments((current) => current.filter((item) => item.documentId !== doc.documentId));
-      onNotice({ type: "success", text: "Document deleted." });
+      setDocuments((current) => current.filter((d) => d.documentId !== doc.documentId));
+      setSelectedDocumentIds((current) => current.filter(id => id !== doc.documentId));
+      onNotice({ type: "success", text: "Document deleted successfully." });
     } catch (error) {
       onNotice({ type: "error", text: error.message });
     }
+  }
+
+  function handleRibbonAction(action) {
+    switch (action) {
+      case "upload":
+        setIsUploadModalOpen(true);
+        break;
+      case "newFolder":
+        setShowAddCategory(true);
+        break;
+      case "refresh":
+        if (selectedLocationId && selectedCategoryId) {
+          setLoading(true);
+          setSelectedDocumentIds([]);
+          listBusinessDocuments({
+            companyId,
+            locationId: Number(selectedLocationId),
+            categoryId: Number(selectedCategoryId),
+          })
+            .then(setDocuments)
+            .catch((error) => onNotice({ type: "error", text: error.message }))
+            .finally(() => setLoading(false));
+        }
+        break;
+      case "delete":
+        if (selectedDocumentIds.length > 0) {
+          const docToDelete = documents.find(d => d.documentId === selectedDocumentIds[0]);
+          if (docToDelete) handleDelete(docToDelete);
+        }
+        break;
+      case "open":
+        if (selectedDocumentIds.length > 0) {
+          const docToOpen = documents.find(d => d.documentId === selectedDocumentIds[0]);
+          if (docToOpen) {
+             const url = getBusinessDocumentPreviewUrl(docToOpen);
+             window.open(url, "_blank");
+          }
+        }
+        break;
+      case "download":
+        if (selectedDocumentIds.length > 0) {
+          const docToDownload = documents.find(d => d.documentId === selectedDocumentIds[0]);
+          if (docToDownload) {
+             const url = getBusinessDocumentDownloadUrl(docToDownload.documentId);
+             window.open(url, "_blank");
+          }
+        }
+        break;
+      default:
+        console.log("Unimplemented action:", action);
+        break;
+    }
+  }
+
+  function toggleSelection(docId) {
+    setSelectedDocumentIds(current => 
+      current.includes(docId) ? current.filter(id => id !== docId) : [docId] // For now, single select logic for simplicity
+    );
   }
 
   function openDocument(doc) {
@@ -441,21 +619,19 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
       {/* Main Panel: Modern Desktop Workspace */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
         
-        {/* Top Toolbar */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px", background: "#ffffff", borderBottom: "1px solid #e2e8f0", zIndex: 10 }}>
-          <Typography variant="h6" sx={{ fontSize: "1.1rem", fontWeight: 600, color: "#1e293b", display: "flex", alignItems: "center", gap: "10px" }}>
-            {categories.find(c => String(c.categoryId) === selectedCategoryId)?.categoryName || "Workspace"}
+        {/* Ribbon Toolbar */}
+        <RibbonMenu
+          activeTab={activeRibbonTab}
+          setActiveTab={setActiveRibbonTab}
+          onAction={handleRibbonAction}
+          disabledActions={{ requiresSelection: selectedDocumentIds.length === 0 }}
+        />
+
+        {/* Current Folder Path / Workspace Label */}
+        <div style={{ display: "flex", alignItems: "center", padding: "8px 24px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: "#475569" }}>
+            Workspace &gt; {categories.find(c => String(c.categoryId) === selectedCategoryId)?.categoryName || "Root"}
           </Typography>
-          
-          <Button
-            variant="contained"
-            disableElevation
-            startIcon={<Upload size={18} />}
-            onClick={() => setIsUploadModalOpen(true)}
-            sx={{ borderRadius: "6px", textTransform: "none", fontWeight: 600 }}
-          >
-            Upload Document
-          </Button>
         </div>
 
         {/* Desktop Area */}
@@ -481,7 +657,7 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
             >
               {documents.map((doc) => {
                 const hasMultiplePages = doc.numberOfPages > 1;
-                // Modern paper stack effect
+                const isSelected = selectedDocumentIds.includes(doc.documentId);
                 const stackShadow = hasMultiplePages
                   ? "0 1px 1px rgba(0,0,0,0.05), 0 4px 0 -1px #fff, 0 4px 1px -1px rgba(0,0,0,0.1), 0 8px 0 -2px #fff, 0 8px 1px -2px rgba(0,0,0,0.1), 0 12px 24px rgba(0,0,0,0.08)"
                   : "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)";
@@ -495,29 +671,35 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
                       e.dataTransfer.effectAllowed = "move";
                     }}
                     style={{
-                      background: "#ffffff",
+                      background: isSelected ? "#e0f2fe" : "#ffffff",
                       borderRadius: "4px",
                       display: "flex",
                       flexDirection: "column",
                       transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                      boxShadow: stackShadow,
+                      boxShadow: isSelected ? "0 0 0 2px #3b82f6, " + stackShadow : stackShadow,
                       position: "relative",
-                      border: "1px solid #e2e8f0",
+                      border: "1px solid",
+                      borderColor: isSelected ? "#3b82f6" : "#e2e8f0",
                       cursor: "grab",
                       overflow: "hidden"
                     }}
-                    onClick={() => openDocument(doc)}
+                    onClick={() => toggleSelection(doc.documentId)}
+                    onDoubleClick={() => openDocument(doc)}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "translateY(-4px)";
-                      e.currentTarget.style.boxShadow = hasMultiplePages
-                        ? "0 1px 1px rgba(0,0,0,0.05), 0 4px 0 -1px #fff, 0 4px 1px -1px rgba(0,0,0,0.1), 0 8px 0 -2px #fff, 0 8px 1px -2px rgba(0,0,0,0.1), 0 20px 30px rgba(193, 105, 42, 0.15)"
-                        : "0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.05), 0 0 0 1px rgba(193, 105, 42, 0.2)";
-                      e.currentTarget.style.borderColor = "transparent";
+                      if (!isSelected) {
+                        e.currentTarget.style.transform = "translateY(-4px)";
+                        e.currentTarget.style.boxShadow = hasMultiplePages
+                          ? "0 1px 1px rgba(0,0,0,0.05), 0 4px 0 -1px #fff, 0 4px 1px -1px rgba(0,0,0,0.1), 0 8px 0 -2px #fff, 0 8px 1px -2px rgba(0,0,0,0.1), 0 20px 30px rgba(193, 105, 42, 0.15)"
+                          : "0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.05), 0 0 0 1px rgba(193, 105, 42, 0.2)";
+                        e.currentTarget.style.borderColor = "transparent";
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "none";
-                      e.currentTarget.style.boxShadow = stackShadow;
-                      e.currentTarget.style.borderColor = "#e2e8f0";
+                      if (!isSelected) {
+                        e.currentTarget.style.transform = "none";
+                        e.currentTarget.style.boxShadow = stackShadow;
+                        e.currentTarget.style.borderColor = "#e2e8f0";
+                      }
                     }}
                   >
                     {/* Thumbnail frame */}
