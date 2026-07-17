@@ -1082,6 +1082,46 @@ app.MapPut("/api/business-documents/{documentId:int}/rename", async (int documen
     return Results.NoContent();
 }).RequireAuthorization();
 
+app.MapPost("/api/business-documents/{documentId:int}/email", async (int documentId, [Microsoft.AspNetCore.Mvc.FromBody] DocumentEmailRequest request, ClaimsPrincipal principal, BusinessDocumentRepository repository, AuditRepository auditRepository, IEmailSender emailSender, HttpContext httpContext, CancellationToken cancellationToken) =>
+{
+    var document = await repository.GetAsync(documentId, cancellationToken);
+    if (document is null)
+    {
+        return Results.NotFound(new { message = "Document not found." });
+    }
+
+    if (!CanAccessCompany(principal, document.CompanyId))
+    {
+        await AuditForbiddenAsync(auditRepository, "business_document.email", principal, document.CompanyId, "business_document", documentId.ToString(), httpContext);
+        return Results.Forbid();
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Email))
+    {
+        return Results.BadRequest(new { message = "Email is required." });
+    }
+
+    if (!IsValidEmailAddress(request.Email))
+    {
+        return Results.BadRequest(new { message = "Valid email is required." });
+    }
+
+    var tenantId = principal.FindFirst("tid")?.Value;
+    
+    var requestUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{httpContext.Request.PathBase}/api/business-documents/{documentId}/preview";
+    
+    try
+    {
+        await emailSender.SendDocumentEmailAsync(request.Email, document, requestUrl, tenantId, cancellationToken);
+        await AuditAsync(auditRepository, "business_document.email", GetActor(principal), document.CompanyId, "business_document", documentId.ToString(), "success", httpContext);
+        return Results.NoContent();
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { message = ex.Message });
+    }
+}).RequireAuthorization();
+
 app.MapPut("/api/categories/{categoryId:int}/rename", async (int categoryId, [Microsoft.AspNetCore.Mvc.FromBody] RenameRequest request, ClaimsPrincipal principal, CategoryRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     var category = await repository.GetAsync(categoryId, cancellationToken);
@@ -2348,3 +2388,4 @@ static IResult PreviewBusinessTiffAsHtml(BusinessDocumentDto document, string di
     return Results.Text(builder.ToString(), "text/html", Encoding.UTF8);
 }
 public record RenameRequest(string Name);
+public record DocumentEmailRequest(string Email);

@@ -15,6 +15,7 @@ import {
   analyzeBusinessDocument,
   renameBusinessDocument,
   renameCategory,
+  emailBusinessDocument,
 } from "../api/client";
 
 function getExtension(value) {
@@ -154,9 +155,9 @@ function RibbonMenu({ activeTab, setActiveTab, onAction, disabledActions }) {
 
             <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", position: "relative", height: "100%" }}>
               <div style={{ display: "flex", gap: "2px", height: "54px" }}>
-                <ActionButton icon={LayoutGrid} label="Grid" action="viewGrid" />
-                <ActionButton icon={ListIcon} label="List" action="viewList" />
-                <ActionButton icon={AlignJustify} label="Details" action="viewDetails" />
+                <ActionButton icon={LayoutGrid} label="Grid" action="grid" />
+                <ActionButton icon={ListIcon} label="List" action="list" />
+                <ActionButton icon={AlignJustify} label="Details" action="details" />
               </div>
               <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>View</span>
             </div>
@@ -208,10 +209,14 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
   // Rename states
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [renameTargetId, setRenameTargetId] = useState(null);
-  const [renameTargetType, setRenameTargetType] = useState(""); // 'document' or 'category'
+  const [renameTargetType, setRenameTargetType] = useState("document");
   const [renameValue, setRenameValue] = useState("");
+  
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailAddress, setEmailAddress] = useState("");
+  const [isEmailing, setIsEmailing] = useState(false);
 
-  // Form states for file upload
+  const [expandedCategories, setExpandedCategories] = useState({});
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [file, setFile] = useState(null);
   const [documentName, setDocumentName] = useState("");
@@ -437,6 +442,24 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
       onNotice({ type: "error", text: error.message });
     }
   }
+  async function handleSendEmail(e) {
+    e.preventDefault();
+    if (!emailAddress.trim() || selectedDocumentIds.length === 0) return;
+    try {
+      setIsEmailing(true);
+      const docId = selectedDocumentIds[0];
+      await emailBusinessDocument(docId, emailAddress.trim());
+      setIsEmailModalOpen(false);
+      setEmailAddress("");
+      alert("Email sent successfully!");
+    } catch (err) {
+      console.error("Failed to send email", err);
+      alert("Failed to send email: " + (err.message || "Unknown error"));
+    } finally {
+      setIsEmailing(false);
+    }
+  }
+
 
   async function handleRenameSubmit(e) {
     e.preventDefault();
@@ -518,10 +541,8 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
         if (selectedDocumentIds.length > 0) {
           const docToEmail = documents.find(d => d.documentId === selectedDocumentIds[0]);
           if (docToEmail) {
-             const url = getBusinessDocumentPreviewUrl(docToEmail);
-             const subject = encodeURIComponent(`Document: ${docToEmail.documentName || "File"}`);
-             const body = encodeURIComponent(`Please review the following document:\n\n${url}`);
-             window.location.href = `mailto:?subject=${subject}&body=${body}`;
+             setEmailAddress("");
+             setIsEmailModalOpen(true);
           }
         }
         break;
@@ -1111,6 +1132,53 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
             sx={{ borderRadius: "6px", fontWeight: 600 }}
           >
             Rename
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Email Modal */}
+      <Dialog open={isEmailModalOpen} onClose={() => !isEmailing && setIsEmailModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ m: 0, p: 2, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e2e8f0" }}>
+          <Typography variant="h6" sx={{ fontSize: "16px", fontWeight: 600 }}>Send Email</Typography>
+          <IconButton onClick={() => setIsEmailModalOpen(false)} size="small" disabled={isEmailing}><X size={20} /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          <form id="email-form" onSubmit={handleSendEmail}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label htmlFor="emailAddress" style={{ fontSize: "14px", fontWeight: 500, color: "#334155" }}>
+                Recipient Email Address
+              </label>
+              <input
+                id="emailAddress"
+                type="email"
+                required
+                value={emailAddress}
+                onChange={(e) => setEmailAddress(e.target.value)}
+                placeholder="user@example.com"
+                disabled={isEmailing}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid #cbd5e1",
+                  fontSize: "14px",
+                  outline: "none",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                }}
+              />
+            </div>
+          </form>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, px: 3 }}>
+          <Button onClick={() => setIsEmailModalOpen(false)} sx={{ color: "#64748b" }} disabled={isEmailing}>Cancel</Button>
+          <Button
+            type="submit"
+            form="email-form"
+            variant="contained"
+            disableElevation
+            disabled={!emailAddress.trim() || isEmailing}
+            sx={{ borderRadius: "6px", fontWeight: 600 }}
+          >
+            {isEmailing ? "Sending..." : "Send"}
           </Button>
         </DialogActions>
       </Dialog>

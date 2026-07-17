@@ -393,3 +393,10 @@ export function renameCategory(categoryId, name) {
     body: JSON.stringify({ name }),
   });
 }
+
+export function emailBusinessDocument(documentId, email) {
+  return request(/business-documents//email, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
