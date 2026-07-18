@@ -166,7 +166,10 @@ public sealed class PatientRepository
                 : $" AND (p.pext_id ILIKE @term{i} OR p.first_name ILIKE @term{i} OR p.last_name ILIKE @term{i})";
         }
 
-        return PatientSearchSelectSql + where + " ORDER BY last_document_date DESC NULLS LAST, patient_id DESC LIMIT @take;";
+        var innerWhere = where.Replace("p.", string.Empty, StringComparison.Ordinal);
+        return PatientSearchSelectSql
+            .Replace("{where}", innerWhere, StringComparison.Ordinal)
+            .Replace("{order}", string.IsNullOrWhiteSpace(search) ? "patient_id DESC" : "last_name, first_name, patient_id DESC", StringComparison.Ordinal);
     }
 
     private static List<string> SplitSearch(string? search)
@@ -239,19 +242,27 @@ public sealed class PatientRepository
 
     private const string PatientSearchSelectSql = """
         SELECT p.patient_id, p.comp_id, p.pext_id, p.first_name, p.last_name, p.dob, p.gender, p.physician, p.box, p.ssn,
-               (
-                   SELECT MAX(d.date)
-                   FROM documents d
-                   WHERE d.comp_id = p.comp_id
-                     AND COALESCE(d.deleted, false) = false
-                     AND (
-                         d.patient_id = p.patient_id
-                         OR (
-                             p.pext_id IS NOT NULL
-                             AND btrim(p.pext_id) = d.patient_id::text
-                         )
-                     )
-               ) AS last_document_date
-        FROM patient p
+               latest.last_document_date
+        FROM (
+            SELECT patient_id, comp_id, pext_id, first_name, last_name, dob, gender, physician, box, ssn
+            FROM patient
+            {where}
+            ORDER BY {order}
+            LIMIT @take
+        ) p
+        LEFT JOIN LATERAL (
+            SELECT MAX(d.date) AS last_document_date
+            FROM documents d
+            WHERE d.comp_id = p.comp_id
+              AND COALESCE(d.deleted, false) = false
+              AND (
+                  d.patient_id = p.patient_id
+                  OR (
+                      p.pext_id IS NOT NULL
+                      AND btrim(p.pext_id) = d.patient_id::text
+                  )
+              )
+        ) latest ON true
+        ORDER BY latest.last_document_date DESC NULLS LAST, p.patient_id DESC;
         """;
 }
