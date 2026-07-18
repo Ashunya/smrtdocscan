@@ -33,7 +33,4 @@ LOAD DATABASE
         ON company_identity_tenant(comp_id, provider, tenant_id); $$,
  $$ CREATE UNIQUE INDEX IF NOT EXISTS ux_user_external_login_provider_subject
         ON user_external_login(provider, tenant_id, subject_id); $$,
- $$ CREATE UNIQUE INDEX IF NOT EXISTS ux_patient_company_external_id
-        ON patient(comp_id, btrim(pext_id))
-        WHERE pext_id IS NOT NULL AND btrim(pext_id) <> ''; $$,
  $$ ALTER TABLE documents ALTER COLUMN deleted SET DEFAULT false; $$;
