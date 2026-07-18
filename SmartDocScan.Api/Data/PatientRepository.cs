@@ -166,7 +166,7 @@ public sealed class PatientRepository
                 : $" AND (p.pext_id ILIKE @term{i} OR p.first_name ILIKE @term{i} OR p.last_name ILIKE @term{i})";
         }
 
-        return PatientSearchSelectSql + where + " ORDER BY last_document_date DESC, patient_id DESC LIMIT @take;";
+        return PatientSearchSelectSql + where + " ORDER BY last_document_date DESC NULLS LAST, patient_id DESC LIMIT @take;";
     }
 
     private static List<string> SplitSearch(string? search)
