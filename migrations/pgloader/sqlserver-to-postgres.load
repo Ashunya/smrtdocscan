@@ -33,6 +33,8 @@ LOAD DATABASE
         ON company_identity_tenant(comp_id, provider, tenant_id); $$,
  $$ CREATE UNIQUE INDEX IF NOT EXISTS ux_user_external_login_provider_subject
         ON user_external_login(provider, tenant_id, subject_id); $$,
+ $$ CREATE INDEX IF NOT EXISTS ix_patient_company_patient
+        ON patient(comp_id, patient_id); $$,
  $$ ALTER TABLE documents
         ALTER COLUMN deleted TYPE boolean USING COALESCE(deleted::text, '0') IN ('1', 'true', 't'),
         ALTER COLUMN deleted SET DEFAULT false; $$,
@@ -57,6 +59,9 @@ LOAD DATABASE
         ALTER COLUMN su TYPE boolean USING COALESCE(su::text, '0') IN ('1', 'true', 't'),
         ALTER COLUMN disabled TYPE boolean USING COALESCE(disabled::text, '0') IN ('1', 'true', 't'),
         ALTER COLUMN isadmin TYPE boolean USING COALESCE(isadmin::text, '0') IN ('1', 'true', 't'); $$,
+ $$ CREATE INDEX IF NOT EXISTS ix_documents_company_patient_date
+        ON documents(comp_id, patient_id, date DESC)
+        WHERE COALESCE(deleted, false) = false; $$,
  $$ CREATE SEQUENCE IF NOT EXISTS audit_log_audit_id_seq OWNED BY audit_log.audit_id; $$,
  $$ SELECT setval('audit_log_audit_id_seq', COALESCE((SELECT MAX(audit_id) FROM audit_log), 0) + 1, false); $$,
  $$ ALTER TABLE audit_log ALTER COLUMN audit_id SET DEFAULT nextval('audit_log_audit_id_seq'); $$,
