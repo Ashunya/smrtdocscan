@@ -59,4 +59,5 @@ LOAD DATABASE
         ALTER COLUMN isadmin TYPE boolean USING COALESCE(isadmin::text, '0') IN ('1', 'true', 't'); $$,
  $$ CREATE SEQUENCE IF NOT EXISTS audit_log_audit_id_seq OWNED BY audit_log.audit_id; $$,
  $$ SELECT setval('audit_log_audit_id_seq', COALESCE((SELECT MAX(audit_id) FROM audit_log), 0) + 1, false); $$,
- $$ ALTER TABLE audit_log ALTER COLUMN audit_id SET DEFAULT nextval('audit_log_audit_id_seq'); $$;
+ $$ ALTER TABLE audit_log ALTER COLUMN audit_id SET DEFAULT nextval('audit_log_audit_id_seq'); $$,
+ $$ ALTER TABLE audit_log ALTER COLUMN created_on SET DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'); $$;
