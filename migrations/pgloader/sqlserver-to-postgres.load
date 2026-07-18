@@ -56,4 +56,4 @@ LOAD DATABASE
         ALTER COLUMN report TYPE boolean USING COALESCE(report::text, '0') IN ('1', 'true', 't'),
         ALTER COLUMN su TYPE boolean USING COALESCE(su::text, '0') IN ('1', 'true', 't'),
         ALTER COLUMN disabled TYPE boolean USING COALESCE(disabled::text, '0') IN ('1', 'true', 't'),
-        ALTER COLUMN "IsAdmin" TYPE boolean USING COALESCE("IsAdmin"::text, '0') IN ('1', 'true', 't'); $$;
+        ALTER COLUMN isadmin TYPE boolean USING COALESCE(isadmin::text, '0') IN ('1', 'true', 't'); $$;

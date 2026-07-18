@@ -247,7 +247,7 @@ public sealed class UserRepository
             Report = ReadByteFlag(reader, "report"),
             SuperUser = ReadByteFlag(reader, "su"),
             Disabled = ReadByteFlag(reader, "disabled"),
-            IsAdmin = ReadBool(reader, "IsAdmin")
+            IsAdmin = ReadBool(reader, "isadmin")
         };
     }
 
@@ -454,14 +454,14 @@ public sealed class UserRepository
     private const string UserSelectSql = """
         SELECT username, name, comp_id, upload_doc, scan_doc, delete_doc, delete_manage,
                print_doc, download_doc, add_cat, add_users, add_patients, box, report,
-               su, disabled, IsAdmin
+               su, disabled, isadmin
         FROM usersinfo
         """;
 
     private const string UserSelectSqlWithPassword = """
         SELECT username, name, password, comp_id, upload_doc, scan_doc, delete_doc, delete_manage,
                print_doc, download_doc, add_cat, add_users, add_patients, box, report,
-               su, disabled, IsAdmin
+               su, disabled, isadmin
         FROM usersinfo
         """;
 
@@ -475,7 +475,7 @@ public sealed class UserRepository
     private const string InsertSql = """
         INSERT INTO usersinfo (username, name, password, comp_id, upload_doc, scan_doc, delete_doc,
                                delete_manage, print_doc, download_doc, add_cat, add_users,
-                               add_patients, box, report, su, disabled, IsAdmin)
+                               add_patients, box, report, su, disabled, isadmin)
         VALUES (@username, @name, @password, @companyId, @uploadDoc, @scanDoc, @deleteDoc,
                 @deleteManage, @printDoc, @downloadDoc, @addCat, @addUsers,
                 @addPatients, @box, @report, @su, @disabled, @isAdmin);
@@ -499,7 +499,7 @@ public sealed class UserRepository
             report = @report,
             su = @su,
             disabled = @disabled,
-            IsAdmin = @isAdmin
+            isadmin = @isAdmin
         WHERE username = @username;
         """;
 
@@ -520,7 +520,7 @@ public sealed class UserRepository
             report = @report,
             su = @su,
             disabled = @disabled,
-            IsAdmin = @isAdmin
+            isadmin = @isAdmin
         WHERE username = @username;
         """;
 }
