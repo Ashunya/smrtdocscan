@@ -35,8 +35,7 @@ public sealed class DocumentRepository
                                     d.patient_id = p.patient_id
                                     OR (
                                         p.pext_id IS NOT NULL
-                                        AND btrim(p.pext_id) ~ '^[0-9]+$'
-                                        AND d.patient_id = btrim(p.pext_id)::integer
+                                        AND btrim(p.pext_id) = d.patient_id::text
                                     )
                                 )
             LEFT JOIN category c ON d.cat_id = c.cat_id

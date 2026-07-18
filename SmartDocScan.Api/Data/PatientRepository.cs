@@ -248,8 +248,7 @@ public sealed class PatientRepository
                          d.patient_id = p.patient_id
                          OR (
                              p.pext_id IS NOT NULL
-                             AND btrim(p.pext_id) ~ '^[0-9]+$'
-                             AND d.patient_id = btrim(p.pext_id)::integer
+                             AND btrim(p.pext_id) = d.patient_id::text
                          )
                      )
                ) AS last_document_date
