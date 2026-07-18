@@ -1689,14 +1689,19 @@ tbody tr:nth-child(odd) {
 }
 
 .brand {
-  min-height: 80px !important;
-  padding: 0 18px !important;
+  min-height: 90px !important;
+  padding: 12px 16px !important;
+  justify-content: center;
+  overflow: visible;
 }
 
 .brand-logo {
-  width: 232px;
+  width: 220px;
   max-width: 100%;
+  max-height: 64px;
+  display: block;
   object-fit: contain;
+  object-position: center;
   transition: width 0.25s ease;
 }
 
@@ -2143,13 +2148,14 @@ tbody tr:nth-child(odd) {
   }
 
   .sidebar.sidebar--temporary .brand {
-    min-height: 72px !important;
+    min-height: 90px !important;
     justify-content: flex-start;
-    padding: 0 18px !important;
+    padding: 12px 18px !important;
   }
 
   .sidebar.sidebar--temporary .brand-logo {
     width: 220px;
+    max-height: 64px;
     max-width: calc(82vw - 36px);
   }
 
