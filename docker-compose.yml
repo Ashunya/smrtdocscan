@@ -11,7 +11,7 @@ services:
       Cors__AllowedOrigins__0: https://scan.ashunya.com
       Store__RootPath: /data/store
     volumes:
-      - D:/DMS/store:/data/store
+      - ${SMARTDOCSCAN_STORE_PATH:-/mnt/smartdocscan/store}:/data/store
       - ./DataProtection-Keys:/root/.aspnet/DataProtection-Keys
     restart: unless-stopped
 
