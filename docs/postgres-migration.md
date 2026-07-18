@@ -24,14 +24,14 @@ SMARTDOCSCAN_CONNECTION_STRING=Host=postgres;Port=5432;Database=smartdocscan;Use
 ## 2. Start PostgreSQL
 
 ```bash
-sudo docker compose --profile postgres up -d postgres
+sudo docker compose up -d postgres
 sudo docker compose ps postgres
 ```
 
 ## 3. Run Test Migration
 
 ```bash
-sudo docker compose -f docker-compose.yml -f docker-compose.pgloader.yml --profile postgres --profile migrate run --rm pgloader
+sudo docker compose -f docker-compose.yml -f docker-compose.pgloader.yml --profile migrate run --rm pgloader
 ```
 
 ## 4. Verify Counts
@@ -52,4 +52,8 @@ union all select 'audit_log', count(*) from audit_log;
 
 ## 5. Cutover
 
-Do not cut over production until the API has been ported to PostgreSQL and tested against this migrated database.
+After migration is verified, start the beta app on PostgreSQL:
+
+```bash
+sudo docker compose up -d --build
+```
