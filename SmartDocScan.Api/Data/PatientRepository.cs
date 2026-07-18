@@ -248,7 +248,14 @@ public sealed class PatientRepository
               AND COALESCE(d.deleted, false) = false
             GROUP BY d.patient_id, d.comp_id
         ) latest
-          ON latest.patient_id = p.patient_id
-         AND latest.comp_id = p.comp_id
+          ON latest.comp_id = p.comp_id
+         AND (
+             latest.patient_id = p.patient_id
+             OR (
+                 p.pext_id IS NOT NULL
+                 AND btrim(p.pext_id) ~ '^[0-9]+$'
+                 AND latest.patient_id = btrim(p.pext_id)::integer
+             )
+         )
         """;
 }

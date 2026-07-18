@@ -29,9 +29,18 @@ public sealed class DocumentRepository
             SELECT d.doc_id, d.comp_id, d.patient_id, d.cat_id, c.cat_name, d.doc_name, d.url,
                    d.num_pages, d.date, d.date_of_service, d.uploaded_by
             FROM documents d
+            INNER JOIN patient p ON p.comp_id = d.comp_id
+                                AND p.patient_id = @patientId
+                                AND (
+                                    d.patient_id = p.patient_id
+                                    OR (
+                                        p.pext_id IS NOT NULL
+                                        AND btrim(p.pext_id) ~ '^[0-9]+$'
+                                        AND d.patient_id = btrim(p.pext_id)::integer
+                                    )
+                                )
             LEFT JOIN category c ON d.cat_id = c.cat_id
             WHERE d.comp_id = @companyId
-              AND d.patient_id = @patientId
               AND COALESCE(d.deleted, false) = false
             ORDER BY d.date DESC, d.doc_id DESC;
             """;
