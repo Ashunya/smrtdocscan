@@ -239,23 +239,20 @@ public sealed class PatientRepository
 
     private const string PatientSearchSelectSql = """
         SELECT p.patient_id, p.comp_id, p.pext_id, p.first_name, p.last_name, p.dob, p.gender, p.physician, p.box, p.ssn,
-               latest.last_document_date
+               (
+                   SELECT MAX(d.date)
+                   FROM documents d
+                   WHERE d.comp_id = p.comp_id
+                     AND COALESCE(d.deleted, false) = false
+                     AND (
+                         d.patient_id = p.patient_id
+                         OR (
+                             p.pext_id IS NOT NULL
+                             AND btrim(p.pext_id) ~ '^[0-9]+$'
+                             AND d.patient_id = btrim(p.pext_id)::integer
+                         )
+                     )
+               ) AS last_document_date
         FROM patient p
-        LEFT JOIN (
-            SELECT d.patient_id, d.comp_id, MAX(d.date) AS last_document_date
-            FROM documents d
-            WHERE d.comp_id = @companyId
-              AND COALESCE(d.deleted, false) = false
-            GROUP BY d.patient_id, d.comp_id
-        ) latest
-          ON latest.comp_id = p.comp_id
-         AND (
-             latest.patient_id = p.patient_id
-             OR (
-                 p.pext_id IS NOT NULL
-                 AND btrim(p.pext_id) ~ '^[0-9]+$'
-                 AND latest.patient_id = btrim(p.pext_id)::integer
-             )
-         )
         """;
 }
