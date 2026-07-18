@@ -43,6 +43,7 @@ services:
       args:
         VITE_API_BASE_URL: https://scanapi.ashunya.com/api
         VITE_DEFAULT_COMPANY_ID: ${SMARTDOCSCAN_DEFAULT_COMPANY_ID:-7}
+        VITE_DYNAMSOFT_PRODUCT_KEY: ${SMARTDOCSCAN_DYNAMSOFT_PRODUCT_KEY:-}
     container_name: smrtdocscan-web
     depends_on:
       - api
