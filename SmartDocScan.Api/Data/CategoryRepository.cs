@@ -1,4 +1,4 @@
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using SmartDocScan.Api.Models;
 
 namespace SmartDocScan.Api.Data;
@@ -16,7 +16,7 @@ public sealed class CategoryRepository
     public async Task<IReadOnlyList<CategoryDto>> GetByCompanyAsync(int companyId, CancellationToken cancellationToken = default)
     {
         var categories = new List<CategoryDto>();
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -50,14 +50,14 @@ public sealed class CategoryRepository
             throw new InvalidOperationException("Category name is required.");
         }
 
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO category (cat_name, comp_id, access)
-            OUTPUT INSERTED.cat_id
-            VALUES (@categoryName, @companyId, @access);
+            VALUES (@categoryName, @companyId, @access)
+            RETURNING cat_id;
             """;
         command.Parameters.AddWithValue("@categoryName", request.CategoryName.Trim());
         command.Parameters.AddWithValue("@companyId", request.CompanyId);
@@ -75,7 +75,7 @@ public sealed class CategoryRepository
 
     public async Task<bool> DeleteAsync(int categoryId, int companyId, CancellationToken cancellationToken = default)
     {
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -87,7 +87,7 @@ public sealed class CategoryRepository
 
     public async Task<CategoryDto?> GetAsync(int categoryId, CancellationToken cancellationToken = default)
     {
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -110,7 +110,7 @@ public sealed class CategoryRepository
             : null;
     }
 
-    private static string? ReadString(SqlDataReader reader, string name)
+    private static string? ReadString(NpgsqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);

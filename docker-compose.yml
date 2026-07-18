@@ -1,4 +1,24 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: smrtdocscan-postgres
+    profiles:
+      - postgres
+    environment:
+      POSTGRES_DB: ${SMARTDOCSCAN_POSTGRES_DB:-smartdocscan}
+      POSTGRES_USER: ${SMARTDOCSCAN_POSTGRES_USER:-smartdocscan}
+      POSTGRES_PASSWORD: ${SMARTDOCSCAN_POSTGRES_PASSWORD}
+    volumes:
+      - ./PostgresData:/var/lib/postgresql/data
+    ports:
+      - "${SMARTDOCSCAN_POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SMARTDOCSCAN_POSTGRES_USER:-smartdocscan} -d ${SMARTDOCSCAN_POSTGRES_DB:-smartdocscan}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   api:
     build:
       context: .

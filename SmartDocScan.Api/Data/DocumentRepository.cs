@@ -1,4 +1,4 @@
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using SmartDocScan.Api.Models;
 
 namespace SmartDocScan.Api.Data;
@@ -21,7 +21,7 @@ public sealed class DocumentRepository
     {
         await EnsureSchemaAsync(cancellationToken);
         var documents = new List<DocumentDto>();
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -32,7 +32,7 @@ public sealed class DocumentRepository
             LEFT JOIN category c ON d.cat_id = c.cat_id
             WHERE d.comp_id = @companyId
               AND d.patient_id = @patientId
-              AND ISNULL(d.deleted, 0) = 0
+              AND COALESCE(d.deleted, false) = false
             ORDER BY d.date DESC, d.doc_id DESC;
             """;
         command.Parameters.AddWithValue("@companyId", companyId);
@@ -51,20 +51,21 @@ public sealed class DocumentRepository
     {
         await EnsureSchemaAsync(cancellationToken);
         var documents = new List<DocumentDto>();
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT TOP (@take) d.doc_id, d.comp_id, d.patient_id, d.cat_id, c.cat_name, d.doc_name, d.url,
+            SELECT d.doc_id, d.comp_id, d.patient_id, d.cat_id, c.cat_name, d.doc_name, d.url,
                    d.num_pages, d.date, d.date_of_service, d.uploaded_by
             FROM documents d
             LEFT JOIN category c ON d.cat_id = c.cat_id
             WHERE d.comp_id = @companyId
-              AND ISNULL(d.deleted, 0) = 0
+              AND COALESCE(d.deleted, false) = false
               AND (@fromDate IS NULL OR d.date >= @fromDate)
-              AND (@toDate IS NULL OR d.date < DATEADD(day, 1, @toDate))
-            ORDER BY d.date DESC, d.doc_id DESC;
+              AND (@toDate IS NULL OR d.date < @toDate + INTERVAL '1 day')
+            ORDER BY d.date DESC, d.doc_id DESC
+            LIMIT @take;
             """;
         command.Parameters.AddWithValue("@companyId", companyId);
         command.Parameters.AddWithValue("@take", Math.Clamp(take, 1, 2000));
@@ -83,14 +84,14 @@ public sealed class DocumentRepository
     public async Task<DocumentDto> CreateAsync(int companyId, int patientId, int categoryId, string fileName, string relativeUrl, int pages, string? uploadedBy, DateTime? dateOfService = null, CancellationToken cancellationToken = default)
     {
         await EnsureSchemaAsync(cancellationToken);
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO documents (comp_id, patient_id, cat_id, doc_name, url, num_pages, date, date_of_service, uploaded_by, deleted)
-            OUTPUT INSERTED.doc_id
-            VALUES (@companyId, @patientId, @categoryId, @documentName, @url, @pages, @date, @dateOfService, @uploadedBy, 0);
+            VALUES (@companyId, @patientId, @categoryId, @documentName, @url, @pages, @date, @dateOfService, @uploadedBy, false)
+            RETURNING doc_id;
             """;
         command.Parameters.AddWithValue("@companyId", companyId);
         command.Parameters.AddWithValue("@patientId", patientId);
@@ -113,13 +114,13 @@ public sealed class DocumentRepository
 
     public async Task<bool> DeleteAsync(int documentId, int companyId, string? deletedBy, CancellationToken cancellationToken = default)
     {
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE documents
-            SET deleted = 1,
+            SET deleted = true,
                 deleted_on = @deletedOn,
                 deleted_by = @deletedBy
             WHERE doc_id = @documentId
@@ -136,7 +137,7 @@ public sealed class DocumentRepository
     private async Task<DocumentDto?> GetAsync(int documentId, CancellationToken cancellationToken)
     {
         await EnsureSchemaAsync(cancellationToken);
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -153,7 +154,7 @@ public sealed class DocumentRepository
         return await reader.ReadAsync(cancellationToken) ? MapDocument(reader) : null;
     }
 
-    private static DocumentDto MapDocument(SqlDataReader reader)
+    private static DocumentDto MapDocument(NpgsqlDataReader reader)
     {
         return new DocumentDto
         {
@@ -192,14 +193,11 @@ public sealed class DocumentRepository
                 return;
             }
 
-            await using var connection = new SqlConnection(_connectionString);
+            await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
             await using var command = connection.CreateCommand();
             command.CommandText = """
-                IF COL_LENGTH('dbo.documents', 'date_of_service') IS NULL
-                BEGIN
-                    ALTER TABLE dbo.documents ADD date_of_service date NULL;
-                END
+                ALTER TABLE documents ADD COLUMN IF NOT EXISTS date_of_service date NULL;
                 """;
             await command.ExecuteNonQueryAsync(cancellationToken);
             _schemaChecked = true;
@@ -210,19 +208,19 @@ public sealed class DocumentRepository
         }
     }
 
-    private static int? ReadNullableInt(SqlDataReader reader, string name)
+    private static int? ReadNullableInt(NpgsqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetInt32(ordinal);
     }
 
-    private static string? ReadString(SqlDataReader reader, string name)
+    private static string? ReadString(NpgsqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
     }
 
-    private static DateTime? ReadNullableDateTime(SqlDataReader reader, string name)
+    private static DateTime? ReadNullableDateTime(NpgsqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetDateTime(ordinal);

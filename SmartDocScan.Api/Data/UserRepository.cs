@@ -1,4 +1,4 @@
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using System.Security.Cryptography;
 using SmartDocScan.Api.Models;
 
@@ -21,7 +21,7 @@ public sealed class UserRepository
     public async Task<IReadOnlyList<UserDto>> GetByCompanyAsync(int companyId, CancellationToken cancellationToken = default)
     {
         var users = new List<UserDto>();
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -44,7 +44,7 @@ public sealed class UserRepository
             return null;
         }
 
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         var normalizedUsername = username.Trim();
@@ -60,7 +60,7 @@ public sealed class UserRepository
         {
             command.CommandText = UserSelectSqlWithPassword + """
              WHERE username = @username
-               AND disabled = 0;
+               AND disabled = false;
             """;
             command.Parameters.AddWithValue("@username", normalizedUsername);
 
@@ -107,7 +107,7 @@ public sealed class UserRepository
             throw new InvalidOperationException("Username and name are required.");
         }
 
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         var exists = await ExistsAsync(connection, request.Username.Trim(), cancellationToken);
@@ -145,7 +145,7 @@ public sealed class UserRepository
 
     public async Task<bool> DeleteAsync(string username, int companyId, CancellationToken cancellationToken = default)
     {
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -167,7 +167,7 @@ public sealed class UserRepository
             return false;
         }
 
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         var storedPassword = await GetStoredPasswordAsync(connection, username.Trim(), cancellationToken);
@@ -179,7 +179,7 @@ public sealed class UserRepository
         return await UpdatePasswordAsync(connection, username.Trim(), HashPassword(newPassword.Trim()), cancellationToken) > 0;
     }
 
-    private static async Task<bool> ExistsAsync(SqlConnection connection, string username, CancellationToken cancellationToken)
+    private static async Task<bool> ExistsAsync(NpgsqlConnection connection, string username, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT COUNT(1) FROM usersinfo WHERE username = @username;";
@@ -189,7 +189,7 @@ public sealed class UserRepository
 
     public async Task<UserDto?> GetByUsernameAsync(string username, CancellationToken cancellationToken)
     {
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -200,7 +200,7 @@ public sealed class UserRepository
         return await reader.ReadAsync(cancellationToken) ? MapUser(reader) : null;
     }
 
-    private static void AddUpsertParameters(SqlCommand command, UserUpsertRequest request, string? passwordHash)
+    private static void AddUpsertParameters(NpgsqlCommand command, UserUpsertRequest request, string? passwordHash)
     {
         command.Parameters.AddWithValue("@username", request.Username!.Trim());
         command.Parameters.AddWithValue("@name", request.Name!.Trim());
@@ -227,7 +227,7 @@ public sealed class UserRepository
 
     private static byte Flag(bool value) => value ? (byte)1 : (byte)0;
 
-    private static UserDto MapUser(SqlDataReader reader)
+    private static UserDto MapUser(NpgsqlDataReader reader)
     {
         return new UserDto
         {
@@ -251,52 +251,52 @@ public sealed class UserRepository
         };
     }
 
-    private static bool ReadByteFlag(SqlDataReader reader, string name)
-    {
-        var ordinal = reader.GetOrdinal(name);
-        return !reader.IsDBNull(ordinal) && reader.GetByte(ordinal) != 0;
-    }
-
-    private static bool ReadBool(SqlDataReader reader, string name)
+    private static bool ReadByteFlag(NpgsqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return !reader.IsDBNull(ordinal) && reader.GetBoolean(ordinal);
     }
 
-    private static string? ReadString(SqlDataReader reader, string name)
+    private static bool ReadBool(NpgsqlDataReader reader, string name)
+    {
+        var ordinal = reader.GetOrdinal(name);
+        return !reader.IsDBNull(ordinal) && reader.GetBoolean(ordinal);
+    }
+
+    private static string? ReadString(NpgsqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
     }
 
-    private static async Task<string?> GetStoredPasswordAsync(SqlConnection connection, string username, CancellationToken cancellationToken)
+    private static async Task<string?> GetStoredPasswordAsync(NpgsqlConnection connection, string username, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT password
             FROM usersinfo
             WHERE username = @username
-              AND disabled = 0;
+              AND disabled = false;
             """;
         command.Parameters.AddWithValue("@username", username);
         return await command.ExecuteScalarAsync(cancellationToken) as string;
     }
 
-    private static async Task<int> UpdatePasswordAsync(SqlConnection connection, string username, string passwordHash, CancellationToken cancellationToken)
+    private static async Task<int> UpdatePasswordAsync(NpgsqlConnection connection, string username, string passwordHash, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE usersinfo
             SET password = @password
             WHERE username = @username
-              AND disabled = 0;
+              AND disabled = false;
             """;
         command.Parameters.AddWithValue("@username", username);
         command.Parameters.AddWithValue("@password", passwordHash);
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task<bool> TryEnsureLoginAttemptTableAsync(SqlConnection connection, bool autoEnsureSchema, CancellationToken cancellationToken)
+    private static async Task<bool> TryEnsureLoginAttemptTableAsync(NpgsqlConnection connection, bool autoEnsureSchema, CancellationToken cancellationToken)
     {
         try
         {
@@ -304,31 +304,28 @@ public sealed class UserRepository
             if (autoEnsureSchema)
             {
                 command.CommandText = """
-                    IF OBJECT_ID('dbo.auth_login_attempt', 'U') IS NULL
-                    BEGIN
-                        CREATE TABLE dbo.auth_login_attempt (
-                            username varchar(50) NOT NULL CONSTRAINT PK_auth_login_attempt PRIMARY KEY,
-                            failed_count int NOT NULL,
-                            first_failed_on datetime2 NOT NULL,
-                            last_failed_on datetime2 NOT NULL,
-                            locked_until datetime2 NULL
-                        );
-                    END;
+                    CREATE TABLE IF NOT EXISTS auth_login_attempt (
+                        username varchar(50) PRIMARY KEY,
+                        failed_count int NOT NULL,
+                        first_failed_on timestamp without time zone NOT NULL,
+                        last_failed_on timestamp without time zone NOT NULL,
+                        locked_until timestamp without time zone NULL
+                    );
                     """;
                 await command.ExecuteNonQueryAsync(cancellationToken);
                 return true;
             }
 
-            command.CommandText = "SELECT CASE WHEN OBJECT_ID('dbo.auth_login_attempt', 'U') IS NULL THEN 0 ELSE 1 END;";
+            command.CommandText = "SELECT CASE WHEN to_regclass('public.auth_login_attempt') IS NULL THEN 0 ELSE 1 END;";
             return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken)) == 1;
         }
-        catch (SqlException)
+        catch (PostgresException)
         {
             return false;
         }
     }
 
-    private static async Task<bool> IsLoginLockedAsync(SqlConnection connection, string username, CancellationToken cancellationToken)
+    private static async Task<bool> IsLoginLockedAsync(NpgsqlConnection connection, string username, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = """
@@ -341,33 +338,29 @@ public sealed class UserRepository
         return lockedUntil is DateTime value && value > DateTime.UtcNow;
     }
 
-    private static async Task RecordFailedLoginAsync(SqlConnection connection, string username, CancellationToken cancellationToken)
+    private static async Task RecordFailedLoginAsync(NpgsqlConnection connection, string username, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            MERGE auth_login_attempt AS target
-            USING (SELECT @username AS username) AS source
-              ON target.username = source.username
-            WHEN MATCHED THEN
-                UPDATE SET
-                    failed_count = CASE
-                        WHEN DATEDIFF(minute, first_failed_on, SYSUTCDATETIME()) >= @windowMinutes THEN 1
-                        ELSE failed_count + 1
-                    END,
-                    first_failed_on = CASE
-                        WHEN DATEDIFF(minute, first_failed_on, SYSUTCDATETIME()) >= @windowMinutes THEN SYSUTCDATETIME()
-                        ELSE first_failed_on
-                    END,
-                    last_failed_on = SYSUTCDATETIME(),
-                    locked_until = CASE
-                        WHEN DATEDIFF(minute, first_failed_on, SYSUTCDATETIME()) < @windowMinutes
-                             AND failed_count + 1 >= @maxFailures
-                        THEN DATEADD(minute, @lockoutMinutes, SYSUTCDATETIME())
-                        ELSE locked_until
-                    END
-            WHEN NOT MATCHED THEN
-                INSERT (username, failed_count, first_failed_on, last_failed_on, locked_until)
-                VALUES (@username, 1, SYSUTCDATETIME(), SYSUTCDATETIME(), NULL);
+            INSERT INTO auth_login_attempt (username, failed_count, first_failed_on, last_failed_on, locked_until)
+            VALUES (@username, 1, (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'), (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'), NULL)
+            ON CONFLICT (username)
+            DO UPDATE SET
+                failed_count = CASE
+                    WHEN EXTRACT(EPOCH FROM ((CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - auth_login_attempt.first_failed_on)) / 60 >= @windowMinutes THEN 1
+                    ELSE auth_login_attempt.failed_count + 1
+                END,
+                first_failed_on = CASE
+                    WHEN EXTRACT(EPOCH FROM ((CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - auth_login_attempt.first_failed_on)) / 60 >= @windowMinutes THEN (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
+                    ELSE auth_login_attempt.first_failed_on
+                END,
+                last_failed_on = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
+                locked_until = CASE
+                    WHEN EXTRACT(EPOCH FROM ((CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - auth_login_attempt.first_failed_on)) / 60 < @windowMinutes
+                         AND auth_login_attempt.failed_count + 1 >= @maxFailures
+                    THEN (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') + (@lockoutMinutes * INTERVAL '1 minute')
+                    ELSE auth_login_attempt.locked_until
+                END;
             """;
         command.Parameters.AddWithValue("@username", username);
         command.Parameters.AddWithValue("@windowMinutes", LoginFailureWindowMinutes);
@@ -376,7 +369,7 @@ public sealed class UserRepository
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task ClearFailedLoginsAsync(SqlConnection connection, string username, CancellationToken cancellationToken)
+    private static async Task ClearFailedLoginsAsync(NpgsqlConnection connection, string username, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = "DELETE FROM auth_login_attempt WHERE username = @username;";
