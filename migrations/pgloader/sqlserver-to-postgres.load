@@ -11,7 +11,7 @@ LOAD DATABASE
  SET maintenance_work_mem to '128MB',
      work_mem to '32MB'
 
- INCLUDING ONLY TABLE NAMES MATCHING
+ INCLUDING ONLY TABLE NAMES LIKE
      'app_setting',
      'audit_log',
      'box',
@@ -24,6 +24,7 @@ LOAD DATABASE
      'users',
      'usersinfo',
      'userinfo'
+     IN SCHEMA 'dbo'
 
  ALTER SCHEMA 'dbo' RENAME TO 'public'
 
