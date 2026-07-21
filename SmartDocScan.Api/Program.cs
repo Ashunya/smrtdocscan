@@ -1167,7 +1167,7 @@ static IResult? ValidateSecuritySettings(SecuritySettingsDto settings)
     var logoDataUrl = settings.Branding?.LogoDataUrl;
     if (!IsValidLogoDataUrl(logoDataUrl))
     {
-        return Results.BadRequest(new { message = "Logo must be a PNG, JPEG, GIF, or WebP data URL under 512 KB." });
+        return Results.BadRequest(new { message = "Logo must be a PNG, JPEG, GIF, or WebP data URL under 2 MB." });
     }
 
     return null;
@@ -1203,13 +1203,15 @@ static bool IsValidEmailAddress(string value)
 
 static bool IsValidLogoDataUrl(string? value)
 {
+    const int maxLogoDataUrlLength = 2 * 1024 * 1024;
+
     if (string.IsNullOrWhiteSpace(value))
     {
         return true;
     }
 
     var logo = value.Trim();
-    if (logo.Length > 512 * 1024)
+    if (logo.Length > maxLogoDataUrlLength)
     {
         return false;
     }

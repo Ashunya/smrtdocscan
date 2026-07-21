@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { getSecuritySettings, saveSecuritySettings } from "../api/client";
 
+const allowedLogoTypes = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+const maxLogoBytes = 2 * 1024 * 1024;
+
 const blankSettings = {
   microsoft: {
     clientId: "",
@@ -82,9 +85,20 @@ export function SettingsManager({ onNotice, onBrandingChange }) {
       return;
     }
 
+    if (!allowedLogoTypes.has(file.type)) {
+      onNotice({ type: "error", text: "Logo must be a PNG, JPEG, GIF, or WebP image." });
+      return;
+    }
+
+    if (file.size > maxLogoBytes) {
+      onNotice({ type: "error", text: "Logo must be under 2 MB." });
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       update("branding", "logoDataUrl", String(reader.result || ""));
+      onNotice(null);
     };
     reader.readAsDataURL(file);
   }
@@ -109,7 +123,7 @@ export function SettingsManager({ onNotice, onBrandingChange }) {
             </div>
             <label>
               App Logo
-              <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" onChange={(event) => handleLogoFile(event.target.files?.[0])} />
+              <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={(event) => handleLogoFile(event.target.files?.[0])} />
             </label>
             <p className="field-help">This logo is used on the sign-in page and main navigation.</p>
           </fieldset>

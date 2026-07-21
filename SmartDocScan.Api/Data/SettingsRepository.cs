@@ -100,20 +100,24 @@ public sealed class SettingsRepository
 
     public async Task SaveSecuritySettingsAsync(SecuritySettingsDto settings, CancellationToken cancellationToken = default)
     {
+        var microsoft = settings.Microsoft ?? new MicrosoftSsoSettingsDto();
+        var smtp = settings.Smtp ?? new SmtpSettingsDto();
+        var branding = settings.Branding ?? new BrandingSettingsDto();
+
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
         await EnsureTableAsync(connection, _autoEnsureSchema, cancellationToken);
 
-        await UpsertAsync(connection, "Authentication:Microsoft:ClientId", settings.Microsoft.ClientId, cancellationToken);
-        await UpsertSecretAsync(connection, "Authentication:Microsoft:ClientSecret", settings.Microsoft.ClientSecret, cancellationToken);
-        await UpsertAsync(connection, "Authentication:Microsoft:CallbackPath", settings.Microsoft.CallbackPath, cancellationToken);
-        await UpsertAsync(connection, "Smtp:Host", settings.Smtp.Host, cancellationToken);
-        await UpsertAsync(connection, "Smtp:Port", settings.Smtp.Port, cancellationToken);
-        await UpsertAsync(connection, "Smtp:EnableSsl", settings.Smtp.EnableSsl, cancellationToken);
-        await UpsertAsync(connection, "Smtp:From", settings.Smtp.From, cancellationToken);
-        await UpsertAsync(connection, "Smtp:Username", settings.Smtp.Username, cancellationToken);
-        await UpsertSecretAsync(connection, "Smtp:Password", settings.Smtp.Password, cancellationToken);
-        await UpsertAsync(connection, "Branding:LogoDataUrl", settings.Branding.LogoDataUrl, cancellationToken);
+        await UpsertAsync(connection, "Authentication:Microsoft:ClientId", microsoft.ClientId, cancellationToken);
+        await UpsertSecretAsync(connection, "Authentication:Microsoft:ClientSecret", microsoft.ClientSecret, cancellationToken);
+        await UpsertAsync(connection, "Authentication:Microsoft:CallbackPath", microsoft.CallbackPath, cancellationToken);
+        await UpsertAsync(connection, "Smtp:Host", smtp.Host, cancellationToken);
+        await UpsertAsync(connection, "Smtp:Port", smtp.Port, cancellationToken);
+        await UpsertAsync(connection, "Smtp:EnableSsl", smtp.EnableSsl, cancellationToken);
+        await UpsertAsync(connection, "Smtp:From", smtp.From, cancellationToken);
+        await UpsertAsync(connection, "Smtp:Username", smtp.Username, cancellationToken);
+        await UpsertSecretAsync(connection, "Smtp:Password", smtp.Password, cancellationToken);
+        await UpsertAsync(connection, "Branding:LogoDataUrl", branding.LogoDataUrl, cancellationToken);
     }
 
     public static void LoadIntoConfiguration(IConfigurationManager configuration)
