@@ -1,0 +1,38 @@
+<ui:FluentWindow x:Class="SmartDocScan.Desktop.Views.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        mc:Ignorable="d"
+        Title="Login - SmartDocScan Desktop" Height="400" Width="350"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        WindowCornerPreference="Round"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Title="SmartDocScan Login" Grid.Row="0" />
+
+        <StackPanel Grid.Row="1" Margin="30" VerticalAlignment="Center" HorizontalAlignment="Stretch">
+            <ui:SymbolIcon Symbol="Person24" FontSize="48" Margin="0,0,0,20" Foreground="#0078D4"/>
+            
+            <TextBlock Text="Welcome Back" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+            <TextBlock Text="Sign in to continue to SmartDocScan" FontSize="12" Foreground="Gray" HorizontalAlignment="Center" Margin="0,0,0,30"/>
+
+            <TextBlock Text="Email Address" Margin="0,0,0,5" FontWeight="Medium"/>
+            <ui:TextBox x:Name="EmailTextBox" PlaceholderText="user@example.com" Margin="0,0,0,15"/>
+
+            <TextBlock Text="Password" Margin="0,0,0,5" FontWeight="Medium"/>
+            <ui:PasswordBox x:Name="PasswordBox" PlaceholderText="Password" Margin="0,0,0,25"/>
+
+            <ui:Button Content="Sign In" Appearance="Primary" HorizontalAlignment="Stretch" Click="OnSignInClicked" />
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>
