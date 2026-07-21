@@ -193,8 +193,8 @@ public sealed class SettingsRepository
     {
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO app_setting (setting_key, setting_value)
-            VALUES (@key, @value)
+            INSERT INTO app_setting (setting_key, setting_value, updated_on)
+            VALUES (@key, @value, CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
             ON CONFLICT (setting_key)
             DO UPDATE SET setting_value = EXCLUDED.setting_value,
                           updated_on = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC');
@@ -247,6 +247,9 @@ public sealed class SettingsRepository
             setting_value text NULL,
             updated_on timestamp without time zone NOT NULL DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
         );
+
+        ALTER TABLE app_setting
+        ALTER COLUMN updated_on SET DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC');
         """;
     private const string ProtectedSecretPrefix = "protected:";
 }
