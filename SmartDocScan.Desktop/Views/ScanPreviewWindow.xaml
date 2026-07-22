@@ -23,26 +23,13 @@
         <Border Grid.Row="1" Background="#F3F3F3" Padding="12,8" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
             <DockPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <ui:Button Content="Rotate Left" Click="OnRotateLeftClicked" Margin="0,0,8,0">
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="ArrowRotateCounterclockwise24"/>
-                        </ui:Button.Icon>
-                    </ui:Button>
-
-                    <ui:Button Content="Rotate Right" Click="OnRotateRightClicked" Margin="0,0,8,0">
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="ArrowRotateClockwise24"/>
-                        </ui:Button.Icon>
-                    </ui:Button>
+                    <ui:Button Content="🔄 Rotate Left" Click="OnRotateLeftClicked" Margin="0,0,8,0" Padding="12,6"/>
+                    <ui:Button Content="🔄 Rotate Right" Click="OnRotateRightClicked" Margin="0,0,8,0" Padding="12,6"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
-                    <ui:Button Content="Discard Scan" IsCancel="True" Click="OnDiscardClicked" Margin="0,0,10,0"/>
-                    <ui:Button Content="Upload to Cloud" Appearance="Primary" IsDefault="True" Click="OnUploadClicked">
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="CloudUpload24"/>
-                        </ui:Button.Icon>
-                    </ui:Button>
+                    <ui:Button Content="Discard Scan" IsCancel="True" Click="OnDiscardClicked" Margin="0,0,10,0" Padding="12,6"/>
+                    <ui:Button Content="☁️ Upload to Cloud" Appearance="Primary" IsDefault="True" Click="OnUploadClicked" Padding="16,6"/>
                 </StackPanel>
             </DockPanel>
         </Border>
