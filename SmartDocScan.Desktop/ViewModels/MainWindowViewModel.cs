@@ -113,42 +113,54 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task ScanDocumentAsync()
     {
         IsScanning = true;
-        StatusMessage = "Initializing scanner...";
+        StatusMessage = "Discovering connected scanners...";
 
         try
         {
             var scanners = await _scannerService.GetAvailableScannersAsync();
-            var scanner = scanners.Count > 0 ? scanners[0] : "Default WIA Scanner";
-
-            var tempPath = Path.Combine(Path.GetTempPath(), $"Scan_{DateTime.Now:yyyyMMdd_HHmmss}.png");
-
-            StatusMessage = "Acquiring scan from scanner...";
-            bool scanned = await _scannerService.ScanDocumentAsync(scanner, tempPath);
-
-            if (scanned && File.Exists(tempPath))
+            var settingsWindow = new ScanSettingsWindow(scanners)
             {
-                StatusMessage = "Uploading scanned document...";
-                int catId = SelectedCategory?.CategoryId ?? 1;
-                bool uploaded = await _apiClient.UploadScannedDocumentAsync(tempPath, catId);
+                Owner = Application.Current.MainWindow
+            };
 
-                if (uploaded)
+            if (settingsWindow.ShowDialog() == true)
+            {
+                var scanner = settingsWindow.SelectedScanner;
+                var tempPath = Path.Combine(Path.GetTempPath(), $"Scan_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+
+                StatusMessage = $"NAPS2 Scanning via '{scanner}'...";
+                bool scanned = await _scannerService.ScanDocumentAsync(scanner, tempPath);
+
+                if (scanned && File.Exists(tempPath))
                 {
-                    StatusMessage = "Document scanned and uploaded successfully!";
-                    await LoadDocumentsAsync(catId);
+                    StatusMessage = "Uploading scanned document to SmartDocScan Cloud...";
+                    int catId = SelectedCategory?.CategoryId ?? 1;
+                    bool uploaded = await _apiClient.UploadScannedDocumentAsync(tempPath, catId);
+
+                    if (uploaded)
+                    {
+                        StatusMessage = "Document scanned and uploaded successfully!";
+                        await LoadDocumentsAsync(catId);
+                    }
+                    else
+                    {
+                        StatusMessage = "Scan completed locally, but cloud upload failed.";
+                    }
                 }
                 else
                 {
-                    StatusMessage = "Scan completed locally, but upload failed.";
+                    StatusMessage = "Scanning cancelled or no image acquired.";
                 }
             }
             else
             {
-                StatusMessage = "Scanning cancelled or no image acquired.";
+                StatusMessage = "Scanning cancelled.";
             }
         }
         catch (Exception ex)
         {
             StatusMessage = $"Scan error: {ex.Message}";
+            MessageBox.Show($"Scan Error:\n\n{ex.Message}", "NAPS2 Scan Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
