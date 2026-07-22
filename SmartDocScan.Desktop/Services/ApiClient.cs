@@ -109,8 +109,10 @@ public class ApiClient
 
     public async Task<List<DocumentModel>> GetDocumentsAsync(int categoryId = 0, int? locationId = null, int? companyId = null)
     {
+        if (categoryId == 0) return new List<DocumentModel>(); // Do not load global documents if no folder selected
+
         int cid = companyId ?? CurrentCompanyId;
-        string url = $"/api/reports/documents?companyId={cid}&take=100";
+        string url = $"/api/business-documents?companyId={cid}&categoryId={categoryId}";
         if (locationId.HasValue && locationId.Value > 0)
         {
             url += $"&locationId={locationId.Value}";
@@ -119,12 +121,7 @@ public class ApiClient
         var response = await _httpClient.GetAsync(GetUri(url));
         if (response.IsSuccessStatusCode)
         {
-            var docs = await response.Content.ReadFromJsonAsync<List<DocumentModel>>() ?? new List<DocumentModel>();
-            if (categoryId > 0)
-            {
-                docs = docs.Where(d => d.CategoryId == categoryId).ToList();
-            }
-            return docs;
+            return await response.Content.ReadFromJsonAsync<List<DocumentModel>>() ?? new List<DocumentModel>();
         }
         return new List<DocumentModel>();
     }

@@ -21,5 +21,6 @@ public partial class DocumentModel : ObservableObject
     [JsonPropertyName("url")]
     public string? Url { get; set; }
 
-    public string ThumbnailUrl => $"/api/documents/{DocumentId}/thumbnail";
+    public string ThumbnailUrl => $"/api/business-documents/{DocumentId}/thumbnail";
+    public string PreviewUrl => $"/api/business-documents/{DocumentId}/preview";
 }

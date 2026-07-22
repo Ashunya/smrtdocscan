@@ -321,22 +321,15 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (SelectedDocument == null) return;
 
-        var url = SelectedDocument.Url;
-        if (!string.IsNullOrWhiteSpace(url))
+        var url = _apiClient.BaseUrl.TrimEnd('/') + SelectedDocument.PreviewUrl;
+        
+        try
         {
-            if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            {
-                url = _apiClient.BaseUrl.TrimEnd('/') + "/" + url.TrimStart('/');
-            }
-
-            try
-            {
-                Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Could not open document: {ex.Message}";
-            }
+            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not open document: {ex.Message}";
         }
     }
 }
