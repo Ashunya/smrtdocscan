@@ -1417,6 +1417,40 @@ app.MapGet("/api/auth/sso-success", (string? redirectUri, HttpContext httpContex
     return Results.Content(html, "text/html");
 }).RequireAuthorization().RequireRateLimiting("auth");
 
+app.MapGet("/api/auth/desktop-callback", (string? redirectUri, HttpContext httpContext) =>
+{
+    var sessionCookie = httpContext.Request.Cookies["smartdocscan.session"];
+
+    string targetUrl = redirectUri ?? "/";
+    if (!string.IsNullOrWhiteSpace(redirectUri) && Uri.TryCreate(redirectUri, UriKind.Absolute, out var uri) && uri.IsLoopback)
+    {
+        var separator = redirectUri.Contains('?') ? "&" : "?";
+        targetUrl = $"{redirectUri}{separator}session={Uri.EscapeDataString(sessionCookie ?? "")}";
+    }
+
+    var html = $"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <title>Completing Sign-In...</title>
+            <meta http-equiv="refresh" content="0;url={System.Net.WebUtility.HtmlEncode(targetUrl)}" />
+        </head>
+        <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 80px; background-color: #f4f6f9;">
+            <div style="background: white; max-width: 450px; margin: 0 auto; padding: 35px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
+                <h3 style="color: #0078d4; margin-top: 0;">&#10004; Authentication Successful!</h3>
+                <p style="color: #555; font-size: 14px;">Transferring session to SmartDocScan Desktop. If not redirected automatically, <a href="{System.Net.WebUtility.HtmlEncode(targetUrl)}" style="color: #0078d4; font-weight: 600;">click here</a>.</p>
+            </div>
+            <script>
+                window.location.href = {System.Text.Json.JsonSerializer.Serialize(targetUrl)};
+            </script>
+        </body>
+        </html>
+        """;
+
+    return Results.Content(html, "text/html");
+}).RequireAuthorization().RequireRateLimiting("auth");
+
 app.MapPost("/api/auth/change-password", async (ChangePasswordRequest request, ClaimsPrincipal principal, UserRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     if (principal.FindFirst("auth_provider")?.Value != "local")

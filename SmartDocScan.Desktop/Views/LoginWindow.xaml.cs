@@ -112,8 +112,7 @@ public partial class LoginWindow : FluentWindow
             }
 
             var baseUrl = _apiClient.BaseUrl.TrimEnd('/');
-            var desktopCallback = $"/api/auth/desktop-callback?redirectUri={Uri.EscapeDataString(loopbackUri)}";
-            var ssoUrl = $"{baseUrl}/api/auth/microsoft?returnUrl={Uri.EscapeDataString(desktopCallback)}";
+            var ssoUrl = $"{baseUrl}/api/auth/microsoft?returnUrl={Uri.EscapeDataString(loopbackUri)}";
 
             // Launch System Browser (Edge / Chrome)
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
