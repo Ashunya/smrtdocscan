@@ -36,6 +36,12 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "Ready";
 
+    [ObservableProperty]
+    private string _companyName = "SmartDocScan Cloud";
+
+    [ObservableProperty]
+    private string _userName = "";
+
     public MainWindowViewModel(ApiClient apiClient, IScannerService scannerService)
     {
         _apiClient = apiClient;
@@ -62,12 +68,22 @@ public partial class MainWindowViewModel : ObservableObject
 
     private async Task LoadCategoriesAsync()
     {
-        StatusMessage = "Loading categories...";
+        StatusMessage = "Connecting to SmartDocScan Cloud...";
+        var userResp = await _apiClient.GetCurrentUserAsync();
+        if (userResp?.User != null)
+        {
+            CompanyName = !string.IsNullOrWhiteSpace(userResp.User.CompanyName) 
+                ? userResp.User.CompanyName 
+                : $"Company #{_apiClient.CurrentCompanyId}";
+            UserName = userResp.User.Name ?? userResp.User.Username ?? "";
+        }
+
+        StatusMessage = $"Loading categories for {CompanyName}...";
         var cats = await _apiClient.GetCategoriesAsync();
         Categories = new ObservableCollection<CategoryModel>(cats);
 
         _ = LoadDocumentsAsync(SelectedCategory?.CategoryId ?? 0);
-        StatusMessage = $"{Categories.Count} categories loaded.";
+        StatusMessage = $"Ready | Company: {CompanyName}";
     }
 
     partial void OnSelectedCategoryChanged(CategoryModel? value)
@@ -87,7 +103,7 @@ public partial class MainWindowViewModel : ObservableObject
         StatusMessage = "Loading documents...";
         var docs = await _apiClient.GetDocumentsAsync(categoryId);
         Documents = new ObservableCollection<DocumentModel>(docs);
-        StatusMessage = $"{Documents.Count} documents loaded.";
+        StatusMessage = $"{Documents.Count} documents loaded for {CompanyName}.";
     }
 
     private async Task ScanDocumentAsync()
@@ -172,7 +188,7 @@ public partial class MainWindowViewModel : ObservableObject
             bool created = await _apiClient.CreateCategoryAsync(inputName, parentId);
             if (created)
             {
-                StatusMessage = $"Category '{inputName}' created!";
+                StatusMessage = $"Category '{inputName}' created successfully!";
                 await LoadCategoriesAsync();
             }
             else
@@ -191,7 +207,7 @@ public partial class MainWindowViewModel : ObservableObject
             bool created = await _apiClient.CreateLocationAsync(inputName);
             if (created)
             {
-                StatusMessage = $"Location '{inputName}' created!";
+                StatusMessage = $"Location '{inputName}' created successfully!";
             }
             else
             {
@@ -209,7 +225,7 @@ public partial class MainWindowViewModel : ObservableObject
             bool created = await _apiClient.CreateBoxAsync(inputName, 1);
             if (created)
             {
-                StatusMessage = $"Box '{inputName}' created!";
+                StatusMessage = $"Box '{inputName}' created successfully!";
             }
             else
             {

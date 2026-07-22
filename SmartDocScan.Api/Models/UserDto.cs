@@ -7,6 +7,7 @@ public sealed class UserDto
     public string? Username { get; set; }
     public string? Name { get; set; }
     public int CompanyId { get; set; }
+    public string? CompanyName { get; set; }
     public bool UploadDocument { get; set; }
     public bool ScanDocument { get; set; }
     public bool DeleteDocument { get; set; }

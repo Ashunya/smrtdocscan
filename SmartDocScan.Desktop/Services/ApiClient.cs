@@ -11,7 +11,11 @@ namespace SmartDocScan.Desktop.Services;
 public class ApiClient
 {
     private readonly HttpClient _httpClient;
-    private string _baseUrl = "http://localhost:5080";
+    private string _baseUrl = "https://scandevapi.ashunya.com";
+
+    public int CurrentCompanyId { get; set; } = 1;
+    public string CurrentCompanyName { get; set; } = "";
+    public string CurrentUserName { get; set; } = "";
 
     public ApiClient(HttpClient httpClient)
     {
@@ -29,7 +33,7 @@ public class ApiClient
                 if (!trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
                     !trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
-                    trimmed = "http://" + trimmed;
+                    trimmed = "https://" + trimmed;
                 }
                 _baseUrl = trimmed;
             }
@@ -43,17 +47,49 @@ public class ApiClient
         return new Uri(baseClean + pathClean);
     }
 
-    // Authentication methods
     public async Task<bool> LoginAsync(string username, string password)
     {
         var request = new { Username = username, Password = password };
         var response = await _httpClient.PostAsJsonAsync(GetUri("/api/auth/login"), request);
-        return response.IsSuccessStatusCode;
+        if (response.IsSuccessStatusCode)
+        {
+            await GetCurrentUserAsync();
+            return true;
+        }
+        return false;
     }
 
-    public async Task<List<CategoryModel>> GetCategoriesAsync(int companyId = 1)
+    public async Task<CurrentUserResponse?> GetCurrentUserAsync()
     {
-        var response = await _httpClient.GetAsync(GetUri($"/api/categories?companyId={companyId}"));
+        try
+        {
+            var response = await _httpClient.GetAsync(GetUri("/api/auth/me"));
+            if (response.IsSuccessStatusCode)
+            {
+                var dto = await response.Content.ReadFromJsonAsync<CurrentUserResponse>();
+                if (dto?.User != null)
+                {
+                    if (dto.User.CompanyId > 0)
+                    {
+                        CurrentCompanyId = dto.User.CompanyId;
+                    }
+                    if (!string.IsNullOrWhiteSpace(dto.User.CompanyName))
+                    {
+                        CurrentCompanyName = dto.User.CompanyName;
+                    }
+                    CurrentUserName = dto.User.Name ?? dto.User.Username ?? "";
+                }
+                return dto;
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    public async Task<List<CategoryModel>> GetCategoriesAsync(int? companyId = null)
+    {
+        int cid = companyId ?? CurrentCompanyId;
+        var response = await _httpClient.GetAsync(GetUri($"/api/categories?companyId={cid}"));
         if (response.IsSuccessStatusCode)
         {
             return await response.Content.ReadFromJsonAsync<List<CategoryModel>>() ?? new List<CategoryModel>();
@@ -61,9 +97,10 @@ public class ApiClient
         return new List<CategoryModel>();
     }
 
-    public async Task<List<DocumentModel>> GetDocumentsAsync(int categoryId = 0, int companyId = 1)
+    public async Task<List<DocumentModel>> GetDocumentsAsync(int categoryId = 0, int? companyId = null)
     {
-        var response = await _httpClient.GetAsync(GetUri($"/api/reports/documents?companyId={companyId}&take=50"));
+        int cid = companyId ?? CurrentCompanyId;
+        var response = await _httpClient.GetAsync(GetUri($"/api/reports/documents?companyId={cid}&take=100"));
         if (response.IsSuccessStatusCode)
         {
             var docs = await response.Content.ReadFromJsonAsync<List<DocumentModel>>() ?? new List<DocumentModel>();
@@ -76,8 +113,9 @@ public class ApiClient
         return new List<DocumentModel>();
     }
 
-    public async Task<bool> UploadScannedDocumentAsync(string filePath, int categoryId = 1, int companyId = 1, int patientId = 1)
+    public async Task<bool> UploadScannedDocumentAsync(string filePath, int categoryId = 1, int? companyId = null, int patientId = 1)
     {
+        int cid = companyId ?? CurrentCompanyId;
         try
         {
             using var content = new MultipartFormDataContent();
@@ -96,7 +134,7 @@ public class ApiClient
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mime);
 
             content.Add(fileContent, "file", System.IO.Path.GetFileName(filePath));
-            content.Add(new StringContent(companyId.ToString()), "companyId");
+            content.Add(new StringContent(cid.ToString()), "companyId");
             content.Add(new StringContent(patientId.ToString()), "patientId");
             content.Add(new StringContent(categoryId.ToString()), "categoryId");
             content.Add(new StringContent(System.IO.Path.GetFileNameWithoutExtension(filePath)), "documentName");
@@ -110,11 +148,12 @@ public class ApiClient
         }
     }
 
-    public async Task<bool> CreateCategoryAsync(string categoryName, int? parentId = null, int companyId = 1)
+    public async Task<bool> CreateCategoryAsync(string categoryName, int? parentId = null, int? companyId = null)
     {
+        int cid = companyId ?? CurrentCompanyId;
         try
         {
-            var body = new { categoryName = categoryName.Trim(), companyId, parentId, access = "all", categoryType = "patient" };
+            var body = new { categoryName = categoryName.Trim(), companyId = cid, parentId, access = "all", categoryType = "patient" };
             var response = await _httpClient.PostAsJsonAsync(GetUri("/api/categories"), body);
             return response.IsSuccessStatusCode;
         }
@@ -124,11 +163,12 @@ public class ApiClient
         }
     }
 
-    public async Task<bool> CreateLocationAsync(string locationName, int companyId = 1)
+    public async Task<bool> CreateLocationAsync(string locationName, int? companyId = null)
     {
+        int cid = companyId ?? CurrentCompanyId;
         try
         {
-            var body = new { locationName = locationName.Trim(), companyId };
+            var body = new { locationName = locationName.Trim(), companyId = cid };
             var response = await _httpClient.PostAsJsonAsync(GetUri("/api/locations"), body);
             return response.IsSuccessStatusCode;
         }
@@ -138,11 +178,12 @@ public class ApiClient
         }
     }
 
-    public async Task<bool> CreateBoxAsync(string boxName, int locationId, int companyId = 1)
+    public async Task<bool> CreateBoxAsync(string boxName, int locationId = 1, int? companyId = null)
     {
+        int cid = companyId ?? CurrentCompanyId;
         try
         {
-            var body = new { boxName = boxName.Trim(), locationId, companyId };
+            var body = new { boxName = boxName.Trim(), locationId, companyId = cid };
             var response = await _httpClient.PostAsJsonAsync(GetUri("/api/boxes"), body);
             return response.IsSuccessStatusCode;
         }
@@ -152,11 +193,12 @@ public class ApiClient
         }
     }
 
-    public async Task<bool> DeleteDocumentAsync(int documentId, int companyId = 1)
+    public async Task<bool> DeleteDocumentAsync(int documentId, int? companyId = null)
     {
+        int cid = companyId ?? CurrentCompanyId;
         try
         {
-            var response = await _httpClient.DeleteAsync(GetUri($"/api/documents/{documentId}?companyId={companyId}"));
+            var response = await _httpClient.DeleteAsync(GetUri($"/api/documents/{documentId}?companyId={cid}"));
             return response.IsSuccessStatusCode;
         }
         catch
@@ -164,4 +206,18 @@ public class ApiClient
             return false;
         }
     }
+}
+
+public class CurrentUserResponse
+{
+    public bool Authenticated { get; set; }
+    public UserProfileDto? User { get; set; }
+}
+
+public class UserProfileDto
+{
+    public string? Username { get; set; }
+    public string? Name { get; set; }
+    public int CompanyId { get; set; }
+    public string? CompanyName { get; set; }
 }

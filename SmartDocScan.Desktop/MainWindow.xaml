@@ -6,7 +6,7 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:local="clr-namespace:SmartDocScan.Desktop"
         mc:Ignorable="d"
-        Title="SmartDocScan Desktop" Height="800" Width="1300"
+        Title="SmartDocScan Desktop - PaperPort Cloud Manager" Height="800" Width="1300"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
         WindowCornerPreference="Round"
@@ -150,10 +150,23 @@
                     </ui:Button>
                 </StackPanel>
 
-                <!-- Status Activity Indicator -->
+                <!-- Company Name & Logged In User Display -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Border Background="#E6F2FB" BorderBrush="#0078D4" BorderThickness="1" CornerRadius="12" Padding="10,4" Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Building24" Foreground="#0078D4" Margin="0,0,6,0" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding CompanyName}" FontWeight="SemiBold" Foreground="#0078D4" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#F0F0F0" BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="12" Padding="10,4" Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Person24" Foreground="#444444" Margin="0,0,6,0" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding UserName}" FontWeight="Medium" Foreground="#333333" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
                     <ui:ProgressRing Height="18" Width="18" IsIndeterminate="True" Visibility="{Binding IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,10,0"/>
-                    <TextBlock Text="{Binding StatusMessage}" Foreground="#555555" VerticalAlignment="Center" FontWeight="Medium"/>
                 </StackPanel>
             </DockPanel>
         </Border>
