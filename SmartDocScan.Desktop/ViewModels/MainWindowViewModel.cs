@@ -133,18 +133,31 @@ public partial class MainWindowViewModel : ObservableObject
 
                 if (scanned && File.Exists(tempPath))
                 {
-                    StatusMessage = "Uploading scanned document to SmartDocScan Cloud...";
-                    int catId = SelectedCategory?.CategoryId ?? 1;
-                    bool uploaded = await _apiClient.UploadScannedDocumentAsync(tempPath, catId);
-
-                    if (uploaded)
+                    // Open Live Interactive Scan Preview Window
+                    var previewWindow = new ScanPreviewWindow(tempPath)
                     {
-                        StatusMessage = "Document scanned and uploaded successfully!";
-                        await LoadDocumentsAsync(catId);
+                        Owner = Application.Current.MainWindow
+                    };
+
+                    if (previewWindow.ShowDialog() == true)
+                    {
+                        StatusMessage = "Uploading scanned document to SmartDocScan Cloud...";
+                        int catId = SelectedCategory?.CategoryId ?? 1;
+                        bool uploaded = await _apiClient.UploadScannedDocumentAsync(tempPath, catId);
+
+                        if (uploaded)
+                        {
+                            StatusMessage = "Document scanned and uploaded successfully!";
+                            await LoadDocumentsAsync(catId);
+                        }
+                        else
+                        {
+                            StatusMessage = "Scan completed locally, but cloud upload failed.";
+                        }
                     }
                     else
                     {
-                        StatusMessage = "Scan completed locally, but cloud upload failed.";
+                        StatusMessage = "Scan discarded by user.";
                     }
                 }
                 else
