@@ -194,11 +194,11 @@
             <Border Grid.Column="0" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
                 <DockPanel Margin="10">
                     <DockPanel DockPanel.Dock="Top" Margin="5,5,5,10">
-                        <TextBlock Text="Categories &amp; Folders" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
+                        <TextBlock Text="Categories" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
                         <ui:Button Icon="{ui:SymbolIcon FolderAdd24}" 
                                    Appearance="Transparent" 
                                    Command="{Binding CreateCategoryCommand}" 
-                                   ToolTip="Create New Folder"
+                                   ToolTip="Create New Category"
                                    HorizontalAlignment="Right"/>
                     </DockPanel>
 
