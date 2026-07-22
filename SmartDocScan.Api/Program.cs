@@ -1364,49 +1364,57 @@ app.MapGet("/api/auth/microsoft", async (HttpContext httpContext) =>
         return Results.BadRequest(new { message = MicrosoftSsoNotConfiguredMessage });
     }
 
-    var redirectUri = BuildPostSignInRedirect(
-        httpContext.Request.Query["returnUrl"].FirstOrDefault(),
-        httpContext.RequestServices.GetRequiredService<IConfiguration>());
+    var rawReturnUrl = httpContext.Request.Query["returnUrl"].FirstOrDefault();
+    string redirectUri;
+
+    if (!string.IsNullOrWhiteSpace(rawReturnUrl) && Uri.TryCreate(rawReturnUrl, UriKind.Absolute, out var absUri) && absUri.IsLoopback)
+    {
+        // For desktop app loopback: redirect to relative endpoint /api/auth/sso-success (HTTPS -> HTTPS)
+        // so Microsoft OIDC 302 never attempts a cross-scheme 302 to http://127.0.0.1 (preventing ERR_UNSAFE_REDIRECT)
+        redirectUri = $"/api/auth/sso-success?redirectUri={Uri.EscapeDataString(rawReturnUrl)}";
+    }
+    else
+    {
+        redirectUri = BuildPostSignInRedirect(
+            rawReturnUrl,
+            httpContext.RequestServices.GetRequiredService<IConfiguration>());
+    }
 
     return Results.Challenge(new AuthenticationProperties { RedirectUri = redirectUri }, [OpenIdConnectDefaults.AuthenticationScheme]);
 }).RequireRateLimiting("auth");
 
-app.MapGet("/api/auth/desktop-callback", (string redirectUri, HttpContext httpContext) =>
+app.MapGet("/api/auth/sso-success", (string? redirectUri, HttpContext httpContext) =>
 {
     var sessionCookie = httpContext.Request.Cookies["smartdocscan.session"];
-    if (string.IsNullOrWhiteSpace(sessionCookie))
-    {
-        return Results.Unauthorized();
-    }
 
-    if (Uri.TryCreate(redirectUri, UriKind.Absolute, out var uri) && uri.IsLoopback)
+    string targetUrl = redirectUri ?? "/";
+    if (!string.IsNullOrWhiteSpace(redirectUri) && Uri.TryCreate(redirectUri, UriKind.Absolute, out var uri) && uri.IsLoopback)
     {
         var separator = redirectUri.Contains('?') ? "&" : "?";
-        var targetUrl = $"{redirectUri}{separator}session={Uri.EscapeDataString(sessionCookie)}";
-        
-        var html = $"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8" />
-                <title>Completing Sign-In...</title>
-                <meta http-equiv="refresh" content="0;url={System.Net.WebUtility.HtmlEncode(targetUrl)}" />
-            </head>
-            <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 80px; background-color: #f4f6f9;">
-                <div style="background: white; max-width: 450px; margin: 0 auto; padding: 35px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-                    <h3 style="color: #0078d4; margin-top: 0;">Signing in to SmartDocScan Desktop...</h3>
-                    <p style="color: #555; font-size: 14px;">Transferring session to application. If not redirected automatically, <a href="{System.Net.WebUtility.HtmlEncode(targetUrl)}" style="color: #0078d4; font-weight: 600;">click here</a>.</p>
-                </div>
-                <script>
-                    window.location.href = {System.Text.Json.JsonSerializer.Serialize(targetUrl)};
-                </script>
-            </body>
-            </html>
-            """;
-
-        return Results.Content(html, "text/html");
+        targetUrl = $"{redirectUri}{separator}session={Uri.EscapeDataString(sessionCookie ?? "")}";
     }
-    return Results.BadRequest(new { message = "Invalid loopback redirect URI." });
+
+    var html = $"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <title>Completing Sign-In...</title>
+            <meta http-equiv="refresh" content="0;url={System.Net.WebUtility.HtmlEncode(targetUrl)}" />
+        </head>
+        <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 80px; background-color: #f4f6f9;">
+            <div style="background: white; max-width: 450px; margin: 0 auto; padding: 35px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
+                <h3 style="color: #0078d4; margin-top: 0;">&#10004; Authentication Successful!</h3>
+                <p style="color: #555; font-size: 14px;">Transferring session to SmartDocScan Desktop. If not redirected automatically, <a href="{System.Net.WebUtility.HtmlEncode(targetUrl)}" style="color: #0078d4; font-weight: 600;">click here</a>.</p>
+            </div>
+            <script>
+                window.location.href = {System.Text.Json.JsonSerializer.Serialize(targetUrl)};
+            </script>
+        </body>
+        </html>
+        """;
+
+    return Results.Content(html, "text/html");
 }).RequireAuthorization().RequireRateLimiting("auth");
 
 app.MapPost("/api/auth/change-password", async (ChangePasswordRequest request, ClaimsPrincipal principal, UserRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
