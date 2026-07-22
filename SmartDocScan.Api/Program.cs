@@ -1319,18 +1319,28 @@ app.MapGet("/api/settings/branding", async (SettingsRepository repository, IConf
     return Results.Ok(await repository.GetBrandingSettingsAsync(configuration, cancellationToken));
 });
 
-app.MapGet("/api/auth/me", (ClaimsPrincipal principal) =>
+app.MapGet("/api/auth/me", async (ClaimsPrincipal principal, CompanyRepository companyRepository, CancellationToken cancellationToken) =>
 {
     if (principal.Identity?.IsAuthenticated != true)
     {
         return Results.Ok(new CurrentUserDto { Authenticated = false });
     }
 
+    var user = UserFromClaims(principal);
+    if (user.CompanyId > 0 && string.IsNullOrWhiteSpace(user.CompanyName))
+    {
+        var comp = await companyRepository.GetByIdAsync(user.CompanyId, cancellationToken);
+        if (comp != null)
+        {
+            user.CompanyName = comp.CompanyName;
+        }
+    }
+
     return Results.Ok(new CurrentUserDto
     {
         Authenticated = true,
         AuthProvider = principal.FindFirst("auth_provider")?.Value,
-        User = UserFromClaims(principal)
+        User = user
     });
 });
 
@@ -1497,6 +1507,7 @@ static ClaimsPrincipal CreatePrincipal(UserDto user, string authProvider)
         new("username", user.Username ?? ""),
         new("name", user.Name ?? ""),
         new("company_id", user.CompanyId.ToString()),
+        new("company_name", user.CompanyName ?? ""),
         new("auth_provider", authProvider),
         new("upload_document", user.UploadDocument.ToString()),
         new("scan_document", user.ScanDocument.ToString()),
@@ -1522,6 +1533,7 @@ static UserDto UserFromClaims(ClaimsPrincipal principal)
         Username = principal.FindFirst("username")?.Value,
         Name = principal.FindFirst("name")?.Value,
         CompanyId = int.TryParse(principal.FindFirst("company_id")?.Value, out var companyId) ? companyId : 0,
+        CompanyName = principal.FindFirst("company_name")?.Value,
         UploadDocument = ReadBoolClaim(principal, "upload_document"),
         ScanDocument = ReadBoolClaim(principal, "scan_document"),
         DeleteDocument = ReadBoolClaim(principal, "delete_document"),

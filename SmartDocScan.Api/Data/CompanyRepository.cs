@@ -82,6 +82,27 @@ public sealed class CompanyRepository
         return companies;
     }
 
+    public async Task<CompanyDto?> GetByIdAsync(int companyId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT comp_id, comp_name, owner, address, location, phone, barcode, inactive
+            FROM company
+            WHERE comp_id = @companyId;
+            """;
+        command.Parameters.AddWithValue("@companyId", companyId);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
+        {
+            return MapCompany(reader);
+        }
+        return null;
+    }
+
     public async Task<CompanyDto> UpsertAsync(CompanyUpsertRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.CompanyName))

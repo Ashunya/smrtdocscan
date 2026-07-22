@@ -234,6 +234,7 @@ public sealed class UserRepository
             Username = ReadString(reader, "username"),
             Name = ReadString(reader, "name"),
             CompanyId = reader.GetInt32(reader.GetOrdinal("comp_id")),
+            CompanyName = HasColumn(reader, "comp_name") ? ReadString(reader, "comp_name") : null,
             UploadDocument = ReadByteFlag(reader, "upload_doc"),
             ScanDocument = ReadByteFlag(reader, "scan_doc"),
             DeleteDocument = ReadByteFlag(reader, "delete_doc"),
@@ -458,18 +459,30 @@ public sealed class UserRepository
         return new string(password);
     }
 
+    private static bool HasColumn(SqlDataReader reader, string columnName)
+    {
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            if (reader.GetName(i).Equals(columnName, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
     private const string UserSelectSql = """
-        SELECT username, name, comp_id, upload_doc, scan_doc, delete_doc, delete_manage,
-               print_doc, download_doc, add_cat, add_users, add_patients, box, report,
-               su, disabled, IsAdmin
-        FROM usersinfo
+        SELECT u.username, u.name, u.comp_id, c.comp_name, u.upload_doc, u.scan_doc, u.delete_doc, u.delete_manage,
+               u.print_doc, u.download_doc, u.add_cat, u.add_users, u.add_patients, u.box, u.report,
+               u.su, u.disabled, u.IsAdmin
+        FROM usersinfo u
+        LEFT JOIN company c ON u.comp_id = c.comp_id
         """;
 
     private const string UserSelectSqlWithPassword = """
-        SELECT username, name, password, comp_id, upload_doc, scan_doc, delete_doc, delete_manage,
-               print_doc, download_doc, add_cat, add_users, add_patients, box, report,
-               su, disabled, IsAdmin
-        FROM usersinfo
+        SELECT u.username, u.name, u.password, u.comp_id, c.comp_name, u.upload_doc, u.scan_doc, u.delete_doc, u.delete_manage,
+               u.print_doc, u.download_doc, u.add_cat, u.add_users, u.add_patients, u.box, u.report,
+               u.su, u.disabled, u.IsAdmin
+        FROM usersinfo u
+        LEFT JOIN company c ON u.comp_id = c.comp_id
         """;
 
     private const string PasswordHashPrefix = "pbkdf2_sha256";
