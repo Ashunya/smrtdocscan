@@ -24,6 +24,25 @@ public sealed class AuthRepository
     {
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
+
+        await using var checkCmd = connection.CreateCommand();
+        checkCmd.CommandText = """
+            SELECT COUNT(1)
+            FROM company_identity_tenant
+            WHERE comp_id = @companyId
+              AND provider = @provider
+              AND enabled = 1;
+            """;
+        checkCmd.Parameters.AddWithValue("@companyId", companyId);
+        checkCmd.Parameters.AddWithValue("@provider", provider);
+
+        var configuredCount = Convert.ToInt32(await checkCmd.ExecuteScalarAsync(cancellationToken));
+        if (configuredCount == 0)
+        {
+            // If no tenant restrictions are explicitly enabled for this company, allow SSO
+            return true;
+        }
+
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT COUNT(1)

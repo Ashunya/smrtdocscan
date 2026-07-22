@@ -97,7 +97,11 @@ var authBuilder = builder.Services
         };
         options.Events.OnValidatePrincipal = async context =>
         {
-            var username = context.Principal?.FindFirst("username")?.Value;
+            var username = context.Principal?.FindFirst("username")?.Value
+                ?? context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? context.Principal?.FindFirst(ClaimTypes.Email)?.Value
+                ?? context.Principal?.FindFirst("email")?.Value;
+
             if (string.IsNullOrWhiteSpace(username))
             {
                 context.RejectPrincipal();
@@ -1415,7 +1419,7 @@ app.MapGet("/api/auth/sso-success", (string? redirectUri, HttpContext httpContex
         """;
 
     return Results.Content(html, "text/html");
-}).RequireAuthorization().RequireRateLimiting("auth");
+}).RequireRateLimiting("auth");
 
 app.MapGet("/api/auth/desktop-callback", (string? redirectUri, HttpContext httpContext) =>
 {
@@ -1449,7 +1453,7 @@ app.MapGet("/api/auth/desktop-callback", (string? redirectUri, HttpContext httpC
         """;
 
     return Results.Content(html, "text/html");
-}).RequireAuthorization().RequireRateLimiting("auth");
+}).RequireRateLimiting("auth");
 
 app.MapPost("/api/auth/change-password", async (ChangePasswordRequest request, ClaimsPrincipal principal, UserRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
