@@ -98,7 +98,7 @@ public partial class MainWindowViewModel : ObservableObject
             SelectedLocation = Locations[0];
         }
 
-        var cats = await _apiClient.GetCategoriesAsync();
+        var cats = await _apiClient.GetCategoriesAsync(null, "business");
         Categories = new ObservableCollection<CategoryModel>(cats);
 
         _ = LoadDocumentsAsync(SelectedCategory?.CategoryId ?? 0);

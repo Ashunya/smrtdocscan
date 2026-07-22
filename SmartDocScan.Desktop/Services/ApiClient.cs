@@ -91,10 +91,15 @@ public class ApiClient
         return new List<LocationModel>();
     }
 
-    public async Task<List<CategoryModel>> GetCategoriesAsync(int? companyId = null)
+    public async Task<List<CategoryModel>> GetCategoriesAsync(int? companyId = null, string? type = null)
     {
         int cid = companyId ?? CurrentCompanyId;
-        var response = await _httpClient.GetAsync(GetUri($"/api/categories?companyId={cid}"));
+        string url = $"/api/categories?companyId={cid}";
+        if (!string.IsNullOrEmpty(type))
+        {
+            url += $"&type={type}";
+        }
+        var response = await _httpClient.GetAsync(GetUri(url));
         if (response.IsSuccessStatusCode)
         {
             return await response.Content.ReadFromJsonAsync<List<CategoryModel>>() ?? new List<CategoryModel>();

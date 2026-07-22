@@ -10,7 +10,7 @@ public class LocationModel
     [JsonPropertyName("companyId")]
     public int CompanyId { get; set; }
 
-    [JsonPropertyName("name")]
+    [JsonPropertyName("locationName")]
     public string Name { get; set; } = "";
 
     public override string ToString() => Name;
