@@ -1,4 +1,5 @@
 using Npgsql;
+using NpgsqlTypes;
 using SmartDocScan.Api.Models;
 
 namespace SmartDocScan.Api.Data;
@@ -138,7 +139,7 @@ public sealed class PatientRepository
             """;
         command.Parameters.AddWithValue("@companyId", companyId);
         command.Parameters.AddWithValue("@externalPatientId", externalPatientId.Trim());
-        command.Parameters.AddWithValue("@currentPatientId", currentPatientId.HasValue ? currentPatientId.Value : DBNull.Value);
+        command.Parameters.AddWithValue("@currentPatientId", NpgsqlDbType.Integer, currentPatientId.HasValue ? currentPatientId.Value : DBNull.Value);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
@@ -186,7 +187,7 @@ public sealed class PatientRepository
         command.Parameters.AddWithValue("@externalPatientId", DbValue(request.ExternalPatientId));
         command.Parameters.AddWithValue("@firstName", DbValue(request.FirstName));
         command.Parameters.AddWithValue("@lastName", DbValue(request.LastName));
-        command.Parameters.AddWithValue("@dateOfBirth", request.DateOfBirth.HasValue ? request.DateOfBirth.Value : DBNull.Value);
+        command.Parameters.AddWithValue("@dateOfBirth", NpgsqlDbType.Timestamp, request.DateOfBirth.HasValue ? request.DateOfBirth.Value : DBNull.Value);
         command.Parameters.AddWithValue("@gender", DbValue(request.Gender));
         command.Parameters.AddWithValue("@physician", DbValue(request.Physician));
         command.Parameters.AddWithValue("@box", DbValue(request.Box));

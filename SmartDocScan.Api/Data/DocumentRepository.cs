@@ -1,4 +1,5 @@
 using Npgsql;
+using NpgsqlTypes;
 using SmartDocScan.Api.Models;
 
 namespace SmartDocScan.Api.Data;
@@ -77,8 +78,8 @@ public sealed class DocumentRepository
             """;
         command.Parameters.AddWithValue("@companyId", companyId);
         command.Parameters.AddWithValue("@take", Math.Clamp(take, 1, 2000));
-        command.Parameters.AddWithValue("@fromDate", fromDate.HasValue ? fromDate.Value.Date : DBNull.Value);
-        command.Parameters.AddWithValue("@toDate", toDate.HasValue ? toDate.Value.Date : DBNull.Value);
+        command.Parameters.AddWithValue("@fromDate", NpgsqlDbType.Timestamp, fromDate.HasValue ? fromDate.Value.Date : DBNull.Value);
+        command.Parameters.AddWithValue("@toDate", NpgsqlDbType.Timestamp, toDate.HasValue ? toDate.Value.Date : DBNull.Value);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
@@ -109,7 +110,7 @@ public sealed class DocumentRepository
         command.Parameters.AddWithValue("@url", relativeUrl);
         command.Parameters.AddWithValue("@pages", pages);
         command.Parameters.AddWithValue("@date", DateTime.UtcNow);
-        command.Parameters.AddWithValue("@dateOfService", dateOfService.HasValue ? dateOfService.Value.Date : DBNull.Value);
+        command.Parameters.AddWithValue("@dateOfService", NpgsqlDbType.Date, dateOfService.HasValue ? dateOfService.Value.Date : DBNull.Value);
         command.Parameters.AddWithValue("@uploadedBy", string.IsNullOrWhiteSpace(uploadedBy) ? DBNull.Value : uploadedBy.Trim());
 
         var id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));

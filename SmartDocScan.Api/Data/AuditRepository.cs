@@ -1,4 +1,5 @@
 using Npgsql;
+using NpgsqlTypes;
 using SmartDocScan.Api.Models;
 
 namespace SmartDocScan.Api.Data;
@@ -39,7 +40,7 @@ public sealed class AuditRepository
             """;
         command.Parameters.AddWithValue("@action", Trim(action, 80));
         command.Parameters.AddWithValue("@actor", DbValue(Trim(actor, 100)));
-        command.Parameters.AddWithValue("@companyId", companyId.HasValue ? companyId.Value : DBNull.Value);
+        command.Parameters.AddWithValue("@companyId", NpgsqlDbType.Integer, companyId.HasValue ? companyId.Value : DBNull.Value);
         command.Parameters.AddWithValue("@targetType", DbValue(Trim(targetType, 80)));
         command.Parameters.AddWithValue("@targetId", DbValue(Trim(targetId, 160)));
         command.Parameters.AddWithValue("@outcome", Trim(outcome, 30));
@@ -78,12 +79,12 @@ public sealed class AuditRepository
             LIMIT @take;
             """;
         command.Parameters.AddWithValue("@take", Math.Clamp(take, 1, 500));
-        command.Parameters.AddWithValue("@companyId", companyId.HasValue ? companyId.Value : DBNull.Value);
+        command.Parameters.AddWithValue("@companyId", NpgsqlDbType.Integer, companyId.HasValue ? companyId.Value : DBNull.Value);
         command.Parameters.AddWithValue("@actor", DbValue(Trim(actor, 100)));
         command.Parameters.AddWithValue("@action", DbValue(Trim(action, 80)));
         command.Parameters.AddWithValue("@outcome", DbValue(Trim(outcome, 30)));
-        command.Parameters.AddWithValue("@fromDate", fromDate.HasValue ? fromDate.Value.Date : DBNull.Value);
-        command.Parameters.AddWithValue("@toDate", toDate.HasValue ? toDate.Value.Date : DBNull.Value);
+        command.Parameters.AddWithValue("@fromDate", NpgsqlDbType.Timestamp, fromDate.HasValue ? fromDate.Value.Date : DBNull.Value);
+        command.Parameters.AddWithValue("@toDate", NpgsqlDbType.Timestamp, toDate.HasValue ? toDate.Value.Date : DBNull.Value);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
