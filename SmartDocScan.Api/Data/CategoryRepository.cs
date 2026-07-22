@@ -52,6 +52,7 @@ public sealed class CategoryRepository
 
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
+        await PostgresSequenceRepair.EnsureSerialDefaultAsync(connection, "category", "cat_id", "category_cat_id_seq", cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """

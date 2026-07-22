@@ -91,6 +91,7 @@ public sealed class CompanyRepository
 
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
+        await PostgresSequenceRepair.EnsureSerialDefaultAsync(connection, "company", "comp_id", "company_comp_id_seq", cancellationToken);
 
         await using var command = connection.CreateCommand();
         if (request.CompanyId.HasValue && request.CompanyId.Value > 0)

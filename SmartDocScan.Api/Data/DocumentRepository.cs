@@ -94,6 +94,7 @@ public sealed class DocumentRepository
         await EnsureSchemaAsync(cancellationToken);
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
+        await PostgresSequenceRepair.EnsureSerialDefaultAsync(connection, "documents", "doc_id", "documents_doc_id_seq", cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """

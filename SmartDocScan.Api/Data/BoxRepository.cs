@@ -44,6 +44,7 @@ public sealed class BoxRepository
 
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
+        await PostgresSequenceRepair.EnsureSerialDefaultAsync(connection, "box", "box_id", "box_box_id_seq", cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """

@@ -62,6 +62,7 @@ public sealed class PatientRepository
 
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
+        await PostgresSequenceRepair.EnsureSerialDefaultAsync(connection, "patient", "patient_id", "patient_patient_id_seq", cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
