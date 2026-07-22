@@ -1,11 +1,15 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 using SmartDocScan.Desktop.Models;
 using SmartDocScan.Desktop.Services;
+using SmartDocScan.Desktop.Views;
 
 namespace SmartDocScan.Desktop.ViewModels;
 
@@ -24,6 +28,9 @@ public partial class MainWindowViewModel : ObservableObject
     private CategoryModel? _selectedCategory;
 
     [ObservableProperty]
+    private DocumentModel? _selectedDocument;
+
+    [ObservableProperty]
     private bool _isScanning = false;
 
     [ObservableProperty]
@@ -36,10 +43,22 @@ public partial class MainWindowViewModel : ObservableObject
 
         LoadCategoriesCommand = new AsyncRelayCommand(LoadCategoriesAsync);
         ScanDocumentCommand = new AsyncRelayCommand(ScanDocumentAsync);
+        ImportFileCommand = new AsyncRelayCommand(ImportFileAsync);
+        CreateCategoryCommand = new AsyncRelayCommand(CreateCategoryAsync);
+        CreateLocationCommand = new AsyncRelayCommand(CreateLocationAsync);
+        CreateBoxCommand = new AsyncRelayCommand(CreateBoxAsync);
+        DeleteDocumentCommand = new AsyncRelayCommand(DeleteDocumentAsync);
+        ViewDocumentCommand = new RelayCommand(ViewDocument);
     }
 
     public IAsyncRelayCommand LoadCategoriesCommand { get; }
     public IAsyncRelayCommand ScanDocumentCommand { get; }
+    public IAsyncRelayCommand ImportFileCommand { get; }
+    public IAsyncRelayCommand CreateCategoryCommand { get; }
+    public IAsyncRelayCommand CreateLocationCommand { get; }
+    public IAsyncRelayCommand CreateBoxCommand { get; }
+    public IAsyncRelayCommand DeleteDocumentCommand { get; }
+    public IRelayCommand ViewDocumentCommand { get; }
 
     private async Task LoadCategoriesAsync()
     {
@@ -47,8 +66,7 @@ public partial class MainWindowViewModel : ObservableObject
         var cats = await _apiClient.GetCategoriesAsync();
         Categories = new ObservableCollection<CategoryModel>(cats);
 
-        // Load all documents by default
-        _ = LoadDocumentsAsync(0);
+        _ = LoadDocumentsAsync(SelectedCategory?.CategoryId ?? 0);
         StatusMessage = $"{Categories.Count} categories loaded.";
     }
 
@@ -89,7 +107,7 @@ public partial class MainWindowViewModel : ObservableObject
 
             if (scanned && File.Exists(tempPath))
             {
-                StatusMessage = "Uploading scanned document to cloud...";
+                StatusMessage = "Uploading scanned document...";
                 int catId = SelectedCategory?.CategoryId ?? 1;
                 bool uploaded = await _apiClient.UploadScannedDocumentAsync(tempPath, catId);
 
@@ -115,6 +133,136 @@ public partial class MainWindowViewModel : ObservableObject
         finally
         {
             IsScanning = false;
+        }
+    }
+
+    private async Task ImportFileAsync()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Import Document / Image File",
+            Filter = "All Supported Files|*.pdf;*.png;*.jpg;*.jpeg;*.tif;*.tiff|PDF Documents (*.pdf)|*.pdf|Image Files (*.png;*.jpg;*.jpeg;*.tif)|*.png;*.jpg;*.jpeg;*.tif"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            StatusMessage = "Uploading imported file...";
+            int catId = SelectedCategory?.CategoryId ?? 1;
+            bool uploaded = await _apiClient.UploadScannedDocumentAsync(dialog.FileName, catId);
+
+            if (uploaded)
+            {
+                StatusMessage = "File imported and uploaded successfully!";
+                await LoadDocumentsAsync(catId);
+            }
+            else
+            {
+                StatusMessage = "Failed to upload imported file.";
+            }
+        }
+    }
+
+    private async Task CreateCategoryAsync()
+    {
+        string? inputName = InputDialogWindow.Prompt("Create New Folder / Category", "Enter folder name:", "New Folder");
+        if (!string.IsNullOrWhiteSpace(inputName))
+        {
+            StatusMessage = "Creating category...";
+            int? parentId = SelectedCategory?.CategoryId;
+            bool created = await _apiClient.CreateCategoryAsync(inputName, parentId);
+            if (created)
+            {
+                StatusMessage = $"Category '{inputName}' created!";
+                await LoadCategoriesAsync();
+            }
+            else
+            {
+                StatusMessage = "Failed to create category.";
+            }
+        }
+    }
+
+    private async Task CreateLocationAsync()
+    {
+        string? inputName = InputDialogWindow.Prompt("Create New Storage Location", "Enter location name:", "Warehouse A");
+        if (!string.IsNullOrWhiteSpace(inputName))
+        {
+            StatusMessage = "Creating location...";
+            bool created = await _apiClient.CreateLocationAsync(inputName);
+            if (created)
+            {
+                StatusMessage = $"Location '{inputName}' created!";
+            }
+            else
+            {
+                StatusMessage = "Failed to create location.";
+            }
+        }
+    }
+
+    private async Task CreateBoxAsync()
+    {
+        string? inputName = InputDialogWindow.Prompt("Create New Storage Box", "Enter box name:", "Box #101");
+        if (!string.IsNullOrWhiteSpace(inputName))
+        {
+            StatusMessage = "Creating box...";
+            bool created = await _apiClient.CreateBoxAsync(inputName, 1);
+            if (created)
+            {
+                StatusMessage = $"Box '{inputName}' created!";
+            }
+            else
+            {
+                StatusMessage = "Failed to create box.";
+            }
+        }
+    }
+
+    private async Task DeleteDocumentAsync()
+    {
+        if (SelectedDocument == null)
+        {
+            MessageBox.Show("Please select a document to delete.", "Delete Document", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var confirm = MessageBox.Show($"Are you sure you want to delete '{SelectedDocument.DocumentName}'?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm == MessageBoxResult.Yes)
+        {
+            StatusMessage = "Deleting document...";
+            bool deleted = await _apiClient.DeleteDocumentAsync(SelectedDocument.DocumentId);
+            if (deleted)
+            {
+                StatusMessage = "Document deleted.";
+                await LoadDocumentsAsync(SelectedCategory?.CategoryId ?? 0);
+            }
+            else
+            {
+                StatusMessage = "Failed to delete document.";
+            }
+        }
+    }
+
+    private void ViewDocument()
+    {
+        if (SelectedDocument == null) return;
+
+        var url = SelectedDocument.Url;
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                url = _apiClient.BaseUrl.TrimEnd('/') + "/" + url.TrimStart('/');
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Could not open document: {ex.Message}";
+            }
         }
     }
 }

@@ -6,7 +6,7 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:local="clr-namespace:SmartDocScan.Desktop"
         mc:Ignorable="d"
-        Title="SmartDocScan Desktop" Height="750" Width="1250"
+        Title="SmartDocScan Desktop" Height="800" Width="1300"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
         WindowCornerPreference="Round"
@@ -20,55 +20,164 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- TitleBar -->
-        <ui:TitleBar Title="SmartDocScan Desktop" Grid.Row="0" />
+        <ui:TitleBar Title="SmartDocScan Desktop - PaperPort Cloud Manager" Grid.Row="0" />
 
-        <!-- Action Toolbar -->
-        <Border Grid.Row="1" Background="#F3F3F3" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="15,8">
+        <!-- Top Navigation Menu Bar -->
+        <Menu Grid.Row="1" Background="#F9F9F9" Padding="5,2" BorderBrush="#E5E5E5" BorderThickness="0,0,0,1">
+            <MenuItem Header="_File">
+                <MenuItem Header="Scan Document..." Command="{Binding ScanDocumentCommand}">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="Print24" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Import File..." Command="{Binding ImportFileCommand}">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="DocumentAdd24" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="Refresh Data" Command="{Binding LoadCategoriesCommand}">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="ArrowClockwise24" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+
+            <MenuItem Header="_Folders &amp; Categories">
+                <MenuItem Header="New Folder / Category..." Command="{Binding CreateCategoryCommand}">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="FolderAdd24" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Refresh Categories" Command="{Binding LoadCategoriesCommand}" />
+            </MenuItem>
+
+            <MenuItem Header="_Storage Locations &amp; Boxes">
+                <MenuItem Header="Create New Location..." Command="{Binding CreateLocationCommand}">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="Building24" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Create New Box..." Command="{Binding CreateBoxCommand}">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="Box24" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+
+            <MenuItem Header="_Documents">
+                <MenuItem Header="View / Open Selected Document" Command="{Binding ViewDocumentCommand}">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="Eye24" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Delete Selected Document" Command="{Binding DeleteDocumentCommand}">
+                    <MenuItem.Icon>
+                        <ui:SymbolIcon Symbol="Delete24" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+        </Menu>
+
+        <!-- Main Action Ribbon / Toolbar -->
+        <Border Grid.Row="2" Background="#F3F3F3" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="12,6">
             <DockPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <!-- Scan Button -->
                     <ui:Button Content="Scan Document" 
                                Appearance="Primary" 
                                Command="{Binding ScanDocumentCommand}" 
-                               Margin="0,0,10,0">
+                               Margin="0,0,8,0">
                         <ui:Button.Icon>
                             <ui:SymbolIcon Symbol="Print24" />
                         </ui:Button.Icon>
                     </ui:Button>
 
+                    <!-- Import File Button -->
+                    <ui:Button Content="Import File" 
+                               Appearance="Secondary" 
+                               Command="{Binding ImportFileCommand}" 
+                               Margin="0,0,8,0">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="DocumentAdd24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+
+                    <!-- New Folder Button -->
+                    <ui:Button Content="New Folder" 
+                               Appearance="Secondary" 
+                               Command="{Binding CreateCategoryCommand}" 
+                               Margin="0,0,8,0">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="FolderAdd24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+
+                    <!-- New Location Button -->
+                    <ui:Button Content="New Location" 
+                               Appearance="Secondary" 
+                               Command="{Binding CreateLocationCommand}" 
+                               Margin="0,0,8,0">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="Building24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+
+                    <!-- New Box Button -->
+                    <ui:Button Content="New Box" 
+                               Appearance="Secondary" 
+                               Command="{Binding CreateBoxCommand}" 
+                               Margin="0,0,8,0">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="Box24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+
+                    <!-- Refresh Button -->
                     <ui:Button Content="Refresh" 
                                Appearance="Secondary" 
                                Command="{Binding LoadCategoriesCommand}" 
-                               Margin="0,0,10,0">
+                               Margin="0,0,8,0">
                         <ui:Button.Icon>
                             <ui:SymbolIcon Symbol="ArrowClockwise24" />
                         </ui:Button.Icon>
                     </ui:Button>
                 </StackPanel>
 
+                <!-- Status Activity Indicator -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <ui:ProgressRing Height="18" Width="18" IsIndeterminate="True" Visibility="{Binding IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,10,0"/>
-                    <TextBlock Text="{Binding StatusMessage}" Foreground="Gray" VerticalAlignment="Center" FontWeight="Medium"/>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="#555555" VerticalAlignment="Center" FontWeight="Medium"/>
                 </StackPanel>
             </DockPanel>
         </Border>
 
-        <!-- Main Content Area -->
-        <Grid Grid.Row="2">
+        <!-- Main Workspace Area -->
+        <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="270"/>
                 <ColumnDefinition Width="5"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Folder Tree -->
-            <Border Grid.Column="0" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0" Margin="0">
+            <!-- Category / Folder Navigation Sidebar -->
+            <Border Grid.Column="0" BorderBrush="#E0E0E0" BorderThickness="0,0,1,0">
                 <DockPanel Margin="10">
-                    <TextBlock Text="Categories &amp; Folders" FontWeight="SemiBold" FontSize="14" Margin="5,5,5,10" DockPanel.Dock="Top"/>
+                    <DockPanel DockPanel.Dock="Top" Margin="5,5,5,10">
+                        <TextBlock Text="Categories &amp; Folders" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center"/>
+                        <ui:Button Icon="{ui:SymbolIcon FolderAdd24}" 
+                                   Appearance="Transparent" 
+                                   Command="{Binding CreateCategoryCommand}" 
+                                   ToolTip="Create New Folder"
+                                   HorizontalAlignment="Right"/>
+                    </DockPanel>
+
                     <TreeView ItemsSource="{Binding Categories}" 
                               SelectedItemChanged="TreeView_SelectedItemChanged"
                               BorderThickness="0" 
@@ -81,6 +190,20 @@
                                 </StackPanel>
                             </HierarchicalDataTemplate>
                         </TreeView.ItemTemplate>
+                        <TreeView.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Add Sub-Folder..." Command="{Binding CreateCategoryCommand}">
+                                    <MenuItem.Icon>
+                                        <ui:SymbolIcon Symbol="FolderAdd24" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Refresh Folders" Command="{Binding LoadCategoriesCommand}">
+                                    <MenuItem.Icon>
+                                        <ui:SymbolIcon Symbol="ArrowClockwise24" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </TreeView.ContextMenu>
                     </TreeView>
                 </DockPanel>
             </Border>
@@ -88,17 +211,38 @@
             <!-- Splitter -->
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="Transparent"/>
 
-            <!-- Document Grid -->
-            <Grid Grid.Column="2" Margin="10">
+            <!-- Document Grid View -->
+            <Grid Grid.Column="2" Margin="15,10,15,10">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Text="Documents" FontWeight="SemiBold" FontSize="16" Margin="10,5,10,15" Grid.Row="0"/>
+                <DockPanel Grid.Row="0" Margin="5,5,5,15">
+                    <TextBlock Text="Documents" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <ui:Button Content="Delete Document" 
+                                   Appearance="Transparent" 
+                                   Command="{Binding DeleteDocumentCommand}" 
+                                   Margin="0,0,5,0">
+                            <ui:Button.Icon>
+                                <ui:SymbolIcon Symbol="Delete24" Foreground="#D13438"/>
+                            </ui:Button.Icon>
+                        </ui:Button>
+
+                        <ui:Button Content="View Document" 
+                                   Appearance="Transparent" 
+                                   Command="{Binding ViewDocumentCommand}">
+                            <ui:Button.Icon>
+                                <ui:SymbolIcon Symbol="Eye24" Foreground="#0078D4"/>
+                            </ui:Button.Icon>
+                        </ui:Button>
+                    </StackPanel>
+                </DockPanel>
 
                 <ListBox Grid.Row="1" 
                          ItemsSource="{Binding Documents}" 
+                         SelectedItem="{Binding SelectedDocument}"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          BorderThickness="0" 
                          Background="Transparent">
@@ -112,20 +256,37 @@
                             <StackPanel Width="170" Margin="10">
                                 <Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="6" Background="White" Padding="6">
                                     <StackPanel>
-                                        <ui:SymbolIcon Symbol="Document24" FontSize="48" Foreground="#0078D4" Margin="0,20,0,20" HorizontalAlignment="Center"/>
+                                        <ui:SymbolIcon Symbol="Document24" FontSize="54" Foreground="#0078D4" Margin="0,20,0,20" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </Border>
                                 <TextBlock Text="{Binding DocumentName}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,0" FontWeight="Medium" FontSize="12"/>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="View / Open Document" Command="{Binding ViewDocumentCommand}">
+                                <MenuItem.Icon>
+                                    <ui:SymbolIcon Symbol="Eye24" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Delete Document" Command="{Binding DeleteDocumentCommand}">
+                                <MenuItem.Icon>
+                                    <ui:SymbolIcon Symbol="Delete24" Foreground="#D13438"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
                 </ListBox>
             </Grid>
         </Grid>
 
         <!-- Status Bar Footer -->
-        <Border Grid.Row="3" Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="15,4">
-            <TextBlock Text="{Binding StatusMessage}" FontSize="11" Foreground="Gray"/>
+        <Border Grid.Row="4" Background="#FAFAFA" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="15,5">
+            <DockPanel>
+                <TextBlock Text="{Binding StatusMessage}" FontSize="12" Foreground="#666666" DockPanel.Dock="Left"/>
+                <TextBlock Text="SmartDocScan PaperPort Desktop v2.0" FontSize="11" Foreground="#999999" HorizontalAlignment="Right" DockPanel.Dock="Right"/>
+            </DockPanel>
         </Border>
     </Grid>
 </ui:FluentWindow>
