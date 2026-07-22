@@ -63,6 +63,7 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
 
   useEffect(() => {
     loadScript("/Resources/dynamsoft.webtwain.config.js")
+      .then(() => applyDynamsoftProductKey())
       .then(() => loadScript("/Resources/dynamsoft.webtwain.initiate.js"))
       .then(() => initializeViewer())
       .catch(() => onNotice({ type: "error", text: "Dynamsoft resources could not be loaded." }));
@@ -109,6 +110,18 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
     }
 
     onNotice({ type: "error", text: "Dynamsoft viewer could not be initialized." });
+  }
+
+  function applyDynamsoftProductKey() {
+    const productKey = import.meta.env.VITE_DYNAMSOFT_PRODUCT_KEY?.trim();
+    const dwt = window.Dynamsoft?.DWT;
+    if (!productKey || !dwt) {
+      return;
+    }
+
+    dwt.ProductKey = productKey;
+    dwt.productKeys = productKey;
+    productKeyRef.current = productKey;
   }
 
   function showViewer(webTwain) {

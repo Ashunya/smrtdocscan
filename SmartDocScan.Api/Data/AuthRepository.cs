@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using SmartDocScan.Api.Models;
 using SmartDocScan.Api.Services;
 
@@ -22,7 +22,7 @@ public sealed class AuthRepository
 
     public async Task<bool> IsTenantAllowedAsync(int companyId, string provider, string tenantId, CancellationToken cancellationToken = default)
     {
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
@@ -31,7 +31,7 @@ public sealed class AuthRepository
             WHERE comp_id = @companyId
               AND provider = @provider
               AND tenant_id = @tenantId
-              AND enabled = 1;
+              AND enabled = true;
             """;
         command.Parameters.AddWithValue("@companyId", companyId);
         command.Parameters.AddWithValue("@provider", provider);
@@ -41,7 +41,7 @@ public sealed class AuthRepository
 
     public async Task<UserDto?> FindExternalUserAsync(string provider, string tenantId, string subjectId, string? email, CancellationToken cancellationToken = default)
     {
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         var linkedUser = await FindLinkedExternalUserAsync(connection, provider, tenantId, subjectId, cancellationToken);
@@ -81,13 +81,13 @@ public sealed class AuthRepository
     {
         var code = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
         var challengeId = Guid.NewGuid();
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
         await EnsureOtpTableAsync(connection, _autoEnsureSchema, cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO auth_otp_challenge (challenge_id, username, code_hash, purpose, expires_on)
-            VALUES (@challengeId, @username, @codeHash, 'login', DATEADD(minute, 10, SYSUTCDATETIME()));
+            VALUES (@challengeId, @username, @codeHash, 'login', (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') + INTERVAL '10 minutes');
             """;
         command.Parameters.AddWithValue("@challengeId", challengeId);
         command.Parameters.AddWithValue("@username", user.Username!);
@@ -105,19 +105,19 @@ public sealed class AuthRepository
             return null;
         }
 
-        await using var connection = new SqlConnection(_connectionString);
+        await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.Transaction = (SqlTransaction)transaction;
+        command.Transaction = (NpgsqlTransaction)transaction;
         command.CommandText = """
             SELECT username, code_hash
             FROM auth_otp_challenge
             WHERE challenge_id = @challengeId
               AND purpose = 'login'
               AND consumed_on IS NULL
-              AND expires_on > SYSUTCDATETIME();
+              AND expires_on > (CURRENT_TIMESTAMP AT TIME ZONE 'UTC');
             """;
         command.Parameters.AddWithValue("@challengeId", challengeId);
 
@@ -141,17 +141,17 @@ public sealed class AuthRepository
         }
 
         await using var update = connection.CreateCommand();
-        update.Transaction = (SqlTransaction)transaction;
-        update.CommandText = "UPDATE auth_otp_challenge SET consumed_on = SYSUTCDATETIME() WHERE challenge_id = @challengeId;";
+        update.Transaction = (NpgsqlTransaction)transaction;
+        update.CommandText = "UPDATE auth_otp_challenge SET consumed_on = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') WHERE challenge_id = @challengeId;";
         update.Parameters.AddWithValue("@challengeId", challengeId);
         await update.ExecuteNonQueryAsync(cancellationToken);
 
-        var user = await FindUserByUsernameAsync(connection, username, cancellationToken, (SqlTransaction)transaction);
+        var user = await FindUserByUsernameAsync(connection, username, cancellationToken, (NpgsqlTransaction)transaction);
         await transaction.CommitAsync(cancellationToken);
         return user?.Disabled == true ? null : user;
     }
 
-    private static async Task EnsureOtpTableAsync(SqlConnection connection, bool autoEnsureSchema, CancellationToken cancellationToken)
+    private static async Task EnsureOtpTableAsync(NpgsqlConnection connection, bool autoEnsureSchema, CancellationToken cancellationToken)
     {
         if (!autoEnsureSchema)
         {
@@ -160,38 +160,35 @@ public sealed class AuthRepository
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            IF OBJECT_ID('dbo.auth_otp_challenge', 'U') IS NULL
-            BEGIN
-                CREATE TABLE dbo.auth_otp_challenge (
-                    challenge_id uniqueidentifier NOT NULL CONSTRAINT PK_auth_otp_challenge PRIMARY KEY,
-                    username varchar(50) NOT NULL,
-                    code_hash nvarchar(255) NOT NULL,
-                    purpose varchar(30) NOT NULL,
-                    expires_on datetime2 NOT NULL,
-                    consumed_on datetime2 NULL,
-                    created_on datetime2 NOT NULL CONSTRAINT DF_auth_otp_challenge_created_on DEFAULT SYSUTCDATETIME()
-                );
+            CREATE TABLE IF NOT EXISTS auth_otp_challenge (
+                challenge_id uuid PRIMARY KEY,
+                username varchar(50) NOT NULL,
+                code_hash varchar(255) NOT NULL,
+                purpose varchar(30) NOT NULL,
+                expires_on timestamp without time zone NOT NULL,
+                consumed_on timestamp without time zone NULL,
+                created_on timestamp without time zone NOT NULL DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
+            );
 
-                CREATE INDEX IX_auth_otp_challenge_username
-                    ON dbo.auth_otp_challenge(username, purpose, expires_on);
-            END;
+            CREATE INDEX IF NOT EXISTS ix_auth_otp_challenge_username
+                ON auth_otp_challenge(username, purpose, expires_on);
             """;
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task<UserDto?> FindLinkedExternalUserAsync(SqlConnection connection, string provider, string tenantId, string subjectId, CancellationToken cancellationToken)
+    private static async Task<UserDto?> FindLinkedExternalUserAsync(NpgsqlConnection connection, string provider, string tenantId, string subjectId, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT u.username, u.name, u.comp_id, u.upload_doc, u.scan_doc, u.delete_doc, u.delete_manage,
                    u.print_doc, u.download_doc, u.add_cat, u.add_users, u.add_patients, u.box, u.report,
-                   u.su, u.disabled, u.IsAdmin
+                   u.su, u.disabled, u.isadmin
             FROM usersinfo u
             INNER JOIN user_external_login x ON x.username = u.username
             WHERE x.provider = @provider
               AND x.tenant_id = @tenantId
               AND x.subject_id = @subjectId
-              AND u.disabled = 0;
+              AND u.disabled = false;
             """;
         command.Parameters.AddWithValue("@provider", provider);
         command.Parameters.AddWithValue("@tenantId", tenantId);
@@ -201,7 +198,7 @@ public sealed class AuthRepository
         return await reader.ReadAsync(cancellationToken) ? MapUser(reader) : null;
     }
 
-    private static async Task<UserDto?> FindUserByUsernameAsync(SqlConnection connection, string username, CancellationToken cancellationToken, SqlTransaction? transaction = null)
+    private static async Task<UserDto?> FindUserByUsernameAsync(NpgsqlConnection connection, string username, CancellationToken cancellationToken, NpgsqlTransaction? transaction = null)
     {
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -211,18 +208,13 @@ public sealed class AuthRepository
         return await reader.ReadAsync(cancellationToken) ? MapUser(reader) : null;
     }
 
-    private static async Task LinkExternalLoginAsync(SqlConnection connection, string username, string provider, string tenantId, string subjectId, string? email, CancellationToken cancellationToken)
+    private static async Task LinkExternalLoginAsync(NpgsqlConnection connection, string username, string provider, string tenantId, string subjectId, string? email, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            IF NOT EXISTS (
-                SELECT 1 FROM user_external_login
-                WHERE provider = @provider AND tenant_id = @tenantId AND subject_id = @subjectId
-            )
-            BEGIN
-                INSERT INTO user_external_login (username, provider, tenant_id, subject_id, email)
-                VALUES (@username, @provider, @tenantId, @subjectId, @email);
-            END
+            INSERT INTO user_external_login (username, provider, tenant_id, subject_id, email)
+            VALUES (@username, @provider, @tenantId, @subjectId, @email)
+            ON CONFLICT (provider, tenant_id, subject_id) DO NOTHING;
             """;
         command.Parameters.AddWithValue("@username", username);
         command.Parameters.AddWithValue("@provider", provider);
@@ -238,7 +230,7 @@ public sealed class AuthRepository
         return Convert.ToHexString(bytes);
     }
 
-    private static UserDto MapUser(SqlDataReader reader)
+    private static UserDto MapUser(NpgsqlDataReader reader)
     {
         return new UserDto
         {
@@ -258,23 +250,23 @@ public sealed class AuthRepository
             Report = ReadByteFlag(reader, "report"),
             SuperUser = ReadByteFlag(reader, "su"),
             Disabled = ReadByteFlag(reader, "disabled"),
-            IsAdmin = ReadBool(reader, "IsAdmin")
+            IsAdmin = ReadBool(reader, "isadmin")
         };
     }
 
-    private static bool ReadByteFlag(SqlDataReader reader, string name)
-    {
-        var ordinal = reader.GetOrdinal(name);
-        return !reader.IsDBNull(ordinal) && reader.GetByte(ordinal) != 0;
-    }
-
-    private static bool ReadBool(SqlDataReader reader, string name)
+    private static bool ReadByteFlag(NpgsqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return !reader.IsDBNull(ordinal) && reader.GetBoolean(ordinal);
     }
 
-    private static string? ReadString(SqlDataReader reader, string name)
+    private static bool ReadBool(NpgsqlDataReader reader, string name)
+    {
+        var ordinal = reader.GetOrdinal(name);
+        return !reader.IsDBNull(ordinal) && reader.GetBoolean(ordinal);
+    }
+
+    private static string? ReadString(NpgsqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
@@ -283,7 +275,7 @@ public sealed class AuthRepository
     private const string UserSelectSql = """
         SELECT u.username, u.name, u.comp_id, u.upload_doc, u.scan_doc, u.delete_doc, u.delete_manage,
                u.print_doc, u.download_doc, u.add_cat, u.add_users, u.add_patients, u.box, u.report,
-               u.su, u.disabled, u.IsAdmin
+               u.su, u.disabled, u.isadmin
         FROM usersinfo u
         """;
 }

@@ -1,0 +1,68 @@
+LOAD DATABASE
+     FROM {{SMARTDOCSCAN_SQLSERVER_CONNECTION_STRING}}
+     INTO {{SMARTDOCSCAN_POSTGRES_CONNECTION_STRING}}
+
+ WITH include drop, create tables, create indexes, reset sequences,
+      foreign keys,
+      batch rows = 1000,
+      workers = 4,
+      concurrency = 1
+
+ SET maintenance_work_mem to '128MB',
+     work_mem to '32MB'
+
+ INCLUDING ONLY TABLE NAMES LIKE
+     'app_setting',
+     'audit_log',
+     'box',
+     'category',
+     'company',
+     'company_identity_tenant',
+     'documents',
+     'patient',
+     'user_external_login',
+     'users',
+     'usersinfo',
+     'userinfo'
+     IN SCHEMA 'dbo'
+
+ ALTER SCHEMA 'dbo' RENAME TO 'public'
+
+ AFTER LOAD DO
+ $$ CREATE UNIQUE INDEX IF NOT EXISTS ux_company_identity_tenant_provider
+        ON company_identity_tenant(comp_id, provider, tenant_id); $$,
+ $$ CREATE UNIQUE INDEX IF NOT EXISTS ux_user_external_login_provider_subject
+        ON user_external_login(provider, tenant_id, subject_id); $$,
+ $$ CREATE INDEX IF NOT EXISTS ix_patient_company_patient
+        ON patient(comp_id, patient_id); $$,
+ $$ ALTER TABLE documents
+        ALTER COLUMN deleted TYPE boolean USING COALESCE(deleted::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN deleted SET DEFAULT false; $$,
+ $$ ALTER TABLE company
+        ALTER COLUMN barcode TYPE boolean USING COALESCE(barcode::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN inactive TYPE boolean USING COALESCE(inactive::text, '0') IN ('1', 'true', 't'); $$,
+ $$ ALTER TABLE company_identity_tenant
+        ALTER COLUMN enabled TYPE boolean USING COALESCE(enabled::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN enabled SET DEFAULT true; $$,
+ $$ ALTER TABLE usersinfo
+        ALTER COLUMN upload_doc TYPE boolean USING COALESCE(upload_doc::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN scan_doc TYPE boolean USING COALESCE(scan_doc::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN delete_doc TYPE boolean USING COALESCE(delete_doc::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN delete_manage TYPE boolean USING COALESCE(delete_manage::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN print_doc TYPE boolean USING COALESCE(print_doc::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN download_doc TYPE boolean USING COALESCE(download_doc::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN add_cat TYPE boolean USING COALESCE(add_cat::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN add_users TYPE boolean USING COALESCE(add_users::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN add_patients TYPE boolean USING COALESCE(add_patients::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN box TYPE boolean USING COALESCE(box::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN report TYPE boolean USING COALESCE(report::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN su TYPE boolean USING COALESCE(su::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN disabled TYPE boolean USING COALESCE(disabled::text, '0') IN ('1', 'true', 't'),
+        ALTER COLUMN isadmin TYPE boolean USING COALESCE(isadmin::text, '0') IN ('1', 'true', 't'); $$,
+ $$ CREATE INDEX IF NOT EXISTS ix_documents_company_patient_date
+        ON documents(comp_id, patient_id, date DESC)
+        WHERE COALESCE(deleted, false) = false; $$,
+ $$ CREATE SEQUENCE IF NOT EXISTS audit_log_audit_id_seq OWNED BY audit_log.audit_id; $$,
+ $$ SELECT setval('audit_log_audit_id_seq', COALESCE((SELECT MAX(audit_id) FROM audit_log), 0) + 1, false); $$,
+ $$ ALTER TABLE audit_log ALTER COLUMN audit_id SET DEFAULT nextval('audit_log_audit_id_seq'); $$,
+ $$ ALTER TABLE audit_log ALTER COLUMN created_on SET DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'); $$;

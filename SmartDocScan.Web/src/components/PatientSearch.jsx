@@ -49,7 +49,7 @@ export function PatientSearch({ patients, search, onSearchChange, loading, onEdi
                   <td>{patient.lastName}</td>
                   <td>{patient.firstName}</td>
                   <td>{formatDate(patient.dateOfBirth)}</td>
-                  <td>{patient.externalPatientId}</td>
+                  <td>{patient.externalPatientId || patient.patientId}</td>
                   <td>{formatDateTime(patient.lastDocumentDate)}</td>
                   <td className="row-actions">
                     <button className="icon-button" type="button" onClick={(event) => { event.stopPropagation(); onDocuments(patient); }} aria-label="View documents">

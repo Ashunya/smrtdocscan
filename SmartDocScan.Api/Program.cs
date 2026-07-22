@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using ImageMagick;
 using SmartDocScan.Api.Data;
@@ -347,7 +347,7 @@ app.MapDelete("/api/patients/{patientId:int}", async (int patientId, ClaimsPrinc
         }
         return deleted ? Results.NoContent() : Results.NotFound(new { message = "Patient not found." });
     }
-    catch (SqlException)
+    catch (PostgresException)
     {
         return Results.Conflict(new { message = "Patient cannot be deleted because related records exist." });
     }
@@ -400,7 +400,7 @@ app.MapDelete("/api/boxes/{boxId:int}", async (int boxId, ClaimsPrincipal princi
     {
         return await repository.DeleteAsync(boxId, box.CompanyId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "Box not found." });
     }
-    catch (SqlException)
+    catch (PostgresException)
     {
         return Results.Conflict(new { message = "Box cannot be deleted because related records exist." });
     }
@@ -461,7 +461,7 @@ app.MapDelete("/api/categories/{categoryId:int}", async (int categoryId, ClaimsP
     {
         return await repository.DeleteAsync(categoryId, category.CompanyId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "Category not found." });
     }
-    catch (SqlException)
+    catch (PostgresException)
     {
         return Results.Conflict(new { message = "Category cannot be deleted because related documents exist." });
     }
@@ -706,7 +706,7 @@ app.MapDelete("/api/companies/{companyId:int}", async (int companyId, ClaimsPrin
         }
         return deleted ? Results.NoContent() : Results.NotFound(new { message = "Company not found." });
     }
-    catch (SqlException)
+    catch (PostgresException)
     {
         return Results.Conflict(new { message = "Company cannot be deleted because related records exist." });
     }
@@ -1371,6 +1371,23 @@ app.MapGet("/api/auth/microsoft", async (HttpContext httpContext) =>
     return Results.Challenge(new AuthenticationProperties { RedirectUri = redirectUri }, [OpenIdConnectDefaults.AuthenticationScheme]);
 }).RequireRateLimiting("auth");
 
+app.MapGet("/api/auth/desktop-callback", (string redirectUri, HttpContext httpContext) =>
+{
+    var sessionCookie = httpContext.Request.Cookies["smartdocscan.session"];
+    if (string.IsNullOrWhiteSpace(sessionCookie))
+    {
+        return Results.Unauthorized();
+    }
+
+    if (Uri.TryCreate(redirectUri, UriKind.Absolute, out var uri) && uri.IsLoopback)
+    {
+        var separator = redirectUri.Contains('?') ? "&" : "?";
+        var targetUrl = $"{redirectUri}{separator}session={Uri.EscapeDataString(sessionCookie)}";
+        return Results.Redirect(targetUrl);
+    }
+    return Results.BadRequest(new { message = "Invalid loopback redirect URI." });
+}).RequireAuthorization().RequireRateLimiting("auth");
+
 app.MapPost("/api/auth/change-password", async (ChangePasswordRequest request, ClaimsPrincipal principal, UserRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     if (principal.FindFirst("auth_provider")?.Value != "local")
@@ -1615,7 +1632,7 @@ static IResult? ValidateSecuritySettings(SecuritySettingsDto settings)
     var logoDataUrl = settings.Branding?.LogoDataUrl;
     if (!IsValidLogoDataUrl(logoDataUrl))
     {
-        return Results.BadRequest(new { message = "Logo must be a PNG, JPEG, GIF, or WebP data URL under 512 KB." });
+        return Results.BadRequest(new { message = "Logo must be a PNG, JPEG, GIF, or WebP data URL under 2 MB." });
     }
 
     return null;
@@ -1651,13 +1668,15 @@ static bool IsValidEmailAddress(string value)
 
 static bool IsValidLogoDataUrl(string? value)
 {
+    const int maxLogoDataUrlLength = 2 * 1024 * 1024;
+
     if (string.IsNullOrWhiteSpace(value))
     {
         return true;
     }
 
     var logo = value.Trim();
-    if (logo.Length > 512 * 1024)
+    if (logo.Length > maxLogoDataUrlLength)
     {
         return false;
     }
@@ -1697,12 +1716,19 @@ static string BuildPostSignInRedirect(string? returnUrl, IConfiguration configur
         returnUrl = "/";
     }
 
-    var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
-    if (Uri.TryCreate(returnUrl, UriKind.Absolute, out var absoluteReturnUri)
-        && allowedOrigins.Any(origin => Uri.TryCreate(origin, UriKind.Absolute, out var allowedOrigin)
-            && Uri.Compare(absoluteReturnUri, allowedOrigin, UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0))
+    if (Uri.TryCreate(returnUrl, UriKind.Absolute, out var absoluteReturnUri))
     {
-        return absoluteReturnUri.ToString();
+        if (absoluteReturnUri.IsLoopback)
+        {
+            return absoluteReturnUri.ToString();
+        }
+
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        if (allowedOrigins.Any(origin => Uri.TryCreate(origin, UriKind.Absolute, out var allowedOrigin)
+            && Uri.Compare(absoluteReturnUri, allowedOrigin, UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0))
+        {
+            return absoluteReturnUri.ToString();
+        }
     }
 
     if (!returnUrl.StartsWith("/", StringComparison.Ordinal) || returnUrl.StartsWith("//", StringComparison.Ordinal))
@@ -1710,7 +1736,8 @@ static string BuildPostSignInRedirect(string? returnUrl, IConfiguration configur
         returnUrl = "/";
     }
 
-    var webOrigin = allowedOrigins.FirstOrDefault(origin => Uri.TryCreate(origin, UriKind.Absolute, out _));
+    var allowedOriginsDefault = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+    var webOrigin = allowedOriginsDefault.FirstOrDefault(origin => Uri.TryCreate(origin, UriKind.Absolute, out _));
     return string.IsNullOrWhiteSpace(webOrigin) ? returnUrl : new Uri(new Uri(webOrigin.TrimEnd('/') + "/"), returnUrl.TrimStart('/')).ToString();
 }
 
