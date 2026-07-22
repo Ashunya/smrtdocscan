@@ -1,4 +1,4 @@
-using Npgsql;
+using Microsoft.Data.SqlClient;
 using SmartDocScan.Api.Models;
 
 namespace SmartDocScan.Api.Data;
@@ -16,7 +16,7 @@ public sealed class CompanyRepository
     public async Task<IReadOnlyList<CompanyDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var companies = new List<CompanyDto>();
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -89,7 +89,7 @@ public sealed class CompanyRepository
             throw new InvalidOperationException("Company name is required.");
         }
 
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -113,8 +113,8 @@ public sealed class CompanyRepository
         {
             command.CommandText = """
                 INSERT INTO company (comp_name, owner, address, location, phone, barcode, inactive)
-                VALUES (@companyName, @owner, @address, @location, @phone, @barcode, @inactive)
-                RETURNING comp_id;
+                OUTPUT INSERTED.comp_id
+                VALUES (@companyName, @owner, @address, @location, @phone, @barcode, @inactive);
                 """;
         }
 
@@ -123,8 +123,8 @@ public sealed class CompanyRepository
         command.Parameters.AddWithValue("@address", DbValue(request.Address));
         command.Parameters.AddWithValue("@location", DbValue(request.Location));
         command.Parameters.AddWithValue("@phone", DbValue(request.Phone));
-        command.Parameters.AddWithValue("@barcode", request.Barcode);
-        command.Parameters.AddWithValue("@inactive", request.Inactive);
+        command.Parameters.AddWithValue("@barcode", request.Barcode ? (byte)1 : (byte)0);
+        command.Parameters.AddWithValue("@inactive", request.Inactive ? (byte)1 : (byte)0);
 
         var companyId = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
         await SaveCompanyTenantsAsync(connection, companyId, request, cancellationToken);
@@ -133,7 +133,7 @@ public sealed class CompanyRepository
 
     public async Task<bool> DeleteAsync(int companyId, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -144,7 +144,7 @@ public sealed class CompanyRepository
 
     private async Task<CompanyDto?> GetAsync(int companyId, CancellationToken cancellationToken)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -199,7 +199,7 @@ public sealed class CompanyRepository
         return company;
     }
 
-    private static async Task SaveCompanyTenantsAsync(NpgsqlConnection connection, int companyId, CompanyUpsertRequest request, CancellationToken cancellationToken)
+    private static async Task SaveCompanyTenantsAsync(SqlConnection connection, int companyId, CompanyUpsertRequest request, CancellationToken cancellationToken)
     {
         var newTenants = request.Tenants;
         if ((newTenants == null || newTenants.Count == 0) && !string.IsNullOrWhiteSpace(request.MicrosoftTenantId))
@@ -233,11 +233,17 @@ public sealed class CompanyRepository
 
             await using var command = connection.CreateCommand();
             command.CommandText = """
-                INSERT INTO company_identity_tenant (comp_id, provider, tenant_id, tenant_name, enabled)
-                VALUES (@companyId, 'microsoft', @tenantId, @tenantName, @enabled)
-                ON CONFLICT (comp_id, provider, tenant_id)
-                DO UPDATE SET tenant_name = EXCLUDED.tenant_name,
-                              enabled = EXCLUDED.enabled;
+                MERGE company_identity_tenant AS target
+                USING (SELECT @companyId AS comp_id, 'microsoft' AS provider, @tenantId AS tenant_id) AS source
+                  ON target.comp_id = source.comp_id
+                 AND target.provider = source.provider
+                 AND target.tenant_id = source.tenant_id
+                WHEN MATCHED THEN
+                    UPDATE SET tenant_name = @tenantName,
+                               enabled = @enabled
+                WHEN NOT MATCHED THEN
+                    INSERT (comp_id, provider, tenant_id, tenant_name, enabled)
+                    VALUES (@companyId, 'microsoft', @tenantId, @tenantName, @enabled);
                 """;
             command.Parameters.AddWithValue("@companyId", companyId);
             command.Parameters.AddWithValue("@tenantId", tenant.TenantId.Trim());
@@ -283,7 +289,7 @@ public sealed class CompanyRepository
         }
     }
 
-    private static CompanyDto MapCompany(NpgsqlDataReader reader)
+    private static CompanyDto MapCompany(SqlDataReader reader)
     {
         return new CompanyDto
         {
@@ -293,20 +299,20 @@ public sealed class CompanyRepository
             Address = ReadString(reader, "address"),
             Location = ReadString(reader, "location"),
             Phone = ReadString(reader, "phone"),
-            Barcode = ReadBool(reader, "barcode"),
-            Inactive = ReadBool(reader, "inactive")
+            Barcode = reader.GetByte(reader.GetOrdinal("barcode")) != 0,
+            Inactive = reader.GetByte(reader.GetOrdinal("inactive")) != 0
         };
     }
 
     private static object DbValue(string? value) => string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();
 
-    private static string? ReadString(NpgsqlDataReader reader, string name)
+    private static string? ReadString(SqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
     }
 
-    private static bool ReadBool(NpgsqlDataReader reader, string name)
+    private static bool ReadBool(SqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return !reader.IsDBNull(ordinal) && reader.GetBoolean(ordinal);

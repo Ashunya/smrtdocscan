@@ -1,4 +1,4 @@
-using Npgsql;
+using Microsoft.Data.SqlClient;
 using SmartDocScan.Api.Models;
 
 namespace SmartDocScan.Api.Data;
@@ -16,7 +16,7 @@ public sealed class PatientRepository
     public async Task<IReadOnlyList<PatientDto>> SearchAsync(int companyId, string? search, int take = 100, CancellationToken cancellationToken = default)
     {
         var patients = new List<PatientDto>();
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -45,7 +45,7 @@ public sealed class PatientRepository
 
     public async Task<PatientDto?> GetAsync(int patientId, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -60,14 +60,14 @@ public sealed class PatientRepository
     {
         await EnsureExternalPatientIdIsUniqueAsync(request.CompanyId, request.ExternalPatientId, null, cancellationToken);
 
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO patient (comp_id, pext_id, first_name, last_name, dob, gender, physician, box, ssn)
-            VALUES (@companyId, @externalPatientId, @firstName, @lastName, @dateOfBirth, @gender, @physician, @box, @ssn)
-            RETURNING patient_id;
+            OUTPUT INSERTED.patient_id
+            VALUES (@companyId, @externalPatientId, @firstName, @lastName, @dateOfBirth, @gender, @physician, @box, @ssn);
             """;
         AddUpsertParameters(command, request);
         var id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
@@ -78,7 +78,7 @@ public sealed class PatientRepository
     {
         await EnsureExternalPatientIdIsUniqueAsync(request.CompanyId, request.ExternalPatientId, patientId, cancellationToken);
 
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -105,7 +105,7 @@ public sealed class PatientRepository
 
     public async Task<bool> DeleteAsync(int patientId, int companyId, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -122,18 +122,17 @@ public sealed class PatientRepository
             return;
         }
 
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT patient_id, pext_id, first_name, last_name, dob
+            SELECT TOP (1) patient_id, pext_id, first_name, last_name, dob
             FROM patient
             WHERE comp_id = @companyId
-              AND btrim(pext_id) = @externalPatientId
+              AND LTRIM(RTRIM(pext_id)) = @externalPatientId
               AND (@currentPatientId IS NULL OR patient_id <> @currentPatientId)
-            ORDER BY patient_id
-            LIMIT 1;
+            ORDER BY patient_id;
             """;
         command.Parameters.AddWithValue("@companyId", companyId);
         command.Parameters.AddWithValue("@externalPatientId", externalPatientId.Trim());
@@ -162,14 +161,11 @@ public sealed class PatientRepository
         {
             var hasNumeric = int.TryParse(terms[i], out _);
             where += hasNumeric
-                ? $" AND (p.patient_id = @patientId{i} OR p.pext_id ILIKE @term{i} OR p.first_name ILIKE @term{i} OR p.last_name ILIKE @term{i})"
-                : $" AND (p.pext_id ILIKE @term{i} OR p.first_name ILIKE @term{i} OR p.last_name ILIKE @term{i})";
+                ? $" AND (p.patient_id = @patientId{i} OR p.pext_id LIKE @term{i} OR p.first_name LIKE @term{i} OR p.last_name LIKE @term{i})"
+                : $" AND (p.pext_id LIKE @term{i} OR p.first_name LIKE @term{i} OR p.last_name LIKE @term{i})";
         }
 
-        var innerWhere = where.Replace("p.", string.Empty, StringComparison.Ordinal);
-        return PatientSearchSelectSql
-            .Replace("{where}", innerWhere, StringComparison.Ordinal)
-            .Replace("{order}", string.IsNullOrWhiteSpace(search) ? "patient_id DESC" : "last_name, first_name, patient_id DESC", StringComparison.Ordinal);
+        return PatientSearchSelectSql + where + " ORDER BY last_document_date DESC, patient_id DESC;";
     }
 
     private static List<string> SplitSearch(string? search)
@@ -179,7 +175,7 @@ public sealed class PatientRepository
             : search.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
     }
 
-    private static void AddUpsertParameters(NpgsqlCommand command, PatientUpsertRequest request)
+    private static void AddUpsertParameters(SqlCommand command, PatientUpsertRequest request)
     {
         command.Parameters.AddWithValue("@companyId", request.CompanyId);
         command.Parameters.AddWithValue("@externalPatientId", DbValue(request.ExternalPatientId));
@@ -197,7 +193,7 @@ public sealed class PatientRepository
         return string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();
     }
 
-    private static PatientDto MapPatient(NpgsqlDataReader reader)
+    private static PatientDto MapPatient(SqlDataReader reader)
     {
         return new PatientDto
         {
@@ -215,13 +211,13 @@ public sealed class PatientRepository
         };
     }
 
-    private static string? ReadString(NpgsqlDataReader reader, string name)
+    private static string? ReadString(SqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
     }
 
-    private static DateTime? ReadDateTime(NpgsqlDataReader reader, string name)
+    private static DateTime? ReadDateTime(SqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetDateTime(ordinal);
@@ -231,38 +227,27 @@ public sealed class PatientRepository
         SELECT p.patient_id, p.comp_id, p.pext_id, p.first_name, p.last_name, p.dob, p.gender, p.physician, p.box, p.ssn,
                latest.last_document_date
         FROM patient p
-        LEFT JOIN LATERAL (
+        OUTER APPLY (
             SELECT MAX(d.date) AS last_document_date
             FROM documents d
             WHERE d.patient_id = p.patient_id
               AND d.comp_id = p.comp_id
-              AND COALESCE(d.deleted, false) = false
-        ) latest ON true
+              AND ISNULL(d.deleted, 0) = 0
+        ) latest
         """;
 
     private const string PatientSearchSelectSql = """
-        SELECT p.patient_id, p.comp_id, p.pext_id, p.first_name, p.last_name, p.dob, p.gender, p.physician, p.box, p.ssn,
+        SELECT TOP (@take) p.patient_id, p.comp_id, p.pext_id, p.first_name, p.last_name, p.dob, p.gender, p.physician, p.box, p.ssn,
                latest.last_document_date
-        FROM (
-            SELECT patient_id, comp_id, pext_id, first_name, last_name, dob, gender, physician, box, ssn
-            FROM patient
-            {where}
-            ORDER BY {order}
-            LIMIT @take
-        ) p
-        LEFT JOIN LATERAL (
-            SELECT MAX(d.date) AS last_document_date
+        FROM patient p
+        LEFT JOIN (
+            SELECT d.patient_id, d.comp_id, MAX(d.date) AS last_document_date
             FROM documents d
-            WHERE d.comp_id = p.comp_id
-              AND COALESCE(d.deleted, false) = false
-              AND (
-                  d.patient_id = p.patient_id
-                  OR (
-                      p.pext_id IS NOT NULL
-                      AND btrim(p.pext_id) = d.patient_id::text
-                  )
-              )
-        ) latest ON true
-        ORDER BY latest.last_document_date DESC NULLS LAST, p.patient_id DESC;
+            WHERE d.comp_id = @companyId
+              AND ISNULL(d.deleted, 0) = 0
+            GROUP BY d.patient_id, d.comp_id
+        ) latest
+          ON latest.patient_id = p.patient_id
+         AND latest.comp_id = p.comp_id
         """;
 }

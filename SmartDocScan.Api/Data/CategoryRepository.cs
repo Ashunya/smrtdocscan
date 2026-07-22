@@ -1,4 +1,4 @@
-using Npgsql;
+using Microsoft.Data.SqlClient;
 using SmartDocScan.Api.Models;
 
 namespace SmartDocScan.Api.Data;
@@ -6,17 +6,22 @@ namespace SmartDocScan.Api.Data;
 public sealed class CategoryRepository
 {
     private readonly string _connectionString;
+    private readonly bool _autoEnsureSchema;
+    private static readonly SemaphoreSlim SchemaLock = new(1, 1);
+    private static bool _schemaChecked;
 
     public CategoryRepository(IConfiguration configuration)
     {
         _connectionString = configuration.GetConnectionString("SmartDocScan")
             ?? throw new InvalidOperationException("Connection string 'SmartDocScan' is missing.");
+        _autoEnsureSchema = DatabaseSchemaOptions.AutoEnsureSchema(configuration);
     }
 
     public async Task<IReadOnlyList<CategoryDto>> GetByCompanyAsync(int companyId, string? categoryType = null, CancellationToken cancellationToken = default)
     {
+        await EnsureSchemaAsync(cancellationToken);
         var categories = new List<CategoryDto>();
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -51,19 +56,20 @@ public sealed class CategoryRepository
 
     public async Task<CategoryDto> CreateAsync(CategoryUpsertRequest request, CancellationToken cancellationToken = default)
     {
+        await EnsureSchemaAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(request.CategoryName))
         {
             throw new InvalidOperationException("Category name is required.");
         }
 
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO category (cat_name, comp_id, access, parent_id, category_type)
-            VALUES (@categoryName, @companyId, @access, @parentId, @categoryType)
-            RETURNING cat_id;
+            OUTPUT INSERTED.cat_id
+            VALUES (@categoryName, @companyId, @access, @parentId, @categoryType);
             """;
         command.Parameters.AddWithValue("@categoryName", request.CategoryName.Trim());
         command.Parameters.AddWithValue("@companyId", request.CompanyId);
@@ -79,7 +85,8 @@ public sealed class CategoryRepository
 
     public async Task<bool> DeleteAsync(int categoryId, int companyId, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await EnsureSchemaAsync(cancellationToken);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -91,7 +98,8 @@ public sealed class CategoryRepository
 
     public async Task<bool> RenameAsync(int categoryId, string newName, int companyId, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await EnsureSchemaAsync(cancellationToken);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -104,7 +112,8 @@ public sealed class CategoryRepository
 
     public async Task<CategoryDto?> GetAsync(int categoryId, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await EnsureSchemaAsync(cancellationToken);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -131,13 +140,67 @@ public sealed class CategoryRepository
             : null;
     }
 
-    private static string? ReadString(NpgsqlDataReader reader, string name)
+    private async Task EnsureSchemaAsync(CancellationToken cancellationToken)
+    {
+        if (_schemaChecked)
+        {
+            return;
+        }
+
+        if (!_autoEnsureSchema)
+        {
+            _schemaChecked = true;
+            return;
+        }
+
+        await SchemaLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_schemaChecked)
+            {
+                return;
+            }
+
+            await using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync(cancellationToken);
+            
+            await using (var command = connection.CreateCommand())
+            {
+                command.CommandText = """
+                    IF COL_LENGTH('dbo.category', 'parent_id') IS NULL
+                    BEGIN
+                        ALTER TABLE dbo.category ADD parent_id INT NULL CONSTRAINT FK_category_parent REFERENCES dbo.category(cat_id);
+                    END
+                    """;
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await using (var command = connection.CreateCommand())
+            {
+                command.CommandText = """
+                    IF COL_LENGTH('dbo.category', 'category_type') IS NULL
+                    BEGIN
+                        ALTER TABLE dbo.category ADD category_type VARCHAR(30) NOT NULL CONSTRAINT DF_category_type DEFAULT 'patient';
+                    END
+                    """;
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            _schemaChecked = true;
+        }
+        finally
+        {
+            SchemaLock.Release();
+        }
+    }
+
+    private static string? ReadString(SqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
     }
 
-    private static int? ReadNullableInt(NpgsqlDataReader reader, string name)
+    private static int? ReadNullableInt(SqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetInt32(ordinal);

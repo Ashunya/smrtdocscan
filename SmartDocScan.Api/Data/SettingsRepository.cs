@@ -1,4 +1,4 @@
-using Npgsql;
+using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.DataProtection;
 using SmartDocScan.Api.Models;
 
@@ -20,7 +20,7 @@ public sealed class SettingsRepository
 
     public async Task<SecuritySettingsDto> GetSecuritySettingsAsync(IConfiguration configuration, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
         await EnsureTableAsync(connection, _autoEnsureSchema, cancellationToken);
         var values = await ReadSettingsAsync(connection, cancellationToken);
@@ -53,7 +53,7 @@ public sealed class SettingsRepository
 
     public async Task<BrandingSettingsDto> GetBrandingSettingsAsync(IConfiguration configuration, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
         await EnsureTableAsync(connection, _autoEnsureSchema, cancellationToken);
         var values = await ReadSettingsAsync(connection, cancellationToken);
@@ -65,7 +65,7 @@ public sealed class SettingsRepository
 
     public async Task<MicrosoftSsoSettingsDto> GetMicrosoftSsoRuntimeSettingsAsync(IConfiguration configuration, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
         await EnsureTableAsync(connection, _autoEnsureSchema, cancellationToken);
         var values = await ReadSettingsAsync(connection, cancellationToken);
@@ -81,7 +81,7 @@ public sealed class SettingsRepository
 
     public async Task<SmtpSettingsDto> GetSmtpRuntimeSettingsAsync(IConfiguration configuration, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
         await EnsureTableAsync(connection, _autoEnsureSchema, cancellationToken);
         var values = await ReadSettingsAsync(connection, cancellationToken);
@@ -100,24 +100,20 @@ public sealed class SettingsRepository
 
     public async Task SaveSecuritySettingsAsync(SecuritySettingsDto settings, CancellationToken cancellationToken = default)
     {
-        var microsoft = settings.Microsoft ?? new MicrosoftSsoSettingsDto();
-        var smtp = settings.Smtp ?? new SmtpSettingsDto();
-        var branding = settings.Branding ?? new BrandingSettingsDto();
-
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
         await EnsureTableAsync(connection, _autoEnsureSchema, cancellationToken);
 
-        await UpsertAsync(connection, "Authentication:Microsoft:ClientId", microsoft.ClientId, cancellationToken);
-        await UpsertSecretAsync(connection, "Authentication:Microsoft:ClientSecret", microsoft.ClientSecret, cancellationToken);
-        await UpsertAsync(connection, "Authentication:Microsoft:CallbackPath", microsoft.CallbackPath, cancellationToken);
-        await UpsertAsync(connection, "Smtp:Host", smtp.Host, cancellationToken);
-        await UpsertAsync(connection, "Smtp:Port", smtp.Port, cancellationToken);
-        await UpsertAsync(connection, "Smtp:EnableSsl", smtp.EnableSsl, cancellationToken);
-        await UpsertAsync(connection, "Smtp:From", smtp.From, cancellationToken);
-        await UpsertAsync(connection, "Smtp:Username", smtp.Username, cancellationToken);
-        await UpsertSecretAsync(connection, "Smtp:Password", smtp.Password, cancellationToken);
-        await UpsertAsync(connection, "Branding:LogoDataUrl", branding.LogoDataUrl, cancellationToken);
+        await UpsertAsync(connection, "Authentication:Microsoft:ClientId", settings.Microsoft.ClientId, cancellationToken);
+        await UpsertSecretAsync(connection, "Authentication:Microsoft:ClientSecret", settings.Microsoft.ClientSecret, cancellationToken);
+        await UpsertAsync(connection, "Authentication:Microsoft:CallbackPath", settings.Microsoft.CallbackPath, cancellationToken);
+        await UpsertAsync(connection, "Smtp:Host", settings.Smtp.Host, cancellationToken);
+        await UpsertAsync(connection, "Smtp:Port", settings.Smtp.Port, cancellationToken);
+        await UpsertAsync(connection, "Smtp:EnableSsl", settings.Smtp.EnableSsl, cancellationToken);
+        await UpsertAsync(connection, "Smtp:From", settings.Smtp.From, cancellationToken);
+        await UpsertAsync(connection, "Smtp:Username", settings.Smtp.Username, cancellationToken);
+        await UpsertSecretAsync(connection, "Smtp:Password", settings.Smtp.Password, cancellationToken);
+        await UpsertAsync(connection, "Branding:LogoDataUrl", settings.Branding.LogoDataUrl, cancellationToken);
     }
 
     public static void LoadIntoConfiguration(IConfigurationManager configuration)
@@ -130,7 +126,7 @@ public sealed class SettingsRepository
 
         try
         {
-            using var connection = new NpgsqlConnection(connectionString);
+            using var connection = new SqlConnection(connectionString);
             connection.Open();
             if (DatabaseSchemaOptions.AutoEnsureSchema(configuration))
             {
@@ -155,7 +151,7 @@ public sealed class SettingsRepository
         }
     }
 
-    private static async Task<Dictionary<string, string?>> ReadSettingsAsync(NpgsqlConnection connection, CancellationToken cancellationToken)
+    private static async Task<Dictionary<string, string?>> ReadSettingsAsync(SqlConnection connection, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT setting_key, setting_value FROM app_setting;";
@@ -168,7 +164,7 @@ public sealed class SettingsRepository
         return values;
     }
 
-    private static async Task EnsureTableAsync(NpgsqlConnection connection, bool autoEnsureSchema, CancellationToken cancellationToken)
+    private static async Task EnsureTableAsync(SqlConnection connection, bool autoEnsureSchema, CancellationToken cancellationToken)
     {
         if (!autoEnsureSchema)
         {
@@ -180,7 +176,7 @@ public sealed class SettingsRepository
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private async Task UpsertSecretAsync(NpgsqlConnection connection, string key, string? value, CancellationToken cancellationToken)
+    private async Task UpsertSecretAsync(SqlConnection connection, string key, string? value, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -189,15 +185,18 @@ public sealed class SettingsRepository
         await UpsertAsync(connection, key, ProtectSecret(value.Trim()), cancellationToken);
     }
 
-    private static async Task UpsertAsync(NpgsqlConnection connection, string key, string? value, CancellationToken cancellationToken)
+    private static async Task UpsertAsync(SqlConnection connection, string key, string? value, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO app_setting (setting_key, setting_value, updated_on)
-            VALUES (@key, @value, CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
-            ON CONFLICT (setting_key)
-            DO UPDATE SET setting_value = EXCLUDED.setting_value,
-                          updated_on = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC');
+            MERGE app_setting AS target
+            USING (SELECT @key AS setting_key) AS source
+              ON target.setting_key = source.setting_key
+            WHEN MATCHED THEN
+                UPDATE SET setting_value = @value, updated_on = SYSUTCDATETIME()
+            WHEN NOT MATCHED THEN
+                INSERT (setting_key, setting_value)
+                VALUES (@key, @value);
             """;
         command.Parameters.AddWithValue("@key", key);
         command.Parameters.AddWithValue("@value", string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim());
@@ -242,14 +241,14 @@ public sealed class SettingsRepository
     }
 
     private const string EnsureTableSql = """
-        CREATE TABLE IF NOT EXISTS app_setting (
-            setting_key varchar(160) PRIMARY KEY,
-            setting_value text NULL,
-            updated_on timestamp without time zone NOT NULL DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
-        );
-
-        ALTER TABLE app_setting
-        ALTER COLUMN updated_on SET DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC');
+        IF OBJECT_ID('dbo.app_setting', 'U') IS NULL
+        BEGIN
+            CREATE TABLE dbo.app_setting (
+                setting_key nvarchar(160) NOT NULL CONSTRAINT PK_app_setting PRIMARY KEY,
+                setting_value nvarchar(max) NULL,
+                updated_on datetime2 NOT NULL CONSTRAINT DF_app_setting_updated_on DEFAULT SYSUTCDATETIME()
+            );
+        END;
         """;
     private const string ProtectedSecretPrefix = "protected:";
 }

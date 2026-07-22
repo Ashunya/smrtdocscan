@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Http.Features;
-using Npgsql;
+using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using ImageMagick;
 using SmartDocScan.Api.Data;
@@ -347,7 +347,7 @@ app.MapDelete("/api/patients/{patientId:int}", async (int patientId, ClaimsPrinc
         }
         return deleted ? Results.NoContent() : Results.NotFound(new { message = "Patient not found." });
     }
-    catch (PostgresException)
+    catch (SqlException)
     {
         return Results.Conflict(new { message = "Patient cannot be deleted because related records exist." });
     }
@@ -400,7 +400,7 @@ app.MapDelete("/api/boxes/{boxId:int}", async (int boxId, ClaimsPrincipal princi
     {
         return await repository.DeleteAsync(boxId, box.CompanyId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "Box not found." });
     }
-    catch (PostgresException)
+    catch (SqlException)
     {
         return Results.Conflict(new { message = "Box cannot be deleted because related records exist." });
     }
@@ -461,7 +461,7 @@ app.MapDelete("/api/categories/{categoryId:int}", async (int categoryId, ClaimsP
     {
         return await repository.DeleteAsync(categoryId, category.CompanyId, cancellationToken) ? Results.NoContent() : Results.NotFound(new { message = "Category not found." });
     }
-    catch (PostgresException)
+    catch (SqlException)
     {
         return Results.Conflict(new { message = "Category cannot be deleted because related documents exist." });
     }
@@ -706,7 +706,7 @@ app.MapDelete("/api/companies/{companyId:int}", async (int companyId, ClaimsPrin
         }
         return deleted ? Results.NoContent() : Results.NotFound(new { message = "Company not found." });
     }
-    catch (PostgresException)
+    catch (SqlException)
     {
         return Results.Conflict(new { message = "Company cannot be deleted because related records exist." });
     }
@@ -1632,7 +1632,7 @@ static IResult? ValidateSecuritySettings(SecuritySettingsDto settings)
     var logoDataUrl = settings.Branding?.LogoDataUrl;
     if (!IsValidLogoDataUrl(logoDataUrl))
     {
-        return Results.BadRequest(new { message = "Logo must be a PNG, JPEG, GIF, or WebP data URL under 2 MB." });
+        return Results.BadRequest(new { message = "Logo must be a PNG, JPEG, GIF, or WebP data URL under 512 KB." });
     }
 
     return null;
@@ -1668,15 +1668,13 @@ static bool IsValidEmailAddress(string value)
 
 static bool IsValidLogoDataUrl(string? value)
 {
-    const int maxLogoDataUrlLength = 2 * 1024 * 1024;
-
     if (string.IsNullOrWhiteSpace(value))
     {
         return true;
     }
 
     var logo = value.Trim();
-    if (logo.Length > maxLogoDataUrlLength)
+    if (logo.Length > 512 * 1024)
     {
         return false;
     }

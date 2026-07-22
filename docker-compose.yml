@@ -1,30 +1,9 @@
 services:
-  postgres:
-    image: postgres:16
-    container_name: smrtdocscan-postgres
-    environment:
-      POSTGRES_DB: ${SMARTDOCSCAN_POSTGRES_DB:-smartdocscan}
-      POSTGRES_USER: ${SMARTDOCSCAN_POSTGRES_USER:-smartdocscan}
-      POSTGRES_PASSWORD: ${SMARTDOCSCAN_POSTGRES_PASSWORD}
-    volumes:
-      - ./PostgresData:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:${SMARTDOCSCAN_POSTGRES_PORT:-5432}:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${SMARTDOCSCAN_POSTGRES_USER:-smartdocscan} -d ${SMARTDOCSCAN_POSTGRES_DB:-smartdocscan}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
   api:
     build:
       context: .
       dockerfile: SmartDocScan.Api/Dockerfile
     container_name: smrtdocscan-api
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
@@ -32,7 +11,7 @@ services:
       Cors__AllowedOrigins__0: https://scandev.ashunya.com
       Store__RootPath: /data/store
     volumes:
-      - ${SMARTDOCSCAN_STORE_PATH:-/mnt/smartdocscan/store}:/data/store
+      - D:/DMS/store:/data/store
       - ./DataProtection-Keys:/root/.aspnet/DataProtection-Keys
     restart: unless-stopped
 
@@ -43,7 +22,6 @@ services:
       args:
         VITE_API_BASE_URL: https://scandevapi.ashunya.com/api
         VITE_DEFAULT_COMPANY_ID: ${SMARTDOCSCAN_DEFAULT_COMPANY_ID:-7}
-        VITE_DYNAMSOFT_PRODUCT_KEY: ${SMARTDOCSCAN_DYNAMSOFT_PRODUCT_KEY:-}
     container_name: smrtdocscan-web
     depends_on:
       - api

@@ -1,4 +1,4 @@
-using Npgsql;
+using Microsoft.Data.SqlClient;
 using SmartDocScan.Api.Models;
 
 namespace SmartDocScan.Api.Data;
@@ -16,16 +16,15 @@ public sealed class BoxRepository
     public async Task<IReadOnlyList<BoxDto>> GetByCompanyAsync(int companyId, CancellationToken cancellationToken = default)
     {
         var boxes = new List<BoxDto>();
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT box_id, comp_id, box_ext_id, box_name, aisle, section, brow, bcolumn
+            SELECT TOP (1000) box_id, comp_id, box_ext_id, box_name, aisle, section, brow, bcolumn
             FROM box
             WHERE comp_id = @companyId
-            ORDER BY box_id
-            LIMIT 1000;
+            ORDER BY box_id;
             """;
         command.Parameters.AddWithValue("@companyId", companyId);
 
@@ -42,14 +41,14 @@ public sealed class BoxRepository
     {
         await EnsureExternalBoxIdIsUniqueAsync(request.ExternalBoxId, cancellationToken);
 
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO box (comp_id, box_ext_id, box_name, aisle, section, brow, bcolumn)
-            VALUES (@companyId, @externalBoxId, @boxName, @aisle, @section, @row, @column)
-            RETURNING box_id;
+            OUTPUT INSERTED.box_id
+            VALUES (@companyId, @externalBoxId, @boxName, @aisle, @section, @row, @column);
             """;
         AddUpsertParameters(command, request);
 
@@ -59,7 +58,7 @@ public sealed class BoxRepository
 
     public async Task<bool> DeleteAsync(int boxId, int companyId, CancellationToken cancellationToken = default)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -71,7 +70,7 @@ public sealed class BoxRepository
 
     public async Task<BoxDto?> GetAsync(int boxId, CancellationToken cancellationToken)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -88,7 +87,7 @@ public sealed class BoxRepository
 
     private async Task EnsureExternalBoxIdIsUniqueAsync(int externalBoxId, CancellationToken cancellationToken)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
@@ -102,7 +101,7 @@ public sealed class BoxRepository
         }
     }
 
-    private static void AddUpsertParameters(NpgsqlCommand command, BoxUpsertRequest request)
+    private static void AddUpsertParameters(SqlCommand command, BoxUpsertRequest request)
     {
         command.Parameters.AddWithValue("@companyId", request.CompanyId);
         command.Parameters.AddWithValue("@externalBoxId", request.ExternalBoxId);
@@ -118,7 +117,7 @@ public sealed class BoxRepository
         return string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();
     }
 
-    private static BoxDto MapBox(NpgsqlDataReader reader)
+    private static BoxDto MapBox(SqlDataReader reader)
     {
         return new BoxDto
         {
@@ -133,7 +132,7 @@ public sealed class BoxRepository
         };
     }
 
-    private static string? ReadString(NpgsqlDataReader reader, string name)
+    private static string? ReadString(SqlDataReader reader, string name)
     {
         var ordinal = reader.GetOrdinal(name);
         return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
