@@ -143,7 +143,7 @@ public partial class MainWindowViewModel : ObservableObject
                     {
                         StatusMessage = "Uploading scanned document to SmartDocScan Cloud...";
                         int catId = SelectedCategory?.CategoryId ?? 1;
-                        bool uploaded = await _apiClient.UploadScannedDocumentAsync(tempPath, catId);
+                        var (uploaded, uploadMessage) = await _apiClient.UploadScannedDocumentAsync(tempPath, catId);
 
                         if (uploaded)
                         {
@@ -152,7 +152,8 @@ public partial class MainWindowViewModel : ObservableObject
                         }
                         else
                         {
-                            StatusMessage = "Scan completed locally, but cloud upload failed.";
+                            StatusMessage = $"Cloud upload failed: {uploadMessage}";
+                            MessageBox.Show($"Could not upload scanned document to cloud:\n\n{uploadMessage}", "Cloud Upload Error", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
                     }
                     else
@@ -193,7 +194,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             StatusMessage = "Uploading imported file...";
             int catId = SelectedCategory?.CategoryId ?? 1;
-            bool uploaded = await _apiClient.UploadScannedDocumentAsync(dialog.FileName, catId);
+            var (uploaded, uploadMessage) = await _apiClient.UploadScannedDocumentAsync(dialog.FileName, catId);
 
             if (uploaded)
             {
@@ -202,7 +203,8 @@ public partial class MainWindowViewModel : ObservableObject
             }
             else
             {
-                StatusMessage = "Failed to upload imported file.";
+                StatusMessage = $"Failed to upload imported file: {uploadMessage}";
+                MessageBox.Show($"Could not upload imported file:\n\n{uploadMessage}", "File Import Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

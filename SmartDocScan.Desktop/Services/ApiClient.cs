@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using SmartDocScan.Desktop.Models;
 
@@ -11,21 +13,18 @@ namespace SmartDocScan.Desktop.Services;
 public class ApiClient
 {
     private readonly HttpClient _httpClient;
-    private string _baseUrl = "https://scandevapi.ashunya.com";
-
+    public string BaseUrl { get; set; } = "https://scandevapi.ashunya.com/";
     public int CurrentCompanyId { get; set; } = 1;
-    public string CurrentCompanyName { get; set; } = "";
+    public string CurrentCompanyName { get; set; } = "Ashunya";
     public string CurrentUserName { get; set; } = "";
-    public string? SessionToken { get; private set; }
 
     public ApiClient(HttpClient httpClient)
     {
         _httpClient = httpClient;
     }
 
-    public void SetSessionToken(string? token)
+    public void SetSessionToken(string token)
     {
-        SessionToken = token;
         _httpClient.DefaultRequestHeaders.Remove("Cookie");
         if (!string.IsNullOrWhiteSpace(token))
         {
@@ -33,40 +32,24 @@ public class ApiClient
         }
     }
 
-    public string BaseUrl
+    private Uri GetUri(string relativePath)
     {
-        get => _baseUrl;
-        set
+        var baseUri = new Uri(BaseUrl.TrimEnd('/') + "/");
+        return new Uri(baseUri, relativePath.TrimStart('/'));
+    }
+
+    public async Task<bool> LoginAsync(string email, string password)
+    {
+        try
         {
-            if (!string.IsNullOrWhiteSpace(value))
+            var response = await _httpClient.PostAsJsonAsync(GetUri("/api/auth/login"), new { username = email, password });
+            if (response.IsSuccessStatusCode)
             {
-                var trimmed = value.TrimEnd('/');
-                if (!trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-                    !trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                {
-                    trimmed = "https://" + trimmed;
-                }
-                _baseUrl = trimmed;
+                var userResp = await GetCurrentUserAsync();
+                return userResp?.User != null;
             }
         }
-    }
-
-    private Uri GetUri(string path)
-    {
-        var baseClean = _baseUrl.TrimEnd('/');
-        var pathClean = path.StartsWith('/') ? path : "/" + path;
-        return new Uri(baseClean + pathClean);
-    }
-
-    public async Task<bool> LoginAsync(string username, string password)
-    {
-        var request = new { Username = username, Password = password };
-        var response = await _httpClient.PostAsJsonAsync(GetUri("/api/auth/login"), request);
-        if (response.IsSuccessStatusCode)
-        {
-            await GetCurrentUserAsync();
-            return true;
-        }
+        catch { }
         return false;
     }
 
@@ -124,15 +107,27 @@ public class ApiClient
         return new List<DocumentModel>();
     }
 
-    public async Task<bool> UploadScannedDocumentAsync(string filePath, int categoryId = 1, int? companyId = null, int patientId = 1)
+    public async Task<(bool Success, string Message)> UploadScannedDocumentAsync(string filePath, int categoryId = 1, int? companyId = null, int? patientId = null)
     {
         int cid = companyId ?? CurrentCompanyId;
         try
         {
-            using var content = new MultipartFormDataContent();
-            using var fileStream = System.IO.File.OpenRead(filePath);
-            var fileContent = new StreamContent(fileStream);
-            
+            int pid = patientId ?? 0;
+            if (pid <= 0)
+            {
+                var patientsResp = await _httpClient.GetAsync(GetUri($"/api/patients?companyId={cid}&take=1"));
+                if (patientsResp.IsSuccessStatusCode)
+                {
+                    var patients = await patientsResp.Content.ReadFromJsonAsync<List<PatientModel>>();
+                    if (patients?.Count > 0)
+                    {
+                        pid = patients[0].PatientId;
+                    }
+                }
+            }
+
+            if (pid <= 0) pid = 1;
+
             var ext = System.IO.Path.GetExtension(filePath).ToLowerInvariant();
             var mime = ext switch
             {
@@ -142,20 +137,51 @@ public class ApiClient
                 _ => "image/png"
             };
 
-            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mime);
+            // Attempt 1: Patient Document Upload
+            using (var content = new MultipartFormDataContent())
+            using (var fileStream = System.IO.File.OpenRead(filePath))
+            {
+                var fileContent = new StreamContent(fileStream);
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mime);
 
-            content.Add(fileContent, "file", System.IO.Path.GetFileName(filePath));
-            content.Add(new StringContent(cid.ToString()), "companyId");
-            content.Add(new StringContent(patientId.ToString()), "patientId");
-            content.Add(new StringContent(categoryId.ToString()), "categoryId");
-            content.Add(new StringContent(System.IO.Path.GetFileNameWithoutExtension(filePath)), "documentName");
+                content.Add(fileContent, "file", System.IO.Path.GetFileName(filePath));
+                content.Add(new StringContent(cid.ToString()), "companyId");
+                content.Add(new StringContent(pid.ToString()), "patientId");
+                content.Add(new StringContent(categoryId.ToString()), "categoryId");
+                content.Add(new StringContent(System.IO.Path.GetFileNameWithoutExtension(filePath)), "documentName");
 
-            var response = await _httpClient.PostAsync(GetUri("/api/documents"), content);
-            return response.IsSuccessStatusCode;
+                var response = await _httpClient.PostAsync(GetUri("/api/documents"), content);
+                if (response.IsSuccessStatusCode)
+                {
+                    return (true, "Success");
+                }
+            }
+
+            // Attempt 2: Business / General Document Upload
+            using (var bizContent = new MultipartFormDataContent())
+            using (var bizStream = System.IO.File.OpenRead(filePath))
+            {
+                var bizFileContent = new StreamContent(bizStream);
+                bizFileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mime);
+
+                bizContent.Add(bizFileContent, "file", System.IO.Path.GetFileName(filePath));
+                bizContent.Add(new StringContent(cid.ToString()), "companyId");
+                bizContent.Add(new StringContent(categoryId.ToString()), "categoryId");
+                bizContent.Add(new StringContent(System.IO.Path.GetFileNameWithoutExtension(filePath)), "documentName");
+
+                var bizResponse = await _httpClient.PostAsync(GetUri("/api/business-documents"), bizContent);
+                if (bizResponse.IsSuccessStatusCode)
+                {
+                    return (true, "Success");
+                }
+
+                var errText = await bizResponse.Content.ReadAsStringAsync();
+                return (false, $"HTTP {(int)bizResponse.StatusCode}: {(string.IsNullOrWhiteSpace(errText) ? bizResponse.ReasonPhrase : errText)}");
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            return (false, ex.Message);
         }
     }
 
@@ -185,7 +211,7 @@ public class ApiClient
         int cid = companyId ?? CurrentCompanyId;
         try
         {
-            var body = new { locationName = locationName.Trim(), companyId = cid };
+            var body = new { name = locationName.Trim(), companyId = cid };
             var response = await _httpClient.PostAsJsonAsync(GetUri("/api/locations"), body);
             if (response.IsSuccessStatusCode)
             {
@@ -206,7 +232,7 @@ public class ApiClient
         int cid = companyId ?? CurrentCompanyId;
         try
         {
-            var body = new { boxName = boxName.Trim(), locationId, companyId = cid };
+            var body = new { boxName = boxName.Trim(), companyId = cid, locationId };
             var response = await _httpClient.PostAsJsonAsync(GetUri("/api/boxes"), body);
             if (response.IsSuccessStatusCode)
             {
@@ -222,12 +248,11 @@ public class ApiClient
         }
     }
 
-    public async Task<(bool Success, string Message)> DeleteDocumentAsync(int documentId, int? companyId = null)
+    public async Task<(bool Success, string Message)> DeleteDocumentAsync(int documentId)
     {
-        int cid = companyId ?? CurrentCompanyId;
         try
         {
-            var response = await _httpClient.DeleteAsync(GetUri($"/api/documents/{documentId}?companyId={cid}"));
+            var response = await _httpClient.DeleteAsync(GetUri($"/api/documents/{documentId}"));
             if (response.IsSuccessStatusCode)
             {
                 return (true, "Success");
@@ -245,14 +270,42 @@ public class ApiClient
 
 public class CurrentUserResponse
 {
-    public bool Authenticated { get; set; }
-    public UserProfileDto? User { get; set; }
+    [JsonPropertyName("user")]
+    public UserDto? User { get; set; }
 }
 
-public class UserProfileDto
+public class UserDto
 {
+    [JsonPropertyName("userId")]
+    public int UserId { get; set; }
+
+    [JsonPropertyName("username")]
     public string? Username { get; set; }
+
+    [JsonPropertyName("name")]
     public string? Name { get; set; }
+
+    [JsonPropertyName("email")]
+    public string? Email { get; set; }
+
+    [JsonPropertyName("companyId")]
     public int CompanyId { get; set; }
+
+    [JsonPropertyName("companyName")]
     public string? CompanyName { get; set; }
+}
+
+public class PatientModel
+{
+    [JsonPropertyName("patientId")]
+    public int PatientId { get; set; }
+
+    [JsonPropertyName("companyId")]
+    public int CompanyId { get; set; }
+
+    [JsonPropertyName("firstName")]
+    public string? FirstName { get; set; }
+
+    [JsonPropertyName("lastName")]
+    public string? LastName { get; set; }
 }
