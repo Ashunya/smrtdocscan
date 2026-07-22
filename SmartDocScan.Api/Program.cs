@@ -1383,7 +1383,28 @@ app.MapGet("/api/auth/desktop-callback", (string redirectUri, HttpContext httpCo
     {
         var separator = redirectUri.Contains('?') ? "&" : "?";
         var targetUrl = $"{redirectUri}{separator}session={Uri.EscapeDataString(sessionCookie)}";
-        return Results.Redirect(targetUrl);
+        
+        var html = $"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8" />
+                <title>Completing Sign-In...</title>
+                <meta http-equiv="refresh" content="0;url={System.Net.WebUtility.HtmlEncode(targetUrl)}" />
+            </head>
+            <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 80px; background-color: #f4f6f9;">
+                <div style="background: white; max-width: 450px; margin: 0 auto; padding: 35px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
+                    <h3 style="color: #0078d4; margin-top: 0;">Signing in to SmartDocScan Desktop...</h3>
+                    <p style="color: #555; font-size: 14px;">Transferring session to application. If not redirected automatically, <a href="{System.Net.WebUtility.HtmlEncode(targetUrl)}" style="color: #0078d4; font-weight: 600;">click here</a>.</p>
+                </div>
+                <script>
+                    window.location.href = {System.Text.Json.JsonSerializer.Serialize(targetUrl)};
+                </script>
+            </body>
+            </html>
+            """;
+
+        return Results.Content(html, "text/html");
     }
     return Results.BadRequest(new { message = "Invalid loopback redirect URI." });
 }).RequireAuthorization().RequireRateLimiting("auth");
