@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         mc:Ignorable="d"
-        Title="Login - SmartDocScan Desktop" Height="400" Width="350"
+        Title="Login - SmartDocScan Desktop" Height="520" Width="380"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
         WindowCornerPreference="Round"
@@ -20,19 +20,33 @@
 
         <ui:TitleBar Title="SmartDocScan Login" Grid.Row="0" />
 
-        <StackPanel Grid.Row="1" Margin="30" VerticalAlignment="Center" HorizontalAlignment="Stretch">
-            <ui:SymbolIcon Symbol="Person24" FontSize="48" Margin="0,0,0,20" Foreground="#0078D4"/>
+        <StackPanel Grid.Row="1" Margin="30,15,30,20" VerticalAlignment="Center" HorizontalAlignment="Stretch">
+            <ui:SymbolIcon Symbol="Person24" FontSize="44" Margin="0,0,0,10" Foreground="#0078D4"/>
             
-            <TextBlock Text="Welcome Back" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-            <TextBlock Text="Sign in to continue to SmartDocScan" FontSize="12" Foreground="Gray" HorizontalAlignment="Center" Margin="0,0,0,30"/>
+            <TextBlock Text="Welcome Back" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,3"/>
+            <TextBlock Text="Sign in to continue to SmartDocScan" FontSize="12" Foreground="Gray" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+            <TextBlock Text="Server URL" Margin="0,0,0,5" FontWeight="Medium"/>
+            <ui:TextBox x:Name="ServerUrlTextBox" PlaceholderText="http://localhost:5080" Margin="0,0,0,12"/>
 
             <TextBlock Text="Email Address" Margin="0,0,0,5" FontWeight="Medium"/>
-            <ui:TextBox x:Name="EmailTextBox" PlaceholderText="user@example.com" Margin="0,0,0,15"/>
+            <ui:TextBox x:Name="EmailTextBox" PlaceholderText="user@example.com" Margin="0,0,0,12"/>
 
             <TextBlock Text="Password" Margin="0,0,0,5" FontWeight="Medium"/>
-            <ui:PasswordBox x:Name="PasswordBox" PlaceholderText="Password" Margin="0,0,0,25"/>
+            <ui:PasswordBox x:Name="PasswordBox" PlaceholderText="Password" Margin="0,0,0,20"/>
 
-            <ui:Button Content="Sign In" Appearance="Primary" HorizontalAlignment="Stretch" Click="OnSignInClicked" />
+            <ui:Button x:Name="SignInButton" Content="Sign In" Appearance="Primary" HorizontalAlignment="Stretch" Click="OnSignInClicked" />
+
+            <TextBlock x:Name="ErrorTextBlock" Foreground="Red" HorizontalAlignment="Center" Margin="0,15,0,0" Visibility="Collapsed" TextWrapping="Wrap"/>
+            <ui:ProgressRing x:Name="LoadingRing" IsIndeterminate="True" Visibility="Collapsed" Margin="0,15,0,0" />
+
+            <Border BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Margin="0,20,0,20" />
+            
+            <ui:Button Content="Sign in with Microsoft" Appearance="Secondary" HorizontalAlignment="Stretch" Click="OnSsoClicked">
+                <ui:Button.Icon>
+                    <ui:SymbolIcon Symbol="WindowApps24" />
+                </ui:Button.Icon>
+            </ui:Button>
         </StackPanel>
     </Grid>
 </ui:FluentWindow>

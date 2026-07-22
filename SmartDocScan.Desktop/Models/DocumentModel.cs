@@ -13,11 +13,13 @@ public partial class DocumentModel : ObservableObject
     public string DocumentName { get; set; } = string.Empty;
 
     [JsonPropertyName("categoryId")]
-    public int CategoryId { get; set; }
+    public int? CategoryId { get; set; }
 
-    [JsonPropertyName("thumbnailUrl")]
-    public string ThumbnailUrl { get; set; } = string.Empty;
-    
-    [ObservableProperty]
-    private string _localThumbnailPath = string.Empty;
+    [JsonPropertyName("categoryName")]
+    public string? CategoryName { get; set; }
+
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
+
+    public string ThumbnailUrl => $"/api/documents/{DocumentId}/thumbnail";
 }
