@@ -18,9 +18,9 @@ public partial class App : Application
                     .ConfigurePrimaryHttpMessageHandler(sp => new System.Net.Http.HttpClientHandler
                     {
                         CookieContainer = sp.GetRequiredService<System.Net.CookieContainer>(),
-                        UseCookies = true
+                        UseCookies = true,
+                        ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
                     });
-            services.AddSingleton<ApiClient>();
             services.AddSingleton<IScannerService, ScannerService>();
             services.AddSingleton<MainWindowViewModel>();
             services.AddTransient<MainWindow>();

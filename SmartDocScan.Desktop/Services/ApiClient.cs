@@ -16,10 +16,21 @@ public class ApiClient
     public int CurrentCompanyId { get; set; } = 1;
     public string CurrentCompanyName { get; set; } = "";
     public string CurrentUserName { get; set; } = "";
+    public string? SessionToken { get; private set; }
 
     public ApiClient(HttpClient httpClient)
     {
         _httpClient = httpClient;
+    }
+
+    public void SetSessionToken(string? token)
+    {
+        SessionToken = token;
+        _httpClient.DefaultRequestHeaders.Remove("Cookie");
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            _httpClient.DefaultRequestHeaders.Add("Cookie", $"smartdocscan.session={token}");
+        }
     }
 
     public string BaseUrl
@@ -148,62 +159,86 @@ public class ApiClient
         }
     }
 
-    public async Task<bool> CreateCategoryAsync(string categoryName, int? parentId = null, int? companyId = null)
+    public async Task<(bool Success, string Message)> CreateCategoryAsync(string categoryName, int? parentId = null, int? companyId = null)
     {
         int cid = companyId ?? CurrentCompanyId;
         try
         {
             var body = new { categoryName = categoryName.Trim(), companyId = cid, parentId, access = "all", categoryType = "patient" };
             var response = await _httpClient.PostAsJsonAsync(GetUri("/api/categories"), body);
-            return response.IsSuccessStatusCode;
+            if (response.IsSuccessStatusCode)
+            {
+                return (true, "Success");
+            }
+
+            var err = await response.Content.ReadAsStringAsync();
+            return (false, $"HTTP {(int)response.StatusCode}: {(string.IsNullOrWhiteSpace(err) ? response.ReasonPhrase : err)}");
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            return (false, ex.Message);
         }
     }
 
-    public async Task<bool> CreateLocationAsync(string locationName, int? companyId = null)
+    public async Task<(bool Success, string Message)> CreateLocationAsync(string locationName, int? companyId = null)
     {
         int cid = companyId ?? CurrentCompanyId;
         try
         {
             var body = new { locationName = locationName.Trim(), companyId = cid };
             var response = await _httpClient.PostAsJsonAsync(GetUri("/api/locations"), body);
-            return response.IsSuccessStatusCode;
+            if (response.IsSuccessStatusCode)
+            {
+                return (true, "Success");
+            }
+
+            var err = await response.Content.ReadAsStringAsync();
+            return (false, $"HTTP {(int)response.StatusCode}: {(string.IsNullOrWhiteSpace(err) ? response.ReasonPhrase : err)}");
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            return (false, ex.Message);
         }
     }
 
-    public async Task<bool> CreateBoxAsync(string boxName, int locationId = 1, int? companyId = null)
+    public async Task<(bool Success, string Message)> CreateBoxAsync(string boxName, int locationId = 1, int? companyId = null)
     {
         int cid = companyId ?? CurrentCompanyId;
         try
         {
             var body = new { boxName = boxName.Trim(), locationId, companyId = cid };
             var response = await _httpClient.PostAsJsonAsync(GetUri("/api/boxes"), body);
-            return response.IsSuccessStatusCode;
+            if (response.IsSuccessStatusCode)
+            {
+                return (true, "Success");
+            }
+
+            var err = await response.Content.ReadAsStringAsync();
+            return (false, $"HTTP {(int)response.StatusCode}: {(string.IsNullOrWhiteSpace(err) ? response.ReasonPhrase : err)}");
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            return (false, ex.Message);
         }
     }
 
-    public async Task<bool> DeleteDocumentAsync(int documentId, int? companyId = null)
+    public async Task<(bool Success, string Message)> DeleteDocumentAsync(int documentId, int? companyId = null)
     {
         int cid = companyId ?? CurrentCompanyId;
         try
         {
             var response = await _httpClient.DeleteAsync(GetUri($"/api/documents/{documentId}?companyId={cid}"));
-            return response.IsSuccessStatusCode;
+            if (response.IsSuccessStatusCode)
+            {
+                return (true, "Success");
+            }
+
+            var err = await response.Content.ReadAsStringAsync();
+            return (false, $"HTTP {(int)response.StatusCode}: {(string.IsNullOrWhiteSpace(err) ? response.ReasonPhrase : err)}");
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            return (false, ex.Message);
         }
     }
 }

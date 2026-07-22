@@ -37,7 +37,7 @@ public partial class MainWindowViewModel : ObservableObject
     private string _statusMessage = "Ready";
 
     [ObservableProperty]
-    private string _companyName = "SmartDocScan Cloud";
+    private string _companyName = "Connecting...";
 
     [ObservableProperty]
     private string _userName = "";
@@ -76,6 +76,10 @@ public partial class MainWindowViewModel : ObservableObject
                 ? userResp.User.CompanyName 
                 : $"Company #{_apiClient.CurrentCompanyId}";
             UserName = userResp.User.Name ?? userResp.User.Username ?? "";
+        }
+        else
+        {
+            CompanyName = $"Company #{_apiClient.CurrentCompanyId}";
         }
 
         StatusMessage = $"Loading categories for {CompanyName}...";
@@ -185,7 +189,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             StatusMessage = "Creating category...";
             int? parentId = SelectedCategory?.CategoryId;
-            bool created = await _apiClient.CreateCategoryAsync(inputName, parentId);
+            var (created, message) = await _apiClient.CreateCategoryAsync(inputName, parentId);
             if (created)
             {
                 StatusMessage = $"Category '{inputName}' created successfully!";
@@ -193,7 +197,8 @@ public partial class MainWindowViewModel : ObservableObject
             }
             else
             {
-                StatusMessage = "Failed to create category.";
+                StatusMessage = $"Failed to create category: {message}";
+                MessageBox.Show($"Could not create folder:\n\n{message}", "Create Category Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
@@ -204,14 +209,15 @@ public partial class MainWindowViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(inputName))
         {
             StatusMessage = "Creating location...";
-            bool created = await _apiClient.CreateLocationAsync(inputName);
+            var (created, message) = await _apiClient.CreateLocationAsync(inputName);
             if (created)
             {
                 StatusMessage = $"Location '{inputName}' created successfully!";
             }
             else
             {
-                StatusMessage = "Failed to create location.";
+                StatusMessage = $"Failed to create location: {message}";
+                MessageBox.Show($"Could not create location:\n\n{message}", "Create Location Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
@@ -222,14 +228,15 @@ public partial class MainWindowViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(inputName))
         {
             StatusMessage = "Creating box...";
-            bool created = await _apiClient.CreateBoxAsync(inputName, 1);
+            var (created, message) = await _apiClient.CreateBoxAsync(inputName, 1);
             if (created)
             {
                 StatusMessage = $"Box '{inputName}' created successfully!";
             }
             else
             {
-                StatusMessage = "Failed to create box.";
+                StatusMessage = $"Failed to create box: {message}";
+                MessageBox.Show($"Could not create box:\n\n{message}", "Create Box Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
@@ -246,7 +253,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (confirm == MessageBoxResult.Yes)
         {
             StatusMessage = "Deleting document...";
-            bool deleted = await _apiClient.DeleteDocumentAsync(SelectedDocument.DocumentId);
+            var (deleted, message) = await _apiClient.DeleteDocumentAsync(SelectedDocument.DocumentId);
             if (deleted)
             {
                 StatusMessage = "Document deleted.";
@@ -254,7 +261,8 @@ public partial class MainWindowViewModel : ObservableObject
             }
             else
             {
-                StatusMessage = "Failed to delete document.";
+                StatusMessage = $"Failed to delete document: {message}";
+                MessageBox.Show($"Could not delete document:\n\n{message}", "Delete Document Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }

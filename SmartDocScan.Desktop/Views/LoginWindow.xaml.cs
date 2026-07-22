@@ -141,8 +141,13 @@ public partial class LoginWindow : FluentWindow
 
                 if (!string.IsNullOrWhiteSpace(sessionValue))
                 {
+                    _apiClient.SetSessionToken(sessionValue);
                     var baseUri = new Uri(_apiClient.BaseUrl);
-                    _cookieContainer.SetCookies(baseUri, $"smartdocscan.session={sessionValue}");
+                    try
+                    {
+                        _cookieContainer.SetCookies(baseUri, $"smartdocscan.session={sessionValue}");
+                    }
+                    catch { }
                     OpenMainWindowAndClose();
                     return;
                 }
