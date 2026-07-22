@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -17,6 +18,12 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private readonly ApiClient _apiClient;
     private readonly IScannerService _scannerService;
+
+    [ObservableProperty]
+    private ObservableCollection<LocationModel> _locations = new();
+
+    [ObservableProperty]
+    private LocationModel? _selectedLocation;
 
     [ObservableProperty]
     private ObservableCollection<CategoryModel> _categories = new();
@@ -82,7 +89,15 @@ public partial class MainWindowViewModel : ObservableObject
             CompanyName = $"Company #{_apiClient.CurrentCompanyId}";
         }
 
-        StatusMessage = $"Loading categories for {CompanyName}...";
+        StatusMessage = $"Loading storage locations & categories for {CompanyName}...";
+        
+        var locs = await _apiClient.GetLocationsAsync();
+        Locations = new ObservableCollection<LocationModel>(locs);
+        if (Locations.Count > 0 && SelectedLocation == null)
+        {
+            SelectedLocation = Locations[0];
+        }
+
         var cats = await _apiClient.GetCategoriesAsync();
         Categories = new ObservableCollection<CategoryModel>(cats);
 
@@ -92,20 +107,19 @@ public partial class MainWindowViewModel : ObservableObject
 
     partial void OnSelectedCategoryChanged(CategoryModel? value)
     {
-        if (value != null)
-        {
-            _ = LoadDocumentsAsync(value.CategoryId);
-        }
-        else
-        {
-            _ = LoadDocumentsAsync(0);
-        }
+        _ = LoadDocumentsAsync(value?.CategoryId ?? 0);
+    }
+
+    partial void OnSelectedLocationChanged(LocationModel? value)
+    {
+        _ = LoadDocumentsAsync(SelectedCategory?.CategoryId ?? 0);
     }
 
     private async Task LoadDocumentsAsync(int categoryId)
     {
         StatusMessage = "Loading documents...";
-        var docs = await _apiClient.GetDocumentsAsync(categoryId);
+        int? locId = SelectedLocation?.LocationId;
+        var docs = await _apiClient.GetDocumentsAsync(categoryId, locId);
         Documents = new ObservableCollection<DocumentModel>(docs);
         StatusMessage = $"{Documents.Count} documents loaded for {CompanyName}.";
     }
@@ -118,13 +132,18 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             var scanners = await _scannerService.GetAvailableScannersAsync();
-            var settingsWindow = new ScanSettingsWindow(scanners)
+            var settingsWindow = new ScanSettingsWindow(scanners, new List<LocationModel>(Locations), SelectedLocation)
             {
                 Owner = Application.Current.MainWindow
             };
 
             if (settingsWindow.ShowDialog() == true)
             {
+                if (settingsWindow.SelectedLocation != null)
+                {
+                    SelectedLocation = settingsWindow.SelectedLocation;
+                }
+
                 var scanner = settingsWindow.SelectedScanner;
                 var tempPath = Path.Combine(Path.GetTempPath(), $"Scan_{DateTime.Now:yyyyMMdd_HHmmss}.png");
 
@@ -143,7 +162,8 @@ public partial class MainWindowViewModel : ObservableObject
                     {
                         StatusMessage = "Uploading scanned document to SmartDocScan Cloud...";
                         int catId = SelectedCategory?.CategoryId ?? 1;
-                        var (uploaded, uploadMessage) = await _apiClient.UploadScannedDocumentAsync(tempPath, catId);
+                        int? locId = SelectedLocation?.LocationId;
+                        var (uploaded, uploadMessage) = await _apiClient.UploadScannedDocumentAsync(tempPath, catId, locId);
 
                         if (uploaded)
                         {
@@ -194,7 +214,8 @@ public partial class MainWindowViewModel : ObservableObject
         {
             StatusMessage = "Uploading imported file...";
             int catId = SelectedCategory?.CategoryId ?? 1;
-            var (uploaded, uploadMessage) = await _apiClient.UploadScannedDocumentAsync(dialog.FileName, catId);
+            int? locId = SelectedLocation?.LocationId;
+            var (uploaded, uploadMessage) = await _apiClient.UploadScannedDocumentAsync(dialog.FileName, catId, locId);
 
             if (uploaded)
             {
@@ -240,6 +261,7 @@ public partial class MainWindowViewModel : ObservableObject
             if (created)
             {
                 StatusMessage = $"Location '{inputName}' created successfully!";
+                await LoadCategoriesAsync();
             }
             else
             {
@@ -255,7 +277,8 @@ public partial class MainWindowViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(inputName))
         {
             StatusMessage = "Creating box...";
-            var (created, message) = await _apiClient.CreateBoxAsync(inputName, 1);
+            int locId = SelectedLocation?.LocationId ?? 1;
+            var (created, message) = await _apiClient.CreateBoxAsync(inputName, locId);
             if (created)
             {
                 StatusMessage = $"Box '{inputName}' created successfully!";

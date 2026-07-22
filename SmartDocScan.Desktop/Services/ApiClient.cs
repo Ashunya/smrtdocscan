@@ -80,6 +80,17 @@ public class ApiClient
         return null;
     }
 
+    public async Task<List<LocationModel>> GetLocationsAsync(int? companyId = null)
+    {
+        int cid = companyId ?? CurrentCompanyId;
+        var response = await _httpClient.GetAsync(GetUri($"/api/locations?companyId={cid}"));
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadFromJsonAsync<List<LocationModel>>() ?? new List<LocationModel>();
+        }
+        return new List<LocationModel>();
+    }
+
     public async Task<List<CategoryModel>> GetCategoriesAsync(int? companyId = null)
     {
         int cid = companyId ?? CurrentCompanyId;
@@ -91,10 +102,16 @@ public class ApiClient
         return new List<CategoryModel>();
     }
 
-    public async Task<List<DocumentModel>> GetDocumentsAsync(int categoryId = 0, int? companyId = null)
+    public async Task<List<DocumentModel>> GetDocumentsAsync(int categoryId = 0, int? locationId = null, int? companyId = null)
     {
         int cid = companyId ?? CurrentCompanyId;
-        var response = await _httpClient.GetAsync(GetUri($"/api/reports/documents?companyId={cid}&take=100"));
+        string url = $"/api/reports/documents?companyId={cid}&take=100";
+        if (locationId.HasValue && locationId.Value > 0)
+        {
+            url += $"&locationId={locationId.Value}";
+        }
+
+        var response = await _httpClient.GetAsync(GetUri(url));
         if (response.IsSuccessStatusCode)
         {
             var docs = await response.Content.ReadFromJsonAsync<List<DocumentModel>>() ?? new List<DocumentModel>();
@@ -107,9 +124,10 @@ public class ApiClient
         return new List<DocumentModel>();
     }
 
-    public async Task<(bool Success, string Message)> UploadScannedDocumentAsync(string filePath, int categoryId = 1, int? companyId = null, int? patientId = null)
+    public async Task<(bool Success, string Message)> UploadScannedDocumentAsync(string filePath, int categoryId = 1, int? locationId = null, int? companyId = null, int? patientId = null)
     {
         int cid = companyId ?? CurrentCompanyId;
+        int locId = locationId ?? 1;
         try
         {
             int pid = patientId ?? 0;
@@ -137,7 +155,27 @@ public class ApiClient
                 _ => "image/png"
             };
 
-            // Attempt 1: Patient Document Upload
+            // Attempt 1: Business / General Document Upload (with locationId)
+            using (var bizContent = new MultipartFormDataContent())
+            using (var bizStream = System.IO.File.OpenRead(filePath))
+            {
+                var bizFileContent = new StreamContent(bizStream);
+                bizFileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mime);
+
+                bizContent.Add(bizFileContent, "file", System.IO.Path.GetFileName(filePath));
+                bizContent.Add(new StringContent(cid.ToString()), "companyId");
+                bizContent.Add(new StringContent(locId.ToString()), "locationId");
+                bizContent.Add(new StringContent(categoryId.ToString()), "categoryId");
+                bizContent.Add(new StringContent(System.IO.Path.GetFileNameWithoutExtension(filePath)), "documentName");
+
+                var bizResponse = await _httpClient.PostAsync(GetUri("/api/business-documents"), bizContent);
+                if (bizResponse.IsSuccessStatusCode)
+                {
+                    return (true, "Success");
+                }
+            }
+
+            // Attempt 2: Patient Document Upload
             using (var content = new MultipartFormDataContent())
             using (var fileStream = System.IO.File.OpenRead(filePath))
             {
@@ -146,6 +184,7 @@ public class ApiClient
 
                 content.Add(fileContent, "file", System.IO.Path.GetFileName(filePath));
                 content.Add(new StringContent(cid.ToString()), "companyId");
+                content.Add(new StringContent(locId.ToString()), "locationId");
                 content.Add(new StringContent(pid.ToString()), "patientId");
                 content.Add(new StringContent(categoryId.ToString()), "categoryId");
                 content.Add(new StringContent(System.IO.Path.GetFileNameWithoutExtension(filePath)), "documentName");
@@ -155,28 +194,9 @@ public class ApiClient
                 {
                     return (true, "Success");
                 }
-            }
 
-            // Attempt 2: Business / General Document Upload
-            using (var bizContent = new MultipartFormDataContent())
-            using (var bizStream = System.IO.File.OpenRead(filePath))
-            {
-                var bizFileContent = new StreamContent(bizStream);
-                bizFileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mime);
-
-                bizContent.Add(bizFileContent, "file", System.IO.Path.GetFileName(filePath));
-                bizContent.Add(new StringContent(cid.ToString()), "companyId");
-                bizContent.Add(new StringContent(categoryId.ToString()), "categoryId");
-                bizContent.Add(new StringContent(System.IO.Path.GetFileNameWithoutExtension(filePath)), "documentName");
-
-                var bizResponse = await _httpClient.PostAsync(GetUri("/api/business-documents"), bizContent);
-                if (bizResponse.IsSuccessStatusCode)
-                {
-                    return (true, "Success");
-                }
-
-                var errText = await bizResponse.Content.ReadAsStringAsync();
-                return (false, $"HTTP {(int)bizResponse.StatusCode}: {(string.IsNullOrWhiteSpace(errText) ? bizResponse.ReasonPhrase : errText)}");
+                var errText = await response.Content.ReadAsStringAsync();
+                return (false, $"HTTP {(int)response.StatusCode}: {(string.IsNullOrWhiteSpace(errText) ? response.ReasonPhrase : errText)}");
             }
         }
         catch (Exception ex)

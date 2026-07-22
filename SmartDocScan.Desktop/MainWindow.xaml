@@ -89,6 +89,17 @@
         <Border Grid.Row="2" Background="#F3F3F3" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="12,6">
             <DockPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <!-- Location Selector -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <ui:SymbolIcon Symbol="Building24" Foreground="#0078D4" Margin="0,0,6,0" FontSize="14" VerticalAlignment="Center"/>
+                        <TextBlock Text="Location:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox ItemsSource="{Binding Locations}" 
+                                  SelectedItem="{Binding SelectedLocation}" 
+                                  DisplayMemberPath="Name" 
+                                  Width="170" 
+                                  Padding="6,4"/>
+                    </StackPanel>
+
                     <!-- Scan Button -->
                     <ui:Button Content="Scan Document" 
                                Appearance="Primary" 
