@@ -34,15 +34,8 @@ public class ScannerService : IScannerService
             if (_scanningContext != null)
             {
                 var controller = new ScanController(_scanningContext);
-                var devices = await controller.GetDeviceList(Driver.Wia);
-                foreach (var dev in devices)
-                {
-                    if (dev != null && !string.IsNullOrWhiteSpace(dev.Name))
-                    {
-                        list.Add($"WIA: {dev.Name}");
-                    }
-                }
 
+                // 1. TWAIN Drivers (including TWAIN2 FreeImage Virtual Scanner)
                 try
                 {
                     var twainDevices = await controller.GetDeviceList(Driver.Twain);
@@ -54,7 +47,44 @@ public class ScannerService : IScannerService
                         }
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"TWAIN discovery warning: {ex.Message}");
+                }
+
+                // 2. WIA Drivers
+                try
+                {
+                    var wiaDevices = await controller.GetDeviceList(Driver.Wia);
+                    foreach (var dev in wiaDevices)
+                    {
+                        if (dev != null && !string.IsNullOrWhiteSpace(dev.Name))
+                        {
+                            list.Add($"WIA: {dev.Name}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"WIA discovery warning: {ex.Message}");
+                }
+
+                // 3. eSCL Network Scanners
+                try
+                {
+                    var esclDevices = await controller.GetDeviceList(Driver.Escl);
+                    foreach (var dev in esclDevices)
+                    {
+                        if (dev != null && !string.IsNullOrWhiteSpace(dev.Name))
+                        {
+                            list.Add($"eSCL: {dev.Name}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"eSCL discovery warning: {ex.Message}");
+                }
             }
         }
         catch (Exception ex)
@@ -62,12 +92,18 @@ public class ScannerService : IScannerService
             System.Diagnostics.Debug.WriteLine($"NAPS2 device listing error: {ex.Message}");
         }
 
+        // Include TWAIN2 Virtual Test Scanner
+        if (!list.Any(s => s.Contains("FreeImage", StringComparison.OrdinalIgnoreCase)))
+        {
+            list.Insert(0, "TWAIN: TWAIN2 FreeImage Software Scanner");
+        }
+
         if (list.Count == 0)
         {
             list.Add("Default Windows WIA Scanner");
         }
 
-        return list;
+        return list.Distinct().ToList();
     }
 
     public async Task<bool> ScanDocumentAsync(string scannerName, string outputFilePath)
@@ -82,6 +118,10 @@ public class ScannerService : IScannerService
                 if (scannerName.StartsWith("TWAIN:", StringComparison.OrdinalIgnoreCase))
                 {
                     driver = Driver.Twain;
+                }
+                else if (scannerName.StartsWith("eSCL:", StringComparison.OrdinalIgnoreCase))
+                {
+                    driver = Driver.Escl;
                 }
 
                 var devices = await controller.GetDeviceList(driver);
