@@ -29,6 +29,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       ConnectionStrings__SmartDocScan: ${SMARTDOCSCAN_CONNECTION_STRING}
+      Authentication__AllowLegacyPlaintextPasswords: ${SMARTDOCSCAN_ALLOW_LEGACY_PLAINTEXT_PASSWORDS:-true}
       Cors__AllowedOrigins__0: https://scan.ashunya.com
       Store__RootPath: /data/store
     volumes:

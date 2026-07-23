@@ -209,23 +209,21 @@ public sealed class UserRepository
             command.Parameters.AddWithValue("@password", passwordHash);
         }
         command.Parameters.AddWithValue("@companyId", request.CompanyId);
-        command.Parameters.AddWithValue("@uploadDoc", Flag(request.UploadDocument));
-        command.Parameters.AddWithValue("@scanDoc", Flag(request.ScanDocument));
-        command.Parameters.AddWithValue("@deleteDoc", Flag(request.DeleteDocument));
-        command.Parameters.AddWithValue("@deleteManage", Flag(request.DeleteManage));
-        command.Parameters.AddWithValue("@printDoc", Flag(request.PrintDocument));
-        command.Parameters.AddWithValue("@downloadDoc", Flag(request.DownloadDocument));
-        command.Parameters.AddWithValue("@addCat", Flag(request.AddCategory));
-        command.Parameters.AddWithValue("@addUsers", Flag(request.AddUsers));
-        command.Parameters.AddWithValue("@addPatients", Flag(request.AddPatients));
-        command.Parameters.AddWithValue("@box", Flag(request.Box));
-        command.Parameters.AddWithValue("@report", Flag(request.Report));
-        command.Parameters.AddWithValue("@su", Flag(request.SuperUser));
-        command.Parameters.AddWithValue("@disabled", Flag(request.Disabled));
+        command.Parameters.AddWithValue("@uploadDoc", request.UploadDocument);
+        command.Parameters.AddWithValue("@scanDoc", request.ScanDocument);
+        command.Parameters.AddWithValue("@deleteDoc", request.DeleteDocument);
+        command.Parameters.AddWithValue("@deleteManage", request.DeleteManage);
+        command.Parameters.AddWithValue("@printDoc", request.PrintDocument);
+        command.Parameters.AddWithValue("@downloadDoc", request.DownloadDocument);
+        command.Parameters.AddWithValue("@addCat", request.AddCategory);
+        command.Parameters.AddWithValue("@addUsers", request.AddUsers);
+        command.Parameters.AddWithValue("@addPatients", request.AddPatients);
+        command.Parameters.AddWithValue("@box", request.Box);
+        command.Parameters.AddWithValue("@report", request.Report);
+        command.Parameters.AddWithValue("@su", request.SuperUser);
+        command.Parameters.AddWithValue("@disabled", request.Disabled);
         command.Parameters.AddWithValue("@isAdmin", request.IsAdmin);
     }
-
-    private static byte Flag(bool value) => value ? (byte)1 : (byte)0;
 
     private static UserDto MapUser(NpgsqlDataReader reader)
     {
