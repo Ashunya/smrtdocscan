@@ -206,6 +206,11 @@ export default function App() {
       return;
     }
 
+    if (["documents", "scan", "barcode"].includes(activeView) && !documentPatient) {
+      setActiveView("find");
+      return;
+    }
+
     if (isHistoryPopRef.current) {
       isHistoryPopRef.current = false;
       return;
@@ -214,7 +219,7 @@ export default function App() {
     if (window.history.state?.activeView !== activeView) {
       window.history.pushState({ smartdocscan: true, activeView }, "", window.location.href);
     }
-  }, [activeView, currentUser]);
+  }, [activeView, currentUser, documentPatient]);
 
   async function savePatient(form) {
     setSaving(true);
@@ -379,6 +384,19 @@ export default function App() {
     return "Patient Directory";
   }, [activeView]);
 
+  const patientSearchView = (
+    <PatientSearch
+      patients={patients}
+      search={search}
+      onSearchChange={setSearch}
+      loading={loading}
+      onEdit={editPatient}
+      onDocuments={viewDocuments}
+      onDelete={removePatient}
+      user={currentUser}
+    />
+  );
+
   return (
     authLoading ? (
       <main className="signin-page">
@@ -490,15 +508,17 @@ export default function App() {
         {notice && <div className={`notice ${notice.type}`}>{notice.text}</div>}
 
         {activeView === "find" ? (
-          <PatientSearch
-            patients={patients}
-            search={search}
-            onSearchChange={setSearch}
-            loading={loading}
-            onEdit={editPatient}
-            onDocuments={viewDocuments}
-            onDelete={removePatient}
-            user={currentUser}
+          patientSearchView
+        ) : activeView === "add" && canAccessView("add", currentUser) ? (
+          <PatientForm
+            companyId={companyId}
+            patient={selectedPatient}
+            onSave={savePatient}
+            onCancel={() => {
+              setSelectedPatient(null);
+              setActiveView("find");
+            }}
+            saving={saving}
           />
         ) : activeView === "box" && canAccessView("box", currentUser) ? (
           <BoxManager companyId={companyId} onNotice={setNotice} />
@@ -518,7 +538,7 @@ export default function App() {
           <SettingsManager onNotice={setNotice} onBrandingChange={(branding) => setLogoUrl(branding.logoDataUrl || "/smartdocscan-logo.svg")} />
         ) : activeView === "audit" && canAccessView("audit", currentUser) ? (
           <AuditLogManager companyId={companyId} onNotice={setNotice} />
-        ) : activeView === "scan" ? (
+        ) : activeView === "scan" && canAccessView("scan", currentUser) && documentPatient ? (
           <ScannerManager companyId={companyId} patient={documentPatient} initialCategoryId={scanCategoryId} onNotice={setNotice} onSaved={() => setActiveView("documents")} />
         ) : activeView === "barcode" && documentPatient ? (
           <BarcodeManager companyId={companyId} patient={documentPatient} onNotice={setNotice} onBack={() => setActiveView("documents")} />
@@ -536,16 +556,7 @@ export default function App() {
             onBack={() => setActiveView("find")}
           />
         ) : (
-          <PatientForm
-            companyId={companyId}
-            patient={selectedPatient}
-            onSave={savePatient}
-            onCancel={() => {
-              setSelectedPatient(null);
-              setActiveView("find");
-            }}
-            saving={saving}
-          />
+          patientSearchView
         )}
       </Box>
     </Box>
@@ -576,8 +587,12 @@ function canAccessView(view, user) {
     return false;
   }
 
-  if (["find", "documents", "scan", "barcode"].includes(view)) {
+  if (["find", "documents", "barcode"].includes(view)) {
     return true;
+  }
+
+  if (view === "scan") {
+    return Boolean(user.scanDocument || isElevatedUser(user));
   }
 
   if (view === "add") {

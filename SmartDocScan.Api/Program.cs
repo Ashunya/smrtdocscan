@@ -93,6 +93,11 @@ var authBuilder = builder.Services
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return Task.CompletedTask;
         };
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        };
         options.Events.OnValidatePrincipal = async context =>
         {
             var username = context.Principal?.FindFirst("username")?.Value;
@@ -495,6 +500,13 @@ app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal pr
     {
         return Results.BadRequest(new { message = "Company, patient, and category are required." });
     }
+
+    var documentName = form["documentName"].ToString().Trim();
+    if (string.IsNullOrWhiteSpace(documentName))
+    {
+        return Results.BadRequest(new { message = "Document name is required." });
+    }
+
     if (!CanAccessCompany(principal, companyId))
     {
         return Results.Forbid();
@@ -511,7 +523,7 @@ app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal pr
         return ownershipValidation;
     }
 
-    var safeName = BuildStoredDocumentName(form["documentName"], file.FileName);
+    var safeName = BuildStoredDocumentName(documentName, file.FileName);
     var validationResult = await ValidateUploadedDocumentAsync(file, safeName, maxDocumentUploadBytes, cancellationToken);
     if (validationResult is not null)
     {
@@ -547,6 +559,13 @@ app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincip
     {
         return Results.BadRequest(new { message = "Company, patient, and category are required." });
     }
+
+    var documentName = httpRequest.Query["documentName"].ToString().Trim();
+    if (string.IsNullOrWhiteSpace(documentName))
+    {
+        return Results.BadRequest(new { message = "Document name is required." });
+    }
+
     if (!CanAccessCompany(principal, companyId))
     {
         return Results.Forbid();
@@ -563,7 +582,7 @@ app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincip
         return ownershipValidation;
     }
 
-    var safeName = BuildStoredDocumentName(httpRequest.Query["documentName"], file.FileName);
+    var safeName = BuildStoredDocumentName(documentName, file.FileName);
     var validationResult = await ValidateUploadedDocumentAsync(file, safeName, maxDocumentUploadBytes, cancellationToken);
     if (validationResult is not null)
     {
@@ -1307,7 +1326,7 @@ static bool CanViewReports(ClaimsPrincipal principal)
 
 static bool CanDownloadDocuments(ClaimsPrincipal principal)
 {
-    return IsElevated(principal) || ReadBoolClaim(principal, "download_document");
+    return IsElevated(principal) || ReadBoolClaim(principal, "download_document") || ReadBoolClaim(principal, "print_document");
 }
 
 static void AddSecurityHeaders(HttpResponse response)

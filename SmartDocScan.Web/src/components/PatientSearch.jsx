@@ -1,7 +1,7 @@
 import { Edit2, FileText, Search, Trash2 } from "lucide-react";
 
 export function PatientSearch({ patients, search, onSearchChange, loading, onEdit, onDocuments, onDelete, user }) {
-  const canDelete = Boolean(user?.deleteDocument || user?.isAdmin || user?.superUser);
+  const canDelete = Boolean(user?.isAdmin || user?.superUser);
   const canEdit = Boolean(user?.addPatients || user?.isAdmin || user?.superUser);
 
   return (
