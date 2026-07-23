@@ -1,1187 +1,614 @@
-import { Folder, Upload, Download, Trash2, Eye, FolderPlus, DollarSign, Calendar, Building, FileText, Plus, X, FolderOpen, Scan, Printer, Mail, Edit3, ZoomIn, ZoomOut, RotateCw, RefreshCw, LayoutGrid, List as ListIcon, AlignJustify, Maximize, FilePenLine } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, Tooltip, Box, Typography, LinearProgress, CircularProgress } from "@mui/material";
 import {
-  listLocations,
-  listCategories,
-  createCategory,
-  listBusinessDocuments,
-  uploadBusinessDocument,
-  deleteBusinessDocument,
-  getBusinessDocumentDownloadUrl,
-  getBusinessDocumentPreviewUrl,
-  getBusinessDocumentThumbnailUrl,
-  moveBusinessDocument,
-  analyzeBusinessDocument,
-  renameBusinessDocument,
-  renameCategory,
-  emailBusinessDocument,
+  Folder, Upload, Download, Trash2, Eye, Plus, X, 
+  Search, Tag, Building2, FileType, Inbox, LayoutDashboard, Settings,
+  AlertCircle, ChevronRight, FileText, Calendar, DollarSign
+} from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { 
+  Dialog, DialogTitle, DialogContent, DialogActions, 
+  Button, IconButton, Tooltip, Box, Typography, CircularProgress,
+  TextField, Select, MenuItem, FormControl, InputLabel, Chip
+} from "@mui/material";
+
+import {
+  listLocations, saveLocation, deleteLocation,
+  listDocumentTypes, saveDocumentType, deleteDocumentType,
+  listCorrespondents, saveCorrespondent, deleteCorrespondent,
+  listTags, saveTag, deleteTag,
+  listBusinessDocuments, uploadBusinessDocument, deleteBusinessDocument,
+  updateBusinessDocumentMetadata, getBusinessDocumentPreviewUrl,
+  getBusinessDocumentDownloadUrl, getBusinessDocumentThumbnailUrl,
+  analyzeBusinessDocument, emailBusinessDocument, renameBusinessDocument
 } from "../api/client";
 
-function getExtension(value) {
-  const cleanValue = String(value || "").split("?")[0];
-  const fileName = cleanValue.split("/").pop() || "";
-  const index = fileName.lastIndexOf(".");
-  return index >= 0 ? fileName.slice(index + 1).toLowerCase() : "";
-}
+// --- UI Components ---
+const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
+  <div 
+    onClick={onClick}
+    style={{
+      display: "flex", alignItems: "center", gap: "12px",
+      padding: "12px 16px", cursor: "pointer",
+      backgroundColor: active ? "#e2e8f0" : "transparent",
+      color: active ? "#0f172a" : "#475569",
+      fontWeight: active ? "600" : "400",
+      borderRadius: "8px", margin: "4px 8px",
+      transition: "all 0.2s"
+    }}
+  >
+    <Icon size={20} />
+    <span style={{ fontSize: "15px" }}>{label}</span>
+  </div>
+);
 
-function BusinessDocumentThumbnail({ document }) {
-  const previewUrl = getBusinessDocumentPreviewUrl(document);
-  const thumbnailUrl = getBusinessDocumentThumbnailUrl(document);
-  const extension = getExtension(document.url) || getExtension(document.documentName);
+const ModernButton = ({ icon: Icon, label, onClick, primary, color = "#2563eb", disabled }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    style={{
+      display: "flex", alignItems: "center", gap: "8px",
+      padding: "10px 16px",
+      backgroundColor: disabled ? "#cbd5e1" : (primary ? color : "transparent"),
+      color: disabled ? "#94a3b8" : (primary ? "white" : color),
+      border: `1px solid ${disabled ? "#cbd5e1" : color}`,
+      borderRadius: "6px", cursor: disabled ? "not-allowed" : "pointer",
+      fontWeight: "500", fontSize: "14px", transition: "all 0.2s"
+    }}
+  >
+    {Icon && <Icon size={18} />}
+    {label}
+  </button>
+);
 
-  const thumbStyle = {
-    width: "100%",
-    height: "220px", // Larger modern thumbnail
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    background: "#ffffff",
-    borderBottom: "1px solid #e0e0e0",
-    position: "relative",
+// --- Main Component ---
+export function BusinessDocumentManager({ companyId, user, onNotice }) {
+  // Views: dashboard, documents, tags, types, correspondents, locations
+  const [activeView, setActiveView] = useState("dashboard");
+  
+  // Data State
+  const [documents, setDocuments] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [documentTypes, setDocumentTypes] = useState([]);
+  const [correspondents, setCorrespondents] = useState([]);
+  const [tags, setTags] = useState([]);
+  
+  const [loading, setLoading] = useState(false);
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterLocation, setFilterLocation] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterCorrespondent, setFilterCorrespondent] = useState("");
+  const [filterTag, setFilterTag] = useState("");
+
+  // Document Selection
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+  const loadMetadata = async () => {
+    try {
+      const [locs, types, corrs, tgs] = await Promise.all([
+        listLocations({ companyId }),
+        listDocumentTypes({ companyId }),
+        listCorrespondents({ companyId }),
+        listTags({ companyId })
+      ]);
+      setLocations(locs);
+      setDocumentTypes(types);
+      setCorrespondents(corrs);
+      setTags(tgs);
+    } catch (e) {
+      onNotice({ type: "error", text: "Failed to load metadata: " + e.message });
+    }
   };
 
-  if (["tif", "tiff"].includes(extension)) {
-    return (
-      <div style={thumbStyle}>
-        <img src={thumbnailUrl} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "10px" }} />
-      </div>
-    );
-  }
+  const loadDocuments = async () => {
+    setLoading(true);
+    try {
+      const docs = await listBusinessDocuments({
+        companyId,
+        locationId: filterLocation || undefined,
+        documentTypeId: filterType || undefined,
+        correspondentId: filterCorrespondent || undefined,
+        tagId: filterTag || undefined,
+        search: searchQuery || undefined
+      });
+      setDocuments(docs);
+    } catch (e) {
+      onNotice({ type: "error", text: "Failed to load documents: " + e.message });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (["png", "jpg", "jpeg", "gif", "webp"].includes(extension)) {
-    return (
-      <div style={thumbStyle}>
-        <img src={previewUrl} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "10px" }} />
-      </div>
-    );
-  }
+  useEffect(() => {
+    loadMetadata();
+  }, [companyId]);
 
-  if (extension === "pdf") {
-    return (
-      <div style={thumbStyle}>
-        <iframe
-          src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-          title={document.documentName}
-          style={{ width: "100%", height: "100%", border: "none", overflow: "hidden" }}
-          scrolling="no"
-        />
-        <div style={{ position: "absolute", inset: 0, background: "transparent" }} />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (activeView === "documents" || activeView === "dashboard") {
+      loadDocuments();
+    }
+  }, [companyId, activeView, filterLocation, filterType, filterCorrespondent, filterTag, searchQuery]);
 
-  return (
-    <div style={{ ...thumbStyle, background: "#f8fafc" }}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", color: "#94a3b8" }}>
-        <FileText size={48} strokeWidth={1.5} />
-        <span style={{ fontSize: "0.85em", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>{extension || "DOCUMENT"}</span>
+  const handleDelete = async (doc) => {
+    if (!window.confirm("Are you sure you want to delete this document?")) return;
+    try {
+      await deleteBusinessDocument(doc.documentId);
+      onNotice({ type: "success", text: "Deleted successfully" });
+      setSelectedDocument(null);
+      loadDocuments();
+    } catch(e) {
+      onNotice({ type: "error", text: e.message });
+    }
+  };
+
+  const renderDashboard = () => (
+    <div style={{ padding: "32px", maxWidth: "1200px", margin: "0 auto" }}>
+      <Typography variant="h4" style={{ fontWeight: "700", color: "#1e293b", marginBottom: "24px" }}>
+        Dashboard
+      </Typography>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "24px" }}>
+        <div style={{ background: "white", padding: "24px", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}>
+          <Typography variant="h6" color="textSecondary">Total Documents</Typography>
+          <Typography variant="h3" style={{ fontWeight: "bold", marginTop: "12px", color: "#2563eb" }}>{documents.length}</Typography>
+        </div>
+        <div style={{ background: "white", padding: "24px", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}>
+          <Typography variant="h6" color="textSecondary">Inbox (Unsorted)</Typography>
+          <Typography variant="h3" style={{ fontWeight: "bold", marginTop: "12px", color: "#ef4444" }}>
+            {documents.filter(d => !d.documentTypeId && !d.correspondentId).length}
+          </Typography>
+        </div>
       </div>
     </div>
   );
-}
 
-function RibbonMenu({ activeTab, setActiveTab, onAction, disabledActions }) {
-  const tabs = ["Home", "View", "Document", "Tools"];
+  const renderDocuments = () => (
+    <div style={{ display: "flex", height: "100%", width: "100%", overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px", overflowY: "auto", background: "#f8fafc" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+          <Typography variant="h4" style={{ fontWeight: "700", color: "#1e293b" }}>Documents</Typography>
+          <ModernButton icon={Upload} label="Upload Document" primary onClick={() => setIsUploadModalOpen(true)} />
+        </div>
+        
+        {/* Filters */}
+        <div style={{ display: "flex", gap: "16px", marginBottom: "24px", flexWrap: "wrap", background: "white", padding: "16px", borderRadius: "12px", boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)" }}>
+          <TextField 
+            label="Search" 
+            variant="outlined" 
+            size="small" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ minWidth: "250px" }}
+          />
+          <FormControl size="small" style={{ minWidth: "150px" }}>
+            <InputLabel>Document Type</InputLabel>
+            <Select value={filterType} onChange={e => setFilterType(e.target.value)} label="Document Type">
+              <MenuItem value=""><em>Any</em></MenuItem>
+              {documentTypes.map(t => <MenuItem key={t.documentTypeId} value={t.documentTypeId}>{t.name}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <FormControl size="small" style={{ minWidth: "150px" }}>
+            <InputLabel>Correspondent</InputLabel>
+            <Select value={filterCorrespondent} onChange={e => setFilterCorrespondent(e.target.value)} label="Correspondent">
+              <MenuItem value=""><em>Any</em></MenuItem>
+              {correspondents.map(c => <MenuItem key={c.correspondentId} value={c.correspondentId}>{c.name}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <FormControl size="small" style={{ minWidth: "150px" }}>
+            <InputLabel>Tags</InputLabel>
+            <Select value={filterTag} onChange={e => setFilterTag(e.target.value)} label="Tags">
+              <MenuItem value=""><em>Any</em></MenuItem>
+              {tags.map(t => <MenuItem key={t.tagId} value={t.tagId}>{t.name}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <FormControl size="small" style={{ minWidth: "150px" }}>
+            <InputLabel>Storage Path (Location)</InputLabel>
+            <Select value={filterLocation} onChange={e => setFilterLocation(e.target.value)} label="Storage Path (Location)">
+              <MenuItem value=""><em>Any</em></MenuItem>
+              {locations.map(l => <MenuItem key={l.locationId} value={l.locationId}>{l.name}</MenuItem>)}
+            </Select>
+          </FormControl>
+        </div>
 
-  const ActionButton = ({ icon: Icon, label, action, disabled }) => (
-    <div
-      onClick={() => !disabled && onAction(action)}
-      style={{
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        padding: "6px 8px", cursor: disabled ? "default" : "pointer", borderRadius: "4px",
-        minWidth: "60px", opacity: disabled ? 0.4 : 1,
-        color: "#334155"
-      }}
-      onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = "#f1f5f9"; }}
-      onMouseLeave={(e) => { if (!disabled) e.currentTarget.style.background = "transparent"; }}
-    >
-      <Icon size={24} strokeWidth={1.5} style={{ marginBottom: "4px", color: "#475569" }} />
-      <span style={{ fontSize: "11px", whiteSpace: "nowrap" }}>{label}</span>
-    </div>
-  );
-
-  return (
-    <div style={{ background: "#ffffff", borderBottom: "1px solid #e2e8f0", display: "flex", flexDirection: "column", width: "100%" }}>
-      {/* Tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", padding: "0 8px" }}>
-        {tabs.map(t => (
-          <div
-            key={t}
-            onClick={() => setActiveTab(t)}
-            style={{
-              padding: "6px 16px", fontSize: "13px", cursor: "pointer",
-              color: activeTab === t ? "#2563eb" : "#64748b",
-              borderBottom: activeTab === t ? "2px solid #2563eb" : "2px solid transparent",
-              fontWeight: activeTab === t ? "500" : "400",
-              marginBottom: "-1px"
-            }}
-          >
-            {t}
+        {/* Document List */}
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "40px" }}><CircularProgress /></div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
+            {documents.map(doc => (
+              <div 
+                key={doc.documentId}
+                onClick={() => setSelectedDocument(doc)}
+                style={{
+                  background: "white", borderRadius: "12px", overflow: "hidden", 
+                  boxShadow: selectedDocument?.documentId === doc.documentId ? "0 0 0 3px #2563eb" : "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                  cursor: "pointer", transition: "transform 0.2s",
+                  transform: "scale(1.0)",
+                  border: "1px solid #e2e8f0"
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = "scale(1.02)"}
+                onMouseLeave={e => e.currentTarget.style.transform = "scale(1.0)"}
+              >
+                <div style={{ height: "160px", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <img src={getBusinessDocumentThumbnailUrl(doc)} alt="" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} onError={(e) => { e.target.style.display='none'; }} />
+                  <FileText size={48} color="#cbd5e1" style={{ position: "absolute", zIndex: 0, opacity: 0.5 }} />
+                </div>
+                <div style={{ padding: "16px", zIndex: 1, position: "relative", background: "white" }}>
+                  <Typography variant="subtitle1" style={{ fontWeight: "600", color: "#1e293b", marginBottom: "8px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {doc.title || doc.documentName}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                    <Calendar size={14} /> {doc.documentDate ? new Date(doc.documentDate).toLocaleDateString() : "No Date"}
+                  </Typography>
+                  {doc.correspondentName && (
+                    <Typography variant="body2" color="textSecondary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Building2 size={14} /> {doc.correspondentName}
+                    </Typography>
+                  )}
+                  <div style={{ marginTop: "12px", display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                    {doc.documentTypeName && <Chip size="small" label={doc.documentTypeName} style={{ backgroundColor: "#e0f2fe", color: "#0369a1" }} />}
+                    {doc.tags?.map(tag => (
+                      <Chip key={tag.tagId} size="small" label={tag.name} style={{ backgroundColor: tag.color || "#f1f5f9" }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
-      
-      {/* Content */}
-      <div style={{ display: "flex", padding: "6px 8px", height: "80px", overflowX: "auto" }}>
-        {activeTab === "Home" && (
-          <>
-            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", borderRight: "1px solid #e2e8f0", position: "relative", height: "100%" }}>
-              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
-                <ActionButton icon={Scan} label="Scan" action="scan" />
-                <ActionButton icon={Upload} label="Upload" action="upload" />
-              </div>
-              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Acquire</span>
-            </div>
+
+      {/* Document Sidebar (Right) */}
+      {selectedDocument && (
+        <div style={{ width: "450px", background: "white", borderLeft: "1px solid #e2e8f0", display: "flex", flexDirection: "column", zIndex: 10 }}>
+          <div style={{ padding: "16px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Typography variant="h6" style={{ fontWeight: "600" }}>Document Details</Typography>
+            <IconButton onClick={() => setSelectedDocument(null)}><X size={20} /></IconButton>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
+            <DocumentEditor 
+              document={selectedDocument} 
+              locations={locations}
+              documentTypes={documentTypes}
+              correspondents={correspondents}
+              tags={tags}
+              onSave={async (updates) => {
+                try {
+                  await updateBusinessDocumentMetadata(selectedDocument.documentId, updates);
+                  onNotice({ type: "success", text: "Metadata updated" });
+                  loadDocuments();
+                  setSelectedDocument(null);
+                } catch(e) {
+                  onNotice({ type: "error", text: e.message });
+                }
+              }}
+              onDelete={() => handleDelete(selectedDocument)}
+            />
             
-            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", borderRight: "1px solid #e2e8f0", position: "relative", height: "100%" }}>
-              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
-                <ActionButton icon={Download} label="Download" action="download" disabled={disabledActions.requiresSelection} />
-                <ActionButton icon={Printer} label="Print" action="print" disabled={disabledActions.requiresSelection} />
-                <ActionButton icon={Mail} label="Email" action="email" disabled={disabledActions.requiresSelection} />
-                <ActionButton icon={Trash2} label="Delete" action="delete" disabled={disabledActions.requiresSelection} />
+            <div style={{ marginTop: "24px", borderTop: "1px solid #e2e8f0", paddingTop: "24px" }}>
+              <Typography variant="subtitle2" style={{ marginBottom: "12px", color: "#64748b" }}>Preview</Typography>
+              <div style={{ height: "400px", background: "#f8fafc", borderRadius: "8px", overflow: "hidden", border: "1px solid #e2e8f0" }}>
+                <iframe src={getBusinessDocumentPreviewUrl(selectedDocument)} style={{ width: "100%", height: "100%", border: "none" }} title="preview" />
               </div>
-              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Actions</span>
+              <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+                <ModernButton icon={Download} label="Download" onClick={() => window.open(getBusinessDocumentDownloadUrl(selectedDocument.documentId), '_blank')} />
+                <ModernButton icon={Eye} label="Open in Tab" onClick={() => window.open(getBusinessDocumentPreviewUrl(selectedDocument), '_blank')} />
+              </div>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
-            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", borderRight: "1px solid #e2e8f0", position: "relative", height: "100%" }}>
-              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
-                <ActionButton icon={FolderPlus} label="New Folder" action="newFolder" />
-                <ActionButton icon={Edit3} label="Rename" action="rename" disabled={!disabledActions.canRename} />
-              </div>
-              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Organize</span>
-            </div>
+  const renderSimpleManager = (title, items, icon, onAdd, onEdit, onDelete) => (
+    <div style={{ padding: "32px", maxWidth: "1000px", margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+        <Typography variant="h4" style={{ fontWeight: "700", color: "#1e293b", display: "flex", alignItems: "center", gap: "12px" }}>
+          {icon} {title}
+        </Typography>
+        <ModernButton icon={Plus} label={`Add ${title}`} primary onClick={onAdd} />
+      </div>
+      <div style={{ background: "white", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)", overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", textAlign: "left" }}>
+              <th style={{ padding: "16px", fontWeight: "600", color: "#475569" }}>Name</th>
+              <th style={{ padding: "16px", fontWeight: "600", color: "#475569" }}>Match Pattern</th>
+              <th style={{ padding: "16px", fontWeight: "600", color: "#475569", width: "120px" }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(item => (
+              <tr key={item.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                <td style={{ padding: "16px", fontWeight: "500" }}>{item.name}</td>
+                <td style={{ padding: "16px", color: "#64748b" }}>{item.matchPattern || "-"}</td>
+                <td style={{ padding: "16px" }}>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <IconButton size="small" color="error" onClick={() => onDelete(item.id)}><Trash2 size={16} /></IconButton>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {items.length === 0 && (
+              <tr>
+                <td colSpan={3} style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>No items found.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 
-            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", position: "relative", height: "100%" }}>
-              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
-                <ActionButton icon={LayoutGrid} label="Grid" action="grid" />
-                <ActionButton icon={ListIcon} label="List" action="list" />
-                <ActionButton icon={AlignJustify} label="Details" action="details" />
-              </div>
-              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>View</span>
-            </div>
-          </>
+  return (
+    <div style={{ display: "flex", height: "100vh", backgroundColor: "#f1f5f9", overflow: "hidden" }}>
+      {/* Sidebar */}
+      <div style={{ width: "260px", background: "#ffffff", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", zIndex: 20 }}>
+        <div style={{ padding: "24px 16px", borderBottom: "1px solid #e2e8f0" }}>
+          <Typography variant="h6" style={{ fontWeight: "800", color: "#2563eb", letterSpacing: "-0.5px" }}>
+            Paperless Admin
+          </Typography>
+        </div>
+        <div style={{ padding: "16px 0", flex: 1, overflowY: "auto" }}>
+          <Typography variant="overline" style={{ padding: "0 24px", color: "#94a3b8", fontWeight: "700" }}>Views</Typography>
+          <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeView === "dashboard"} onClick={() => setActiveView("dashboard")} />
+          <SidebarItem icon={FileText} label="Documents" active={activeView === "documents"} onClick={() => setActiveView("documents")} />
+          
+          <Typography variant="overline" style={{ padding: "0 24px", color: "#94a3b8", fontWeight: "700", display: "block", marginTop: "24px" }}>Manage</Typography>
+          <SidebarItem icon={Tag} label="Tags" active={activeView === "tags"} onClick={() => setActiveView("tags")} />
+          <SidebarItem icon={FileType} label="Document Types" active={activeView === "types"} onClick={() => setActiveView("types")} />
+          <SidebarItem icon={Building2} label="Correspondents" active={activeView === "correspondents"} onClick={() => setActiveView("correspondents")} />
+          <SidebarItem icon={Folder} label="Storage Paths" active={activeView === "locations"} onClick={() => setActiveView("locations")} />
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div style={{ flex: 1, position: "relative" }}>
+        {activeView === "dashboard" && renderDashboard()}
+        {activeView === "documents" && renderDocuments()}
+        
+        {activeView === "tags" && renderSimpleManager("Tags", tags.map(t => ({...t, id: t.tagId})), <Tag size={28} />, 
+          () => {
+            const name = prompt("Enter Tag Name:");
+            if (name) saveTag({ companyId, name }).then(() => loadMetadata()).catch(e => onNotice({type:"error", text: e.message}));
+          },
+          () => {}, 
+          (id) => deleteTag(id, companyId).then(() => loadMetadata()).catch(e => onNotice({type:"error", text: e.message}))
         )}
         
-        {activeTab === "View" && (
-          <>
-            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", borderRight: "1px solid #e2e8f0", position: "relative", height: "100%" }}>
-              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
-                <ActionButton icon={Eye} label="Open" action="open" disabled={disabledActions.requiresSelection} />
-                <ActionButton icon={FilePenLine} label="Edit" action="edit" disabled={disabledActions.requiresSelection} />
-              </div>
-              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Document</span>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", borderRight: "1px solid #e2e8f0", position: "relative", height: "100%" }}>
-              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
-                <ActionButton icon={ZoomIn} label="Zoom In" action="zoomIn" disabled={disabledActions.requiresSelection} />
-                <ActionButton icon={ZoomOut} label="Zoom Out" action="zoomOut" disabled={disabledActions.requiresSelection} />
-                <ActionButton icon={RotateCw} label="Rotate" action="rotate" disabled={disabledActions.requiresSelection} />
-              </div>
-              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Zoom</span>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "flex-start", padding: "0 8px", position: "relative", height: "100%" }}>
-              <div style={{ display: "flex", gap: "2px", height: "54px" }}>
-                <ActionButton icon={RefreshCw} label="Refresh" action="refresh" />
-              </div>
-              <span style={{ position: "absolute", bottom: "0", left: "0", right: "0", textAlign: "center", fontSize: "10px", color: "#94a3b8" }}>Navigation</span>
-            </div>
-          </>
+        {activeView === "types" && renderSimpleManager("Document Types", documentTypes.map(t => ({...t, id: t.documentTypeId})), <FileType size={28} />, 
+          () => {
+            const name = prompt("Enter Document Type Name:");
+            if (name) saveDocumentType({ companyId, name }).then(() => loadMetadata()).catch(e => onNotice({type:"error", text: e.message}));
+          },
+          () => {}, 
+          (id) => deleteDocumentType(id, companyId).then(() => loadMetadata()).catch(e => onNotice({type:"error", text: e.message}))
         )}
+        
+        {activeView === "correspondents" && renderSimpleManager("Correspondents", correspondents.map(c => ({...c, id: c.correspondentId})), <Building2 size={28} />, 
+          () => {
+            const name = prompt("Enter Correspondent Name:");
+            if (name) saveCorrespondent({ companyId, name }).then(() => loadMetadata()).catch(e => onNotice({type:"error", text: e.message}));
+          },
+          () => {}, 
+          (id) => deleteCorrespondent(id, companyId).then(() => loadMetadata()).catch(e => onNotice({type:"error", text: e.message}))
+        )}
+        
+        {activeView === "locations" && renderSimpleManager("Storage Paths", locations.map(l => ({...l, id: l.locationId})), <Folder size={28} />, 
+          () => {
+            const name = prompt("Enter Storage Path Name:");
+            if (name) saveLocation({ companyId, name, type: "business" }).then(() => loadMetadata()).catch(e => onNotice({type:"error", text: e.message}));
+          },
+          () => {}, 
+          (id) => deleteLocation(id, companyId).then(() => loadMetadata()).catch(e => onNotice({type:"error", text: e.message}))
+        )}
+      </div>
+
+      {/* Upload Modal */}
+      <UploadModal 
+        open={isUploadModalOpen} 
+        onClose={() => setIsUploadModalOpen(false)} 
+        companyId={companyId}
+        locations={locations}
+        documentTypes={documentTypes}
+        correspondents={correspondents}
+        tags={tags}
+        onSuccess={() => {
+          setIsUploadModalOpen(false);
+          loadDocuments();
+          onNotice({ type: "success", text: "Document uploaded successfully!" });
+        }}
+        onNotice={onNotice}
+      />
+    </div>
+  );
+}
+
+// --- Document Editor Component ---
+function DocumentEditor({ document, locations, documentTypes, correspondents, tags, onSave, onDelete }) {
+  const [title, setTitle] = useState(document.title || document.documentName || "");
+  const [asn, setAsn] = useState(document.asn || "");
+  const [documentDate, setDocumentDate] = useState(document.documentDate ? document.documentDate.split('T')[0] : "");
+  const [documentTypeId, setDocumentTypeId] = useState(document.documentTypeId || "");
+  const [correspondentId, setCorrespondentId] = useState(document.correspondentId || "");
+  const [tagIds, setTagIds] = useState(document.tags?.map(t => t.tagId) || []);
+  const [amount, setAmount] = useState(document.amount || "");
+
+  const handleSave = () => {
+    onSave({
+      title,
+      asn: asn ? parseInt(asn) : null,
+      documentDate: documentDate || null,
+      documentTypeId: documentTypeId || null,
+      correspondentId: correspondentId || null,
+      tagIds,
+      amount: amount ? parseFloat(amount) : null
+    });
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <TextField label="Title" fullWidth size="small" value={title} onChange={e => setTitle(e.target.value)} />
+      <TextField label="ASN (Archive Serial Number)" type="number" fullWidth size="small" value={asn} onChange={e => setAsn(e.target.value)} />
+      <TextField label="Date" type="date" fullWidth size="small" value={documentDate} onChange={e => setDocumentDate(e.target.value)} InputLabelProps={{ shrink: true }} />
+      
+      <FormControl fullWidth size="small">
+        <InputLabel>Document Type</InputLabel>
+        <Select value={documentTypeId} onChange={e => setDocumentTypeId(e.target.value)} label="Document Type">
+          <MenuItem value=""><em>None</em></MenuItem>
+          {documentTypes.map(t => <MenuItem key={t.documentTypeId} value={t.documentTypeId}>{t.name}</MenuItem>)}
+        </Select>
+      </FormControl>
+      
+      <FormControl fullWidth size="small">
+        <InputLabel>Correspondent</InputLabel>
+        <Select value={correspondentId} onChange={e => setCorrespondentId(e.target.value)} label="Correspondent">
+          <MenuItem value=""><em>None</em></MenuItem>
+          {correspondents.map(c => <MenuItem key={c.correspondentId} value={c.correspondentId}>{c.name}</MenuItem>)}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth size="small">
+        <InputLabel>Tags</InputLabel>
+        <Select multiple value={tagIds} onChange={e => setTagIds(e.target.value)} label="Tags"
+          renderValue={(selected) => (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {selected.map((value) => {
+                const tg = tags.find(t => t.tagId === value);
+                return <Chip key={value} label={tg ? tg.name : value} size="small" style={{ height: "20px" }} />;
+              })}
+            </Box>
+          )}
+        >
+          {tags.map(t => <MenuItem key={t.tagId} value={t.tagId}>{t.name}</MenuItem>)}
+        </Select>
+      </FormControl>
+
+      <TextField label="Amount" type="number" fullWidth size="small" value={amount} onChange={e => setAmount(e.target.value)} />
+      
+      <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+        <ModernButton label="Save Changes" primary onClick={handleSave} />
+        <ModernButton label="Delete" color="#ef4444" onClick={onDelete} />
       </div>
     </div>
   );
 }
 
-export function BusinessDocumentManager({ companyId, user, onNotice }) {
-  const [locations, setLocations] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [selectedLocationId, setSelectedLocationId] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [documents, setDocuments] = useState([]);
-  const [selectedDocumentIds, setSelectedDocumentIds] = useState([]);
-  const [activeRibbonTab, setActiveRibbonTab] = useState("Home");
-  const [viewMode, setViewMode] = useState("grid"); // 'grid', 'list', 'details'
-
-  // Rename states
-  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-  const [renameTargetId, setRenameTargetId] = useState(null);
-  const [renameTargetType, setRenameTargetType] = useState("document");
-  const [renameValue, setRenameValue] = useState("");
-  
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  const [emailAddress, setEmailAddress] = useState("");
-  const [isEmailing, setIsEmailing] = useState(false);
-
-  const [expandedCategories, setExpandedCategories] = useState({});
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+// --- Upload Modal Component ---
+function UploadModal({ open, onClose, companyId, locations, documentTypes, correspondents, tags, onSuccess, onNotice }) {
   const [file, setFile] = useState(null);
-  const [documentName, setDocumentName] = useState("");
+  const [title, setTitle] = useState("");
   const [documentDate, setDocumentDate] = useState("");
-  const [vendorName, setVendorName] = useState("");
+  const [documentTypeId, setDocumentTypeId] = useState("");
+  const [correspondentId, setCorrespondentId] = useState("");
+  const [tagIds, setTagIds] = useState([]);
   const [amount, setAmount] = useState("");
-  const [pages, setPages] = useState("1");
-  const [fileInputKey, setFileInputKey] = useState(0);
-
-  // Category addition states
-  const [newCatName, setNewCatName] = useState("");
-  const [newCatParentId, setNewCatParentId] = useState("");
-  const [showAddCategory, setShowAddCategory] = useState(false);
-
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [savingCategory, setSavingCategory] = useState(false);
-  const [dragOverCatId, setDragOverCatId] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  // Auto-analyze document
+  // Auto-analyze when file is selected
   useEffect(() => {
-    if (!file) {
-      setAnalyzing(false);
-      return;
-    }
+    if (!file) return;
     let ignore = false;
     setAnalyzing(true);
     analyzeBusinessDocument(file).then(data => {
       if (!ignore) {
-        if (data.vendorName) setVendorName(data.vendorName);
+        if (data.vendorName && correspondents.length > 0) {
+          const matchedCorr = correspondents.find(c => c.name.toLowerCase() === data.vendorName.toLowerCase());
+          if (matchedCorr) setCorrespondentId(matchedCorr.correspondentId);
+        }
         if (data.amount) setAmount(String(data.amount));
-        if (data.documentDate) {
-          const datePart = String(data.documentDate).split('T')[0];
-          setDocumentDate(datePart);
-        }
-        if (data.suggestedCategoryName && categories.length > 0) {
-          const matchedCat = categories.find(c => c.categoryName.toLowerCase() === data.suggestedCategoryName.toLowerCase());
-          if (matchedCat) {
-            setSelectedCategoryId(String(matchedCat.categoryId));
-          }
+        if (data.documentDate) setDocumentDate(String(data.documentDate).split('T')[0]);
+        if (data.suggestedCategoryName && documentTypes.length > 0) {
+          const matchedType = documentTypes.find(t => t.name.toLowerCase() === data.suggestedCategoryName.toLowerCase());
+          if (matchedType) setDocumentTypeId(matchedType.documentTypeId);
         }
       }
-    }).catch(err => {
-      console.error("AI Analysis failed:", err);
-      // Fail silently to the user so they can still type manually
-    }).finally(() => {
-      if (!ignore) setAnalyzing(false);
-    });
+    }).catch(e => console.error("Analysis failed", e)).finally(() => !ignore && setAnalyzing(false));
     return () => { ignore = true; };
-  }, [file, categories]);
+  }, [file, correspondents, documentTypes]);
 
-  // Load Locations and Business Categories on load
-  useEffect(() => {
-    let ignore = false;
-    setLoading(true);
-    Promise.all([
-      listLocations({ companyId }),
-      listCategories({ companyId, type: "business" }),
-    ])
-      .then(([locationData, categoryData]) => {
-        if (!ignore) {
-          const activeLocations = locationData.filter((l) => !l.inactive);
-          setLocations(activeLocations);
-          setCategories(categoryData);
-
-          // Select first location if available
-          if (activeLocations.length > 0) {
-            setSelectedLocationId(String(activeLocations[0].locationId));
-          }
-          // Select first category if available
-          if (categoryData.length > 0) {
-            setSelectedCategoryId(String(categoryData[0].categoryId));
-          }
-        }
-      })
-      .catch((error) => !ignore && onNotice({ type: "error", text: error.message }))
-      .finally(() => !ignore && setLoading(false));
-
-    return () => {
-      ignore = true;
-    };
-  }, [companyId, onNotice]);
-
-  // Load Documents when location or category changes
-  useEffect(() => {
-    if (!selectedLocationId || !selectedCategoryId) {
-      setDocuments([]);
-      setSelectedDocumentIds([]);
-      return;
-    }
-    let ignore = false;
-    setLoading(true);
-    setSelectedDocumentIds([]);
-    listBusinessDocuments({
-      companyId,
-      locationId: Number(selectedLocationId),
-      categoryId: Number(selectedCategoryId),
-    })
-      .then((data) => !ignore && setDocuments(data))
-      .catch((error) => !ignore && onNotice({ type: "error", text: error.message }))
-      .finally(() => !ignore && setLoading(false));
-
-    return () => {
-      ignore = true;
-    };
-  }, [companyId, selectedLocationId, selectedCategoryId, onNotice]);
-
-  // Hierarchically sort/group categories
-  const orderedCategories = useMemo(() => {
-    const roots = categories.filter((c) => !c.parentId);
-    const result = [];
-    roots.forEach((parent) => {
-      result.push({ ...parent, level: 0 });
-      categories
-        .filter((c) => c.parentId === parent.categoryId)
-        .forEach((child) => result.push({ ...child, level: 1 }));
-    });
-    // Append orphans
-    categories.forEach((c) => {
-      if (c.parentId && !result.some((r) => r.categoryId === c.categoryId)) {
-        result.push({ ...c, level: 0 });
-      }
-    });
-    return result;
-  }, [categories]);
-
-  async function handleAddCategory(event) {
-    event.preventDefault();
-    if (!newCatName) return;
-    setSavingCategory(true);
-    onNotice(null);
-    try {
-      const category = await createCategory({
-        companyId,
-        categoryName: newCatName,
-        parentId: newCatParentId ? Number(newCatParentId) : null,
-        categoryType: "business",
-      });
-      setCategories((current) => [...current, category]);
-      setNewCatName("");
-      setNewCatParentId("");
-      setShowAddCategory(false);
-      onNotice({ type: "success", text: "Business folder created." });
-      setSelectedCategoryId(String(category.categoryId));
-    } catch (error) {
-      onNotice({ type: "error", text: error.message });
-    } finally {
-      setSavingCategory(false);
-    }
-  }
-
-  async function handleUpload(event) {
-    event.preventDefault();
-    if (!file || !selectedCategoryId || !selectedLocationId) {
-      onNotice({ type: "error", text: "Please select a location, category, and file." });
+  const handleUpload = async () => {
+    if (!file) {
+      onNotice({ type: "error", text: "Please select a file." });
       return;
     }
     setUploading(true);
-    setUploadProgress(0);
-    onNotice(null);
     try {
-      const document = await uploadBusinessDocument({
+      await uploadBusinessDocument({
         companyId,
-        locationId: Number(selectedLocationId),
-        categoryId: Number(selectedCategoryId),
         file,
-        documentName: documentName || file.name,
-        documentDate: documentDate || null,
-        vendorName: vendorName || null,
-        amount: amount ? Number(amount) : null,
-        pages: Number(pages) || 1,
-        onProgress: setUploadProgress,
+        documentName: title || file.name,
+        documentDate: documentDate || undefined,
+        documentTypeId: documentTypeId || undefined,
+        correspondentId: correspondentId || undefined,
+        tags: tagIds.length > 0 ? tagIds : undefined,
+        amount: amount || undefined
       });
-
-      setDocuments((current) => [document, ...current]);
-      setFile(null);
-      setDocumentName("");
-      setDocumentDate("");
-      setVendorName("");
-      setAmount("");
-      setPages("1");
-      setFileInputKey((k) => k + 1);
-      setIsUploadModalOpen(false);
-      onNotice({ type: "success", text: "Document uploaded to folder successfully." });
-    } catch (error) {
-      onNotice({ type: "error", text: error.message });
+      onSuccess();
+    } catch (e) {
+      onNotice({ type: "error", text: e.message });
     } finally {
       setUploading(false);
-      setUploadProgress(0);
     }
-  }
-
-  async function handleDropOnCategory(e, categoryId) {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOverCatId(null);
-    if (String(categoryId) === String(selectedCategoryId)) return;
-    
-    const docId = e.dataTransfer.getData("document-id");
-    if (!docId) return;
-
-    try {
-      await moveBusinessDocument(docId, categoryId);
-      setDocuments((current) => current.filter((doc) => String(doc.documentId) !== String(docId)));
-      onNotice({ type: "success", text: "Document moved successfully." });
-    } catch (error) {
-      onNotice({ type: "error", text: "Failed to move document: " + error.message });
-    }
-  }
-
-  async function handleDelete(doc) {
-    const ok = window.confirm(`Delete document "${doc.documentName}"?`);
-    if (!ok) return;
-    onNotice(null);
-    try {
-      await deleteBusinessDocument(doc.documentId);
-      setDocuments((current) => current.filter((d) => d.documentId !== doc.documentId));
-      setSelectedDocumentIds((current) => current.filter(id => id !== doc.documentId));
-      onNotice({ type: "success", text: "Document deleted successfully." });
-    } catch (error) {
-      onNotice({ type: "error", text: error.message });
-    }
-  }
-  async function handleSendEmail(e) {
-    e.preventDefault();
-    if (!emailAddress.trim() || selectedDocumentIds.length === 0) return;
-    try {
-      setIsEmailing(true);
-      const docId = selectedDocumentIds[0];
-      await emailBusinessDocument(docId, emailAddress.trim());
-      setIsEmailModalOpen(false);
-      setEmailAddress("");
-      alert("Email sent successfully!");
-    } catch (err) {
-      console.error("Failed to send email", err);
-      alert("Failed to send email: " + (err.message || "Unknown error"));
-    } finally {
-      setIsEmailing(false);
-    }
-  }
-
-
-  async function handleRenameSubmit(e) {
-    e.preventDefault();
-    if (!renameValue.trim()) return;
-
-    try {
-      if (renameTargetType === "document") {
-        await renameBusinessDocument(renameTargetId, renameValue);
-        setDocuments(current => current.map(d => d.documentId === renameTargetId ? { ...d, documentName: renameValue } : d));
-        onNotice({ type: "success", text: "Document renamed successfully." });
-      } else if (renameTargetType === "category") {
-        await renameCategory(renameTargetId, renameValue);
-        setCategories(current => current.map(c => c.categoryId === renameTargetId ? { ...c, categoryName: renameValue } : c));
-        onNotice({ type: "success", text: "Folder renamed successfully." });
-      }
-    } catch (error) {
-      onNotice({ type: "error", text: error.message });
-    } finally {
-      setIsRenameModalOpen(false);
-    }
-  }
-
-  function handleRibbonAction(action) {
-    switch (action) {
-      case "upload":
-        setIsUploadModalOpen(true);
-        break;
-      case "newFolder":
-        setShowAddCategory(true);
-        break;
-      case "refresh":
-        if (selectedLocationId && selectedCategoryId) {
-          setLoading(true);
-          setSelectedDocumentIds([]);
-          listBusinessDocuments({
-            companyId,
-            locationId: Number(selectedLocationId),
-            categoryId: Number(selectedCategoryId),
-          })
-            .then(setDocuments)
-            .catch((error) => onNotice({ type: "error", text: error.message }))
-            .finally(() => setLoading(false));
-        }
-        break;
-      case "delete":
-        if (selectedDocumentIds.length > 0) {
-          const docToDelete = documents.find(d => d.documentId === selectedDocumentIds[0]);
-          if (docToDelete) handleDelete(docToDelete);
-        }
-        break;
-      case "open":
-        if (selectedDocumentIds.length > 0) {
-          const docToOpen = documents.find(d => d.documentId === selectedDocumentIds[0]);
-          if (docToOpen) {
-             const url = getBusinessDocumentPreviewUrl(docToOpen);
-             window.open(url, "_blank");
-          }
-        }
-        break;
-      case "download":
-        if (selectedDocumentIds.length > 0) {
-          const docToDownload = documents.find(d => d.documentId === selectedDocumentIds[0]);
-          if (docToDownload) {
-             const url = getBusinessDocumentDownloadUrl(docToDownload.documentId);
-             window.open(url, "_blank");
-          }
-        }
-        break;
-      case "print":
-        if (selectedDocumentIds.length > 0) {
-          const docToPrint = documents.find(d => d.documentId === selectedDocumentIds[0]);
-          if (docToPrint) {
-             const url = getBusinessDocumentPreviewUrl(docToPrint);
-             window.open(url, "_blank");
-          }
-        }
-        break;
-      case "email":
-        if (selectedDocumentIds.length > 0) {
-          const docToEmail = documents.find(d => d.documentId === selectedDocumentIds[0]);
-          if (docToEmail) {
-             setEmailAddress("");
-             setIsEmailModalOpen(true);
-          }
-        }
-        break;
-      case "rename":
-        if (selectedDocumentIds.length > 0) {
-          const doc = documents.find(d => d.documentId === selectedDocumentIds[0]);
-          if (doc) {
-            setRenameTargetId(doc.documentId);
-            setRenameTargetType("document");
-            setRenameValue(doc.documentName || "");
-            setIsRenameModalOpen(true);
-          }
-        } else if (selectedCategoryId) {
-          const cat = categories.find(c => String(c.categoryId) === selectedCategoryId);
-          if (cat) {
-            setRenameTargetId(cat.categoryId);
-            setRenameTargetType("category");
-            setRenameValue(cat.categoryName || "");
-            setIsRenameModalOpen(true);
-          }
-        }
-        break;
-      case "grid":
-        setViewMode("grid");
-        break;
-      case "list":
-        setViewMode("list");
-        break;
-      case "details":
-        setViewMode("details");
-        break;
-      default:
-        console.log("Unimplemented action:", action);
-        break;
-    }
-  }
-
-  function toggleSelection(docId) {
-    setSelectedDocumentIds(current => 
-      current.includes(docId) ? current.filter(id => id !== docId) : [docId] // For now, single select logic for simplicity
-    );
-  }
-
-  function openDocument(doc) {
-    window.open(getBusinessDocumentPreviewUrl(doc), "_blank", "noopener,noreferrer");
-  }
+  };
 
   return (
-    <div style={{ display: "flex", height: "calc(100vh - 120px)", borderRadius: "8px", overflow: "hidden", background: "#f1f5f9", border: "1px solid #e2e8f0" }}>
-      {/* Left Sidebar: Modern Folder Tree */}
-      <aside style={{ width: "280px", display: "flex", flexDirection: "column", background: "#ffffff", borderRight: "1px solid #e2e8f0", flexShrink: 0 }}>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ style: { borderRadius: "12px" } }}>
+      <DialogTitle style={{ fontWeight: "700" }}>Upload Document</DialogTitle>
+      <DialogContent dividers style={{ display: "flex", flexDirection: "column", gap: "20px", paddingTop: "20px" }}>
         
-        <div style={{ padding: "16px", borderBottom: "1px solid #f1f5f9" }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#475569", mb: 1, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.5px" }}>
-            Location / Center
-          </Typography>
-          <select
-            value={selectedLocationId}
-            onChange={(e) => setSelectedLocationId(e.target.value)}
-            style={{ width: "100%", padding: "10px", fontSize: "14px", borderRadius: "6px", border: "1px solid #cbd5e1", outline: "none", background: "#f8fafc" }}
-          >
-            {locations.length === 0 ? (
-              <option value="">No centers active</option>
-            ) : (
-              locations.map((loc) => (
-                <option key={loc.locationId} value={loc.locationId}>
-                  {loc.locationName}
-                </option>
-              ))
+        <Button variant="outlined" component="label" fullWidth style={{ padding: "32px", borderStyle: "dashed", borderColor: "#94a3b8", color: "#64748b" }}>
+          {file ? file.name : "Select File"}
+          <input type="file" hidden onChange={e => setFile(e.target.files[0])} />
+        </Button>
+
+        {analyzing && <Typography variant="body2" color="primary" style={{ display: "flex", alignItems: "center", gap: "8px" }}><CircularProgress size={16} /> AI Analyzing document...</Typography>}
+
+        <TextField label="Title" fullWidth size="small" value={title} onChange={e => setTitle(e.target.value)} placeholder={file ? file.name : ""} />
+        <TextField label="Date" type="date" fullWidth size="small" value={documentDate} onChange={e => setDocumentDate(e.target.value)} InputLabelProps={{ shrink: true }} />
+        
+        <FormControl fullWidth size="small">
+          <InputLabel>Document Type</InputLabel>
+          <Select value={documentTypeId} onChange={e => setDocumentTypeId(e.target.value)} label="Document Type">
+            <MenuItem value=""><em>None</em></MenuItem>
+            {documentTypes.map(t => <MenuItem key={t.documentTypeId} value={t.documentTypeId}>{t.name}</MenuItem>)}
+          </Select>
+        </FormControl>
+        
+        <FormControl fullWidth size="small">
+          <InputLabel>Correspondent</InputLabel>
+          <Select value={correspondentId} onChange={e => setCorrespondentId(e.target.value)} label="Correspondent">
+            <MenuItem value=""><em>None</em></MenuItem>
+            {correspondents.map(c => <MenuItem key={c.correspondentId} value={c.correspondentId}>{c.name}</MenuItem>)}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth size="small">
+          <InputLabel>Tags</InputLabel>
+          <Select multiple value={tagIds} onChange={e => setTagIds(e.target.value)} label="Tags"
+            renderValue={(selected) => (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {selected.map((value) => {
+                  const tg = tags.find(t => t.tagId === value);
+                  return <Chip key={value} label={tg ? tg.name : value} size="small" style={{ height: "20px" }} />;
+                })}
+              </Box>
             )}
-          </select>
-        </div>
-
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px 8px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", padding: "0 8px" }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#475569", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.5px" }}>
-              Folders
-            </Typography>
-            <Tooltip title="New Folder">
-              <IconButton size="small" onClick={() => setShowAddCategory(!showAddCategory)} sx={{ color: "#c1692a" }}>
-                <FolderPlus size={16} />
-              </IconButton>
-            </Tooltip>
-          </div>
-
-          {showAddCategory && (
-            <div style={{ padding: "12px", background: "#f8fafc", borderRadius: "6px", marginBottom: "16px", margin: "0 8px", border: "1px solid #e2e8f0" }}>
-              <form onSubmit={handleAddCategory}>
-                <input
-                  placeholder="Folder Name"
-                  value={newCatName}
-                  onChange={(e) => setNewCatName(e.target.value)}
-                  required
-                  style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "4px", border: "1px solid #cbd5e1", fontSize: "13px" }}
-                />
-                <select
-                  value={newCatParentId}
-                  onChange={(e) => setNewCatParentId(e.target.value)}
-                  style={{ width: "100%", padding: "8px", marginBottom: "12px", borderRadius: "4px", border: "1px solid #cbd5e1", fontSize: "13px" }}
-                >
-                  <option value="">Top-level folder</option>
-                  {categories
-                    .filter((c) => !c.parentId)
-                    .map((c) => (
-                      <option key={c.categoryId} value={c.categoryId}>
-                        {c.categoryName}
-                      </option>
-                    ))}
-                </select>
-                <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                  <Button size="small" variant="text" onClick={() => setShowAddCategory(false)}>Cancel</Button>
-                  <Button size="small" variant="contained" type="submit" disabled={savingCategory} disableElevation>Create</Button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {orderedCategories.length === 0 ? (
-            <Typography variant="body2" sx={{ color: "#94a3b8", px: 1 }}>No folders found.</Typography>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-              {orderedCategories.map((cat) => {
-                const isSelected = selectedCategoryId === String(cat.categoryId);
-                const isDragOver = dragOverCatId === String(cat.categoryId);
-                return (
-                  <button
-                    key={cat.categoryId}
-                    type="button"
-                    onClick={() => setSelectedCategoryId(String(cat.categoryId))}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      if (!isDragOver) setDragOverCatId(String(cat.categoryId));
-                    }}
-                    onDragLeave={() => setDragOverCatId(null)}
-                    onDrop={(e) => handleDropOnCategory(e, cat.categoryId)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      width: "100%",
-                      padding: "8px 12px",
-                      textAlign: "left",
-                      border: "none",
-                      borderRadius: "6px",
-                      background: isDragOver ? "#e2e8f0" : (isSelected ? "#fff2ea" : "transparent"),
-                      color: isSelected ? "#a05522" : "#334155",
-                      paddingLeft: cat.level === 1 ? "32px" : "12px",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      transition: "all 0.2s ease",
-                      fontWeight: isSelected ? "600" : "500",
-                    }}
-                    onMouseEnter={(e) => { if (!isSelected && !isDragOver) e.currentTarget.style.background = "#f8fafc"; }}
-                    onMouseLeave={(e) => { if (!isSelected && !isDragOver) e.currentTarget.style.background = "transparent"; }}
-                  >
-                    {isSelected ? (
-                      <FolderOpen size={18} style={{ color: "#c1692a", flexShrink: 0 }} />
-                    ) : (
-                      <Folder size={18} style={{ color: "#94a3b8", flexShrink: 0 }} />
-                    )}
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {cat.categoryName}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </aside>
-
-      {/* Main Panel: Modern Desktop Workspace */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
-        
-        {/* Ribbon Toolbar */}
-        <RibbonMenu
-          activeTab={activeRibbonTab}
-          setActiveTab={setActiveRibbonTab}
-          onAction={handleRibbonAction}
-          disabledActions={{ 
-            requiresSelection: selectedDocumentIds.length === 0,
-            canRename: selectedDocumentIds.length > 0 || !!selectedCategoryId
-          }}
-        />
-
-        {/* Current Folder Path / Workspace Label */}
-        <div style={{ display: "flex", alignItems: "center", padding: "8px 24px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, color: "#475569" }}>
-            Workspace &gt; {categories.find(c => String(c.categoryId) === selectedCategoryId)?.categoryName || "Root"}
-          </Typography>
-        </div>
-
-        {/* Desktop Area */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "30px", background: "#f8fafc" }}>
-          {loading ? (
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
-              <Typography variant="body1" color="textSecondary">Loading documents...</Typography>
-            </div>
-          ) : documents.length === 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", color: "#94a3b8" }}>
-              <FolderOpen size={64} style={{ marginBottom: "16px", opacity: 0.5 }} />
-              <Typography variant="h6" sx={{ fontWeight: 500, mb: 1 }}>Empty Folder</Typography>
-              <Typography variant="body2">No documents have been uploaded to this folder yet.</Typography>
-            </div>
-          ) : (
-            <>
-              {viewMode === "grid" && (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                    gap: "35px",
-                    alignItems: "start"
-                  }}
-                >
-                  {documents.map((doc) => {
-                    const hasMultiplePages = doc.numberOfPages > 1;
-                    const isSelected = selectedDocumentIds.includes(doc.documentId);
-                    const stackShadow = hasMultiplePages
-                      ? "0 1px 1px rgba(0,0,0,0.05), 0 4px 0 -1px #fff, 0 4px 1px -1px rgba(0,0,0,0.1), 0 8px 0 -2px #fff, 0 8px 1px -2px rgba(0,0,0,0.1), 0 12px 24px rgba(0,0,0,0.08)"
-                      : "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)";
-
-                    return (
-                      <article
-                        key={doc.documentId}
-                        draggable={true}
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData("document-id", String(doc.documentId));
-                          e.dataTransfer.effectAllowed = "move";
-                        }}
-                        style={{
-                          background: isSelected ? "#e0f2fe" : "#ffffff",
-                          borderRadius: "4px",
-                          display: "flex",
-                          flexDirection: "column",
-                          transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                          boxShadow: isSelected ? "0 0 0 2px #3b82f6, " + stackShadow : stackShadow,
-                          position: "relative",
-                          border: "1px solid",
-                          borderColor: isSelected ? "#3b82f6" : "#e2e8f0",
-                          cursor: "grab",
-                          overflow: "hidden"
-                        }}
-                        onClick={() => toggleSelection(doc.documentId)}
-                        onDoubleClick={() => openDocument(doc)}
-                        onMouseEnter={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.transform = "translateY(-4px)";
-                            e.currentTarget.style.boxShadow = hasMultiplePages
-                              ? "0 1px 1px rgba(0,0,0,0.05), 0 4px 0 -1px #fff, 0 4px 1px -1px rgba(0,0,0,0.1), 0 8px 0 -2px #fff, 0 8px 1px -2px rgba(0,0,0,0.1), 0 20px 30px rgba(193, 105, 42, 0.15)"
-                              : "0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.05), 0 0 0 1px rgba(193, 105, 42, 0.2)";
-                            e.currentTarget.style.borderColor = "transparent";
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.transform = "none";
-                            e.currentTarget.style.boxShadow = stackShadow;
-                            e.currentTarget.style.borderColor = "#e2e8f0";
-                          }
-                        }}
-                      >
-                        {/* Thumbnail frame */}
-                        <div style={{ position: "relative" }}>
-                          <BusinessDocumentThumbnail document={doc} />
-                          {hasMultiplePages && (
-                            <span
-                              style={{
-                                position: "absolute",
-                                bottom: "10px",
-                                right: "10px",
-                                background: "rgba(15, 23, 42, 0.8)",
-                                backdropFilter: "blur(4px)",
-                                color: "#fff",
-                                padding: "4px 8px",
-                                borderRadius: "12px",
-                                fontSize: "0.7rem",
-                                fontWeight: "600",
-                                letterSpacing: "0.5px"
-                              }}
-                            >
-                              {doc.numberOfPages} pgs
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Document Details Info */}
-                        <div style={{ padding: "16px", display: "flex", flexDirection: "column", flex: 1 }}>
-                          <Typography
-                            variant="subtitle2"
-                            sx={{
-                              fontWeight: 600,
-                              lineHeight: 1.3,
-                              color: "#1e293b",
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                              mb: 1.5,
-                              fontSize: "0.9rem"
-                            }}
-                            title={doc.documentName}
-                          >
-                            {doc.documentName}
-                          </Typography>
-                          
-                          <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.75rem", color: "#64748b", marginTop: "auto" }}>
-                            {doc.vendorName && (
-                              <span style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                <Building size={14} style={{ color: "#94a3b8", flexShrink: 0 }} /> {doc.vendorName}
-                              </span>
-                            )}
-                            {doc.amount && (
-                              <span style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "600", color: "#166534" }}>
-                                <DollarSign size={14} style={{ flexShrink: 0 }} /> {doc.amount.toFixed(2)}
-                              </span>
-                            )}
-                            {doc.documentDate && (
-                              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                <Calendar size={14} style={{ color: "#94a3b8", flexShrink: 0 }} /> {new Date(doc.documentDate).toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Action buttons footer */}
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              borderTop: "1px solid #f1f5f9",
-                              paddingTop: "12px",
-                              marginTop: "16px",
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div style={{ display: "flex", gap: "4px" }}>
-                              <Tooltip title="Preview">
-                                <IconButton size="small" onClick={() => openDocument(doc)} sx={{ color: "#64748b", '&:hover': { color: "#c1692a", background: "#fff2ea" } }}>
-                                  <Eye size={16} />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Download">
-                                <IconButton size="small" component="a" href={getBusinessDocumentDownloadUrl(doc.documentId)} sx={{ color: "#64748b", '&:hover': { color: "#c1692a", background: "#fff2ea" } }}>
-                                  <Download size={16} />
-                                </IconButton>
-                              </Tooltip>
-                            </div>
-                            <Tooltip title="Delete">
-                              <IconButton size="small" onClick={() => handleDelete(doc)} sx={{ color: "#94a3b8", '&:hover': { color: "#ef4444", background: "#fef2f2" } }}>
-                                <Trash2 size={16} />
-                              </IconButton>
-                            </Tooltip>
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              )}
-
-              {viewMode === "list" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {documents.map((doc) => {
-                    const isSelected = selectedDocumentIds.includes(doc.documentId);
-                    return (
-                      <div
-                        key={doc.documentId}
-                        onClick={() => toggleSelection(doc.documentId)}
-                        onDoubleClick={() => openDocument(doc)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          padding: "12px 16px",
-                          background: isSelected ? "#e0f2fe" : "#fff",
-                          border: "1px solid",
-                          borderColor: isSelected ? "#3b82f6" : "#e2e8f0",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                          transition: "background 0.2s"
-                        }}
-                      >
-                        <div style={{ width: "40px", height: "40px", flexShrink: 0, marginRight: "16px", overflow: "hidden", borderRadius: "4px", border: "1px solid #cbd5e1" }}>
-                          <BusinessDocumentThumbnail document={doc} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {doc.documentName}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: "#64748b" }}>
-                            {doc.documentDate ? new Date(doc.documentDate).toLocaleDateString() : "No date"}
-                          </Typography>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {viewMode === "details" && (
-                <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: "6px", overflow: "hidden" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
-                    <thead style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                      <tr>
-                        <th style={{ padding: "12px 16px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>Name</th>
-                        <th style={{ padding: "12px 16px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>Vendor</th>
-                        <th style={{ padding: "12px 16px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>Date</th>
-                        <th style={{ padding: "12px 16px", textAlign: "right", color: "#64748b", fontWeight: 600 }}>Amount</th>
-                        <th style={{ padding: "12px 16px", textAlign: "right", color: "#64748b", fontWeight: 600 }}>Pages</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {documents.map((doc) => {
-                        const isSelected = selectedDocumentIds.includes(doc.documentId);
-                        return (
-                          <tr
-                            key={doc.documentId}
-                            onClick={() => toggleSelection(doc.documentId)}
-                            onDoubleClick={() => openDocument(doc)}
-                            style={{
-                              background: isSelected ? "#e0f2fe" : "transparent",
-                              borderBottom: "1px solid #e2e8f0",
-                              cursor: "pointer",
-                              transition: "background 0.2s"
-                            }}
-                            onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#f8fafc"; }}
-                            onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
-                          >
-                            <td style={{ padding: "12px 16px", fontWeight: 500, color: "#1e293b" }}>{doc.documentName}</td>
-                            <td style={{ padding: "12px 16px", color: "#475569" }}>{doc.vendorName || "-"}</td>
-                            <td style={{ padding: "12px 16px", color: "#475569" }}>{doc.documentDate ? new Date(doc.documentDate).toLocaleDateString() : "-"}</td>
-                            <td style={{ padding: "12px 16px", textAlign: "right", color: "#166534", fontWeight: 600 }}>{doc.amount ? doc.amount.toFixed(2) : "-"}</td>
-                            <td style={{ padding: "12px 16px", textAlign: "right", color: "#475569" }}>{doc.numberOfPages}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Modern Upload Modal */}
-      <Dialog open={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: '12px' } }}>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>Upload to {categories.find(c => String(c.categoryId) === selectedCategoryId)?.categoryName}</Typography>
-          <IconButton onClick={() => setIsUploadModalOpen(false)} size="small">
-            <X size={20} />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 3 }}>
-          <form id="upload-doc-form" onSubmit={handleUpload} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            <div style={{ padding: "20px", border: "2px dashed #cbd5e1", borderRadius: "8px", background: "#f8fafc", textAlign: "center", position: "relative" }}>
-              <input
-                key={fileInputKey}
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                required
-                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
-              />
-              {analyzing ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                  <CircularProgress size={24} sx={{ color: "#c1692a" }} />
-                  <Typography variant="body2" sx={{ color: "#475569", fontWeight: 500 }}>
-                    AI is analyzing document...
-                  </Typography>
-                </Box>
-              ) : (
-                <>
-                  <Upload size={32} style={{ color: "#94a3b8", marginBottom: "8px" }} />
-                  <Typography variant="body2" sx={{ color: "#475569", fontWeight: 500 }}>
-                    {file ? file.name : "Click or drag file to upload"}
-                  </Typography>
-                </>
-              )}
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-              <div>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 0.5, display: "block" }}>Document Name</Typography>
-                <input
-                  type="text"
-                  value={documentName}
-                  onChange={(e) => setDocumentName(e.target.value)}
-                  placeholder={file?.name || "Optional custom name"}
-                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}
-                />
-              </div>
-              <div>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 0.5, display: "block" }}>Vendor / Party</Typography>
-                <input
-                  type="text"
-                  value={vendorName}
-                  onChange={(e) => setVendorName(e.target.value)}
-                  placeholder="e.g. Bank of America"
-                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}
-                />
-              </div>
-              <div>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 0.5, display: "block" }}>Amount ($)</Typography>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}
-                />
-              </div>
-              <div>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 0.5, display: "block" }}>Document Date</Typography>
-                <input
-                  type="date"
-                  value={documentDate}
-                  onChange={(e) => setDocumentDate(e.target.value)}
-                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}
-                />
-              </div>
-              <div>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 0.5, display: "block" }}>Pages</Typography>
-                <input
-                  type="number"
-                  min="1"
-                  value={pages}
-                  onChange={(e) => setPages(e.target.value)}
-                  style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}
-                />
-              </div>
-            </div>
-          </form>
-          {uploading && (
-            <Box sx={{ width: '100%', mt: 3 }}>
-              <LinearProgress variant="determinate" value={uploadProgress} sx={{ height: 6, borderRadius: 3 }} />
-              <Typography variant="body2" color="text.secondary" align="center" mt={1}>
-                {uploadProgress}%
-              </Typography>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2, px: 3 }}>
-          <Button onClick={() => setIsUploadModalOpen(false)} sx={{ color: "#64748b" }}>Cancel</Button>
-          <Button
-            type="submit"
-            form="upload-doc-form"
-            variant="contained"
-            disableElevation
-            disabled={uploading || !file || !selectedCategoryId || !selectedLocationId}
-            sx={{ borderRadius: "6px", fontWeight: 600 }}
           >
-            {uploading ? "Uploading..." : "Upload Document"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            {tags.map(t => <MenuItem key={t.tagId} value={t.tagId}>{t.name}</MenuItem>)}
+          </Select>
+        </FormControl>
 
-      {/* Rename Modal */}
-      <Dialog open={isRenameModalOpen} onClose={() => setIsRenameModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: "1.1rem" }}>
-            Rename {renameTargetType === "document" ? "Document" : "Folder"}
-          </Typography>
-          <IconButton onClick={() => setIsRenameModalOpen(false)} size="small"><X size={20} /></IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          <form id="rename-form" onSubmit={handleRenameSubmit}>
-            <div>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: "#64748b", mb: 0.5, display: "block" }}>New Name</Typography>
-              <input
-                type="text"
-                autoFocus
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "14px" }}
-              />
-            </div>
-          </form>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, px: 3 }}>
-          <Button onClick={() => setIsRenameModalOpen(false)} sx={{ color: "#64748b" }}>Cancel</Button>
-          <Button
-            type="submit"
-            form="rename-form"
-            variant="contained"
-            disableElevation
-            disabled={!renameValue.trim()}
-            sx={{ borderRadius: "6px", fontWeight: 600 }}
-          >
-            Rename
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Email Modal */}
-      <Dialog open={isEmailModalOpen} onClose={() => !isEmailing && setIsEmailModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ m: 0, p: 2, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e2e8f0" }}>
-          <Typography variant="h6" sx={{ fontSize: "16px", fontWeight: 600 }}>Send Email</Typography>
-          <IconButton onClick={() => setIsEmailModalOpen(false)} size="small" disabled={isEmailing}><X size={20} /></IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          <form id="email-form" onSubmit={handleSendEmail}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <label htmlFor="emailAddress" style={{ fontSize: "14px", fontWeight: 500, color: "#334155" }}>
-                Recipient Email Address
-              </label>
-              <input
-                id="emailAddress"
-                type="email"
-                required
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                placeholder="user@example.com"
-                disabled={isEmailing}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid #cbd5e1",
-                  fontSize: "14px",
-                  outline: "none",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
-                }}
-              />
-            </div>
-          </form>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, px: 3 }}>
-          <Button onClick={() => setIsEmailModalOpen(false)} sx={{ color: "#64748b" }} disabled={isEmailing}>Cancel</Button>
-          <Button
-            type="submit"
-            form="email-form"
-            variant="contained"
-            disableElevation
-            disabled={!emailAddress.trim() || isEmailing}
-            sx={{ borderRadius: "6px", fontWeight: 600 }}
-          >
-            {isEmailing ? "Sending..." : "Send"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </div>
+        <TextField label="Amount" type="number" fullWidth size="small" value={amount} onChange={e => setAmount(e.target.value)} />
+      </DialogContent>
+      <DialogActions style={{ padding: "16px 24px" }}>
+        <Button onClick={onClose} disabled={uploading}>Cancel</Button>
+        <Button variant="contained" onClick={handleUpload} disabled={uploading || !file}>
+          {uploading ? <CircularProgress size={24} color="inherit" /> : "Upload"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

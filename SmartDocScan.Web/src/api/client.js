@@ -465,16 +465,4 @@ export function deleteTag(tagId, companyId) {
   return request(`/tags/${tagId}?${params.toString()}`, { method: "DELETE" });
 }
 
-export function renameCategory(categoryId, name) {
-  return request(`/categories/${categoryId}/rename`, {
-    method: "PUT",
-    body: JSON.stringify({ name }),
-  });
-}
 
-export function emailBusinessDocument(documentId, email) {
-  return request(/business-documents//email, {
-    method: "POST",
-    body: JSON.stringify({ email }),
-  });
-}
