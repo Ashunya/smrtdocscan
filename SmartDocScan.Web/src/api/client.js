@@ -291,26 +291,30 @@ export function deleteLocation(locationId, companyId) {
   return request(`/locations/${locationId}?${params.toString()}`, { method: "DELETE" });
 }
 
-export function listBusinessDocuments({ companyId, locationId, categoryId }) {
+export function listBusinessDocuments({ companyId, locationId, documentTypeId, correspondentId, tagId, search }) {
   const params = new URLSearchParams({
     companyId: String(companyId),
   });
   if (locationId) params.set("locationId", String(locationId));
-  if (categoryId) params.set("categoryId", String(categoryId));
+  if (documentTypeId) params.set("documentTypeId", String(documentTypeId));
+  if (correspondentId) params.set("correspondentId", String(correspondentId));
+  if (tagId) params.set("tagId", String(tagId));
+  if (search) params.set("search", search);
   return request(`/business-documents?${params.toString()}`);
 }
 
-export function uploadBusinessDocument({ companyId, locationId, categoryId, file, documentName, documentDate, vendorName, amount, pages, onProgress }) {
+export function uploadBusinessDocument({ companyId, locationId, documentTypeId, file, documentName, documentDate, correspondentId, amount, pages, tags, onProgress }) {
   return new Promise((resolve, reject) => {
     const formData = new FormData();
     formData.set("companyId", String(companyId));
     if (locationId) formData.set("locationId", String(locationId));
-    formData.set("categoryId", String(categoryId));
+    if (documentTypeId) formData.set("documentTypeId", String(documentTypeId));
     if (documentName) formData.set("documentName", documentName);
     if (documentDate) formData.set("documentDate", documentDate);
-    if (vendorName) formData.set("vendorName", vendorName);
+    if (correspondentId) formData.set("correspondentId", String(correspondentId));
     if (amount) formData.set("amount", String(amount));
     if (pages) formData.set("pages", String(pages));
+    if (tags && tags.length > 0) formData.set("tags", JSON.stringify(tags));
     formData.set("file", file);
 
     const xhr = new XMLHttpRequest();
@@ -344,6 +348,13 @@ export function uploadBusinessDocument({ companyId, locationId, categoryId, file
     };
     xhr.onerror = () => reject(new Error("Network Error"));
     xhr.send(formData);
+  });
+}
+
+export function updateBusinessDocumentMetadata(documentId, data) {
+  return request(`/business-documents/${documentId}/metadata`, {
+    method: "PUT",
+    body: JSON.stringify(data),
   });
 }
 
@@ -385,6 +396,73 @@ export function renameBusinessDocument(documentId, name) {
     method: "PUT",
     body: JSON.stringify({ name }),
   });
+}
+
+export function emailBusinessDocument(documentId, to, subject, body) {
+  return request(`/business-documents/${documentId}/email`, {
+    method: "POST",
+    body: JSON.stringify({ to, subject, body }),
+  });
+}
+
+// ---------------------------------------------
+// Correspondents
+// ---------------------------------------------
+export function listCorrespondents({ companyId }) {
+  const params = new URLSearchParams({ companyId: String(companyId) });
+  return request(`/correspondents?${params.toString()}`);
+}
+
+export function saveCorrespondent(correspondent) {
+  return request("/correspondents", {
+    method: "POST",
+    body: JSON.stringify(correspondent),
+  });
+}
+
+export function deleteCorrespondent(correspondentId, companyId) {
+  const params = new URLSearchParams({ companyId: String(companyId) });
+  return request(`/correspondents/${correspondentId}?${params.toString()}`, { method: "DELETE" });
+}
+
+// ---------------------------------------------
+// Document Types
+// ---------------------------------------------
+export function listDocumentTypes({ companyId }) {
+  const params = new URLSearchParams({ companyId: String(companyId) });
+  return request(`/document-types?${params.toString()}`);
+}
+
+export function saveDocumentType(documentType) {
+  return request("/document-types", {
+    method: "POST",
+    body: JSON.stringify(documentType),
+  });
+}
+
+export function deleteDocumentType(documentTypeId, companyId) {
+  const params = new URLSearchParams({ companyId: String(companyId) });
+  return request(`/document-types/${documentTypeId}?${params.toString()}`, { method: "DELETE" });
+}
+
+// ---------------------------------------------
+// Tags
+// ---------------------------------------------
+export function listTags({ companyId }) {
+  const params = new URLSearchParams({ companyId: String(companyId) });
+  return request(`/tags?${params.toString()}`);
+}
+
+export function saveTag(tag) {
+  return request("/tags", {
+    method: "POST",
+    body: JSON.stringify(tag),
+  });
+}
+
+export function deleteTag(tagId, companyId) {
+  const params = new URLSearchParams({ companyId: String(companyId) });
+  return request(`/tags/${tagId}?${params.toString()}`, { method: "DELETE" });
 }
 
 export function renameCategory(categoryId, name) {

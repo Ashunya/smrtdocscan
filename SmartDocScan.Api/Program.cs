@@ -1,11 +1,18 @@
+using SmartDocScan.Api;
 using System.Net;
 using System.Net.Mail;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.IO;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.SqlClient;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -42,6 +49,9 @@ builder.Services.AddSingleton<UserRepository>();
 builder.Services.AddSingleton<AuthRepository>();
 builder.Services.AddSingleton<AuditRepository>();
 builder.Services.AddSingleton<SettingsRepository>();
+builder.Services.AddSingleton<TagRepository>();
+builder.Services.AddSingleton<CorrespondentRepository>();
+builder.Services.AddSingleton<DocumentTypeRepository>();
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
 builder.Services.AddRateLimiter(options =>
 {
@@ -236,6 +246,11 @@ app.Use(async (context, next) =>
     }
 
     await next();
+});
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
 });
 
 app.UseCors();
@@ -779,17 +794,17 @@ app.MapDelete("/api/locations/{locationId:int}", async (int locationId, int comp
 // -------------------------------------------------------------
 // Business Documents (Finance & Administration) Endpoints
 // -------------------------------------------------------------
-app.MapGet("/api/business-documents", async (int companyId, int? locationId, int? categoryId, ClaimsPrincipal principal, BusinessDocumentRepository repository, CancellationToken cancellationToken) =>
+app.MapGet("/api/business-documents", async (int companyId, int? locationId, int? documentTypeId, int? correspondentId, int? tagId, string? search, ClaimsPrincipal principal, BusinessDocumentRepository repository, CancellationToken cancellationToken) =>
 {
     if (!CanAccessCompany(principal, companyId))
     {
         return Results.Forbid();
     }
-    var documents = await repository.GetByCompanyAsync(companyId, locationId, categoryId, cancellationToken);
+    var documents = await repository.GetByCompanyAsync(companyId, locationId, documentTypeId, correspondentId, tagId, search, cancellationToken);
     return Results.Ok(documents);
 }).RequireAuthorization();
 
-app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPrincipal principal, BusinessDocumentRepository repository, CategoryRepository categoryRepository, LocationRepository locationRepository, AuditRepository auditRepository, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPrincipal principal, BusinessDocumentRepository repository, DocumentTypeRepository documentTypeRepository, LocationRepository locationRepository, AuditRepository auditRepository, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
     if (!httpRequest.HasFormContentType)
     {
@@ -803,10 +818,9 @@ app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPri
         return Results.BadRequest(new { message = "Please select a document to upload." });
     }
 
-    if (!int.TryParse(form["companyId"], out var companyId) ||
-        !int.TryParse(form["categoryId"], out var categoryId))
+    if (!int.TryParse(form["companyId"], out var companyId))
     {
-        return Results.BadRequest(new { message = "Company and category are required." });
+        return Results.BadRequest(new { message = "Company is required." });
     }
     if (!CanAccessCompany(principal, companyId))
     {
@@ -819,10 +833,15 @@ app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPri
         locationId = locId;
     }
 
-    var category = await categoryRepository.GetAsync(categoryId, cancellationToken);
-    if (category is null || category.CompanyId != companyId)
+    int? documentTypeId = null;
+    if (int.TryParse(form["documentTypeId"], out var docTypeId))
     {
-        return Results.BadRequest(new { message = "Invalid category." });
+        var docType = await documentTypeRepository.GetAsync(docTypeId, cancellationToken);
+        if (docType is null || docType.CompanyId != companyId)
+        {
+            return Results.BadRequest(new { message = "Invalid document type." });
+        }
+        documentTypeId = docTypeId;
     }
 
     if (locationId.HasValue)
@@ -859,7 +878,25 @@ app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPri
     {
         documentDate = docDate;
     }
-    string? vendorName = form["vendorName"];
+    int? correspondentId = null;
+    if (int.TryParse(form["correspondentId"], out var corrId))
+    {
+        correspondentId = corrId;
+    }
+
+    List<int>? tagIds = null;
+    if (!string.IsNullOrEmpty(form["tags"]))
+    {
+        try
+        {
+            tagIds = System.Text.Json.JsonSerializer.Deserialize<List<int>>(form["tags"]!);
+        }
+        catch
+        {
+            // Ignore parse errors for tags array
+        }
+    }
+
     decimal? amount = null;
     if (decimal.TryParse(form["amount"], out var amt))
     {
@@ -869,14 +906,15 @@ app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPri
     var document = await repository.CreateAsync(
         companyId,
         locationId,
-        categoryId,
+        documentTypeId,
         safeName,
         relativeUrl,
         pages,
         form["uploadedBy"].FirstOrDefault() ?? GetActor(principal),
         documentDate,
-        vendorName,
+        correspondentId,
         amount,
+        tagIds,
         cancellationToken);
 
     await AuditAsync(auditRepository, "business_document.upload", GetActor(principal), companyId, "business_document", document.DocumentId.ToString(), "success", httpRequest.HttpContext);
@@ -1033,7 +1071,7 @@ app.MapDelete("/api/business-documents/{documentId:int}", async (int documentId,
     return Results.NoContent();
 }).RequireAuthorization();
 
-app.MapPut("/api/business-documents/{documentId:int}/category", async (int documentId, [Microsoft.AspNetCore.Mvc.FromBody] UpdateBusinessDocumentCategoryRequest request, ClaimsPrincipal principal, BusinessDocumentRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
+app.MapPut("/api/business-documents/{documentId:int}/metadata", async (int documentId, [Microsoft.AspNetCore.Mvc.FromBody] UpdateBusinessDocumentMetadataRequest request, ClaimsPrincipal principal, BusinessDocumentRepository repository, AuditRepository auditRepository, HttpContext httpContext, CancellationToken cancellationToken) =>
 {
     var document = await repository.GetAsync(documentId, cancellationToken);
     if (document is null)
@@ -1047,7 +1085,18 @@ app.MapPut("/api/business-documents/{documentId:int}/category", async (int docum
         return Results.Forbid();
     }
 
-    var updated = await repository.UpdateCategoryAsync(documentId, request.CategoryId, document.CompanyId, cancellationToken);
+    var updated = await repository.UpdateMetadataAsync(
+        documentId, 
+        document.CompanyId, 
+        request.DocumentTypeId, 
+        request.CorrespondentId, 
+        request.Asn, 
+        request.Title, 
+        request.Amount, 
+        request.DocumentDate, 
+        request.TagIds, 
+        cancellationToken);
+        
     if (!updated)
     {
         return Results.NotFound(new { message = "Document not found." });
@@ -2389,6 +2438,10 @@ static bool StartsWith(ReadOnlySpan<byte> value, ReadOnlySpan<byte> expected)
 {
     return value.Length >= expected.Length && value[..expected.Length].SequenceEqual(expected);
 }
+
+app.MapPaperlessEndpoints();
+
+app.Run();
 
 static async Task<IResult> PreviewBusinessDocumentAsync(int documentId, string? routeFileName, HttpContext httpContext, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken)
 {
