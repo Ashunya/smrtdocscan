@@ -201,6 +201,11 @@ export default function App() {
       return;
     }
 
+    if (!canAccessView(activeView, currentUser)) {
+      setActiveView("find");
+      return;
+    }
+
     if (isHistoryPopRef.current) {
       isHistoryPopRef.current = false;
       return;
@@ -260,6 +265,7 @@ export default function App() {
   function handleSignedIn(user) {
     setCurrentUser(user);
     setCompanyId(getPreferredCompanyId(user));
+    setActiveView("find");
   }
 
   function changeActiveCompany(nextCompanyId, { navigate = true, notify = true } = {}) {
@@ -494,23 +500,23 @@ export default function App() {
             onDelete={removePatient}
             user={currentUser}
           />
-        ) : activeView === "box" ? (
+        ) : activeView === "box" && canAccessView("box", currentUser) ? (
           <BoxManager companyId={companyId} onNotice={setNotice} />
-        ) : activeView === "companies" ? (
+        ) : activeView === "companies" && canAccessView("companies", currentUser) ? (
           <CompanyManager
             companyId={companyId}
             onNotice={setNotice}
             onCompanyChange={changeActiveCompany}
           />
-        ) : activeView === "users" ? (
+        ) : activeView === "users" && canAccessView("users", currentUser) ? (
           <UserManager companyId={companyId} onNotice={setNotice} />
-        ) : activeView === "categories" ? (
+        ) : activeView === "categories" && canAccessView("categories", currentUser) ? (
           <CategoryManager companyId={companyId} onNotice={setNotice} />
-        ) : activeView === "reports" ? (
+        ) : activeView === "reports" && canAccessView("reports", currentUser) ? (
           <ReportManager companyId={companyId} onNotice={setNotice} />
-        ) : activeView === "settings" && currentUser.superUser ? (
+        ) : activeView === "settings" && canAccessView("settings", currentUser) ? (
           <SettingsManager onNotice={setNotice} onBrandingChange={(branding) => setLogoUrl(branding.logoDataUrl || "/smartdocscan-logo.svg")} />
-        ) : activeView === "audit" && currentUser.superUser ? (
+        ) : activeView === "audit" && canAccessView("audit", currentUser) ? (
           <AuditLogManager companyId={companyId} onNotice={setNotice} />
         ) : activeView === "scan" ? (
           <ScannerManager companyId={companyId} patient={documentPatient} initialCategoryId={scanCategoryId} onNotice={setNotice} onSaved={() => setActiveView("documents")} />
@@ -563,6 +569,46 @@ function useDebouncedValue(value, delay) {
 
 function isElevatedUser(user) {
   return Boolean(user?.isAdmin || user?.superUser);
+}
+
+function canAccessView(view, user) {
+  if (!user) {
+    return false;
+  }
+
+  if (["find", "documents", "scan", "barcode"].includes(view)) {
+    return true;
+  }
+
+  if (view === "add") {
+    return Boolean(user.addPatients || isElevatedUser(user));
+  }
+
+  if (view === "box") {
+    return Boolean(user.box || isElevatedUser(user));
+  }
+
+  if (view === "companies") {
+    return isElevatedUser(user);
+  }
+
+  if (view === "users") {
+    return Boolean(user.addUsers || isElevatedUser(user));
+  }
+
+  if (view === "categories") {
+    return Boolean(user.addCategory || isElevatedUser(user));
+  }
+
+  if (view === "reports") {
+    return Boolean(user.report || isElevatedUser(user));
+  }
+
+  if (view === "settings" || view === "audit") {
+    return Boolean(user.superUser);
+  }
+
+  return false;
 }
 
 function getCompanyPreferenceKey(user) {
