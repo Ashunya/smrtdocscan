@@ -72,6 +72,64 @@ public partial class MainWindowViewModel : ObservableObject
     public IAsyncRelayCommand CreateBoxCommand { get; }
     public IAsyncRelayCommand DeleteDocumentCommand { get; }
     public IRelayCommand ViewDocumentCommand { get; }
+    
+    private System.Windows.Threading.DispatcherTimer? _refreshTimer;
+
+    private void StartAutoRefresh()
+    {
+        _refreshTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(20)
+        };
+        _refreshTimer.Tick += async (s, e) => await SilentRefreshAsync();
+        _refreshTimer.Start();
+    }
+
+    private async Task SilentRefreshAsync()
+    {
+        if (IsScanning) return;
+
+        // Refresh documents silently
+        int catId = SelectedCategory?.CategoryId ?? 0;
+        int? locId = SelectedLocation?.LocationId;
+        
+        if (catId > 0)
+        {
+            var docs = await _apiClient.GetDocumentsAsync(catId, locId);
+            
+            // Only replace if count differs or just replace directly. Replacing ObservableCollection will re-render grid but that's fast.
+            // To avoid UI stutter and losing selection in grid, we can just merge, but replacing is easier for now.
+            // Actually, just replacing is fine since the user expects fresh data.
+            Documents = new ObservableCollection<DocumentModel>(docs);
+        }
+        
+        // Refresh categories
+        var cats = await _apiClient.GetCategoriesAsync(null, "business");
+        MergeCategories(Categories, cats);
+    }
+    
+    private void MergeCategories(ObservableCollection<CategoryModel> existing, List<CategoryModel> latest)
+    {
+        // Simple merge: if counts differ or any ID differs, just replace and accept selection loss.
+        // It's too complex to do a deep merge of WPF TreeView items without IsExpanded/IsSelected tracking.
+        bool changed = existing.Count != latest.Count;
+        if (!changed)
+        {
+            for (int i = 0; i < existing.Count; i++)
+            {
+                if (existing[i].CategoryId != latest[i].CategoryId)
+                {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        
+        if (changed)
+        {
+            Categories = new ObservableCollection<CategoryModel>(latest);
+        }
+    }
 
     private async Task LoadCategoriesAsync()
     {
@@ -103,6 +161,11 @@ public partial class MainWindowViewModel : ObservableObject
 
         _ = LoadDocumentsAsync(SelectedCategory?.CategoryId ?? 0);
         StatusMessage = $"Ready | Company: {CompanyName}";
+        
+        if (_refreshTimer == null)
+        {
+            StartAutoRefresh();
+        }
     }
 
     partial void OnSelectedCategoryChanged(CategoryModel? value)

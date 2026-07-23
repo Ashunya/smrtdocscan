@@ -212,7 +212,7 @@ public class ApiClient
         int cid = companyId ?? CurrentCompanyId;
         try
         {
-            var body = new { categoryName = categoryName.Trim(), companyId = cid, parentId, access = "all", categoryType = "patient" };
+            var body = new { categoryName = categoryName.Trim(), companyId = cid, parentId, access = "all", categoryType = "business" };
             var response = await _httpClient.PostAsJsonAsync(GetUri("/api/categories"), body);
             if (response.IsSuccessStatusCode)
             {
