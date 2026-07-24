@@ -1545,6 +1545,8 @@ app.MapPost("/api/auth/logout", async (HttpContext httpContext) =>
     return Results.NoContent();
 });
 
+app.MapPaperlessEndpoints();
+
 app.Run();
 
 static ClaimsPrincipal CreatePrincipal(UserDto user, string authProvider)
@@ -2439,9 +2441,6 @@ static bool StartsWith(ReadOnlySpan<byte> value, ReadOnlySpan<byte> expected)
     return value.Length >= expected.Length && value[..expected.Length].SequenceEqual(expected);
 }
 
-app.MapPaperlessEndpoints();
-
-app.Run();
 
 static async Task<IResult> PreviewBusinessDocumentAsync(int documentId, string? routeFileName, HttpContext httpContext, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken)
 {
