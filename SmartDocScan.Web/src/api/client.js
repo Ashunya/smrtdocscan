@@ -303,13 +303,14 @@ export function listBusinessDocuments({ companyId, locationId, documentTypeId, c
   return request(`/business-documents?${params.toString()}`);
 }
 
-export function uploadBusinessDocument({ companyId, locationId, documentTypeId, file, documentName, documentDate, correspondentId, amount, pages, tags, onProgress }) {
+export function uploadBusinessDocument({ companyId, locationId, documentTypeId, file, documentName, title, documentDate, correspondentId, amount, pages, tags, onProgress }) {
   return new Promise((resolve, reject) => {
     const formData = new FormData();
     formData.set("companyId", String(companyId));
     if (locationId) formData.set("locationId", String(locationId));
     if (documentTypeId) formData.set("documentTypeId", String(documentTypeId));
     if (documentName) formData.set("documentName", documentName);
+    if (title) formData.set("title", title);
     if (documentDate) formData.set("documentDate", documentDate);
     if (correspondentId) formData.set("correspondentId", String(correspondentId));
     if (amount) formData.set("amount", String(amount));

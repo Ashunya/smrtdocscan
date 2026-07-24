@@ -120,13 +120,24 @@ public static class PaperlessEndpoints
 
     private static bool CanAccessCompany(ClaimsPrincipal principal, int companyId)
     {
-        if (principal.IsInRole("Admin")) return true;
-        var accessible = principal.FindAll("CompanyId").Select(c => int.Parse(c.Value)).ToList();
-        return accessible.Contains(companyId);
+        if (IsElevated(principal)) return true;
+        var userCompanyIdStr = principal.FindFirst("company_id")?.Value;
+        if (int.TryParse(userCompanyIdStr, out var userCompanyId))
+        {
+            return userCompanyId == companyId;
+        }
+        return false;
     }
 
     private static bool CanManageBusiness(ClaimsPrincipal principal)
     {
-        return principal.IsInRole("Admin") || principal.IsInRole("BusinessAdmin");
+        return IsElevated(principal); // or any other specific claim if you have one
+    }
+    
+    private static bool IsElevated(ClaimsPrincipal principal)
+    {
+        var isAdmin = bool.TryParse(principal.FindFirst("is_admin")?.Value, out var admin) && admin;
+        var isSuperUser = bool.TryParse(principal.FindFirst("super_user")?.Value, out var super) && super;
+        return isAdmin || isSuperUser;
     }
 }

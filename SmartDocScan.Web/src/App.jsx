@@ -18,6 +18,7 @@ import { ScannerManager } from "./components/ScannerManager";
 import { SettingsManager } from "./components/SettingsManager";
 import { LocationManager } from "./components/LocationManager";
 import { BusinessDocumentManager } from "./components/BusinessDocumentManager";
+import { BusinessScannerManager } from "./components/BusinessScannerManager";
 
 const DEFAULT_COMPANY_ID = Number(import.meta.env.VITE_DEFAULT_COMPANY_ID || 7);
 
@@ -509,10 +510,13 @@ export default function App() {
             companyId={companyId} 
             user={currentUser} 
             onNotice={setNotice} 
-            onScan={(selectedCategoryId) => {
-              setScanCategoryId(selectedCategoryId ? String(selectedCategoryId) : "");
-              setActiveView("scan");
-            }}
+            onScan={() => setActiveView("business-scan")}
+          />
+        ) : activeView === "business-scan" ? (
+          <BusinessScannerManager 
+            companyId={companyId} 
+            onNotice={setNotice} 
+            onSaved={() => setActiveView("business")} 
           />
         ) : activeView === "locations" ? (
           <LocationManager companyId={companyId} onNotice={setNotice} />
