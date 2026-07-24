@@ -144,9 +144,15 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
 
   const renderDashboard = () => (
     <div style={{ padding: "32px", maxWidth: "1200px", margin: "0 auto" }}>
-      <Typography variant="h4" style={{ fontWeight: "700", color: "#1e293b", marginBottom: "24px" }}>
-        Dashboard
-      </Typography>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+        <Typography variant="h4" style={{ fontWeight: "700", color: "#1e293b" }}>
+          Dashboard
+        </Typography>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <ModernButton icon={Upload} label="Upload Document" primary onClick={() => setIsUploadModalOpen(true)} />
+          {onScan && <ModernButton icon={Scan} label="Scan" onClick={() => onScan()} />}
+        </div>
+      </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "24px" }}>
         <div style={{ background: "white", padding: "24px", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}>
           <Typography variant="h6" color="textSecondary">Total Documents</Typography>
