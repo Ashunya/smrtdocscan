@@ -505,7 +505,15 @@ export default function App() {
         ) : activeView === "box" ? (
           <BoxManager companyId={companyId} onNotice={setNotice} />
         ) : activeView === "business" ? (
-          <BusinessDocumentManager companyId={companyId} user={currentUser} onNotice={setNotice} />
+          <BusinessDocumentManager 
+            companyId={companyId} 
+            user={currentUser} 
+            onNotice={setNotice} 
+            onScan={(selectedCategoryId) => {
+              setScanCategoryId(selectedCategoryId ? String(selectedCategoryId) : "");
+              setActiveView("scan");
+            }}
+          />
         ) : activeView === "locations" ? (
           <LocationManager companyId={companyId} onNotice={setNotice} />
         ) : activeView === "companies" ? (

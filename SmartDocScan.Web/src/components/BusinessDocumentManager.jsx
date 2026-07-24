@@ -1,7 +1,7 @@
 import {
   Folder, Upload, Download, Trash2, Eye, Plus, X, 
   Search, Tag, Building2, FileType, Inbox, LayoutDashboard, Settings,
-  AlertCircle, ChevronRight, FileText, Calendar, DollarSign
+  AlertCircle, ChevronRight, FileText, Calendar, DollarSign, Scan
 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { 
@@ -60,7 +60,7 @@ const ModernButton = ({ icon: Icon, label, onClick, primary, color = "#2563eb", 
 );
 
 // --- Main Component ---
-export function BusinessDocumentManager({ companyId, user, onNotice }) {
+export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
   // Views: dashboard, documents, tags, types, correspondents, locations
   const [activeView, setActiveView] = useState("dashboard");
   
@@ -167,7 +167,10 @@ export function BusinessDocumentManager({ companyId, user, onNotice }) {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px", overflowY: "auto", background: "#f8fafc" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
           <Typography variant="h4" style={{ fontWeight: "700", color: "#1e293b" }}>Documents</Typography>
-          <ModernButton icon={Upload} label="Upload Document" primary onClick={() => setIsUploadModalOpen(true)} />
+          <div style={{ display: "flex", gap: "8px" }}>
+            <ModernButton icon={Upload} label="Upload Document" primary onClick={() => setIsUploadModalOpen(true)} />
+            {onScan && <ModernButton icon={Scan} label="Scan" onClick={() => onScan()} />}
+          </div>
         </div>
         
         {/* Filters */}
