@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "predev": "node scripts/copy-dynamsoft-resources.mjs",
+    "prebuild": "node scripts/copy-dynamsoft-resources.mjs",
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0"
