@@ -11,6 +11,7 @@ namespace SmartDocScan.Api.Data;
 public sealed class CorrespondentRepository
 {
     private readonly string _connectionString;
+    private readonly bool _autoEnsureSchema;
     private static readonly SemaphoreSlim SchemaLock = new(1, 1);
     private static bool _schemaChecked;
 
@@ -18,11 +19,17 @@ public sealed class CorrespondentRepository
     {
         _connectionString = configuration.GetConnectionString("SmartDocScan")
             ?? throw new InvalidOperationException("Connection string 'SmartDocScan' is missing.");
+        _autoEnsureSchema = DatabaseSchemaOptions.AutoEnsureSchema(configuration);
     }
 
     private async Task EnsureSchemaAsync(CancellationToken cancellationToken)
     {
         if (_schemaChecked) return;
+        if (!_autoEnsureSchema)
+        {
+            _schemaChecked = true;
+            return;
+        }
 
         await SchemaLock.WaitAsync(cancellationToken);
         try

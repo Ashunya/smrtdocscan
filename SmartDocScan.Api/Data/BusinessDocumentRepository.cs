@@ -330,23 +330,23 @@ public sealed class BusinessDocumentRepository
 
                     IF COL_LENGTH('dbo.business_documents', 'doc_type_id') IS NULL
                     BEGIN
-                        ALTER TABLE dbo.business_documents ADD doc_type_id INT NULL;
+                        EXEC('ALTER TABLE dbo.business_documents ADD doc_type_id INT NULL;');
                     END
                     IF COL_LENGTH('dbo.business_documents', 'corresp_id') IS NULL
                     BEGIN
-                        ALTER TABLE dbo.business_documents ADD corresp_id INT NULL;
+                        EXEC('ALTER TABLE dbo.business_documents ADD corresp_id INT NULL;');
                     END
                     IF COL_LENGTH('dbo.business_documents', 'asn') IS NULL
                     BEGIN
-                        ALTER TABLE dbo.business_documents ADD asn INT NULL;
+                        EXEC('ALTER TABLE dbo.business_documents ADD asn INT NULL;');
                     END
                     IF COL_LENGTH('dbo.business_documents', 'content') IS NULL
                     BEGIN
-                        ALTER TABLE dbo.business_documents ADD content NVARCHAR(MAX) NULL;
+                        EXEC('ALTER TABLE dbo.business_documents ADD content NVARCHAR(MAX) NULL;');
                     END
                     IF COL_LENGTH('dbo.business_documents', 'title') IS NULL
                     BEGIN
-                        ALTER TABLE dbo.business_documents ADD title NVARCHAR(255) NULL;
+                        EXEC('ALTER TABLE dbo.business_documents ADD title NVARCHAR(255) NULL;');
                     END
 
                     IF OBJECT_ID('dbo.business_tags', 'U') IS NULL
