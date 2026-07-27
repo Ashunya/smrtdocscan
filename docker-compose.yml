@@ -10,6 +10,7 @@ services:
       ConnectionStrings__SmartDocScan: ${SMARTDOCSCAN_CONNECTION_STRING}
       Cors__AllowedOrigins__0: https://scandev.ashunya.com
       Store__RootPath: /data/store
+      Ai__OllamaUrl: http://ollama:11434/api/generate
     volumes:
       - D:/DMS/store:/data/store
       - ./DataProtection-Keys:/root/.aspnet/DataProtection-Keys
@@ -59,3 +60,12 @@ services:
       - ./CaddyData:/data
       - ./CaddyConfig:/config
     restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: smrtdocscan-ollama
+    restart: unless-stopped
+    volumes:
+      - ./OllamaData:/root/.ollama
+    ports:
+      - "11434:11434"
