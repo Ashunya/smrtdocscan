@@ -1607,7 +1607,9 @@ static ClaimsPrincipal CreatePrincipal(UserDto user, string authProvider)
         new("box", user.Box.ToString()),
         new("report", user.Report.ToString()),
         new("super_user", user.SuperUser.ToString()),
-        new("is_admin", user.IsAdmin.ToString())
+        new("is_admin", user.IsAdmin.ToString()),
+        new("location_ids", user.LocationIds != null ? string.Join(",", user.LocationIds) : ""),
+        new("document_type_ids", user.DocumentTypeIds != null ? string.Join(",", user.DocumentTypeIds) : "")
     };
     return new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
 }
@@ -1632,7 +1634,9 @@ static UserDto UserFromClaims(ClaimsPrincipal principal)
         Box = ReadBoolClaim(principal, "box"),
         Report = ReadBoolClaim(principal, "report"),
         SuperUser = ReadBoolClaim(principal, "super_user"),
-        IsAdmin = ReadBoolClaim(principal, "is_admin")
+        IsAdmin = ReadBoolClaim(principal, "is_admin"),
+        LocationIds = principal.FindFirst("location_ids")?.Value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList() ?? new List<int>(),
+        DocumentTypeIds = principal.FindFirst("document_type_ids")?.Value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList() ?? new List<int>()
     };
 }
 

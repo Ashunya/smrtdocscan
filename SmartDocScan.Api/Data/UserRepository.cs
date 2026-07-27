@@ -24,14 +24,60 @@ public sealed class UserRepository
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = UserSelectSql + " WHERE comp_id = @companyId ORDER BY name, username;";
-        command.Parameters.AddWithValue("@companyId", companyId);
+        var usersByUsername = new Dictionary<string, UserDto>(StringComparer.OrdinalIgnoreCase);
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        await using (var command = connection.CreateCommand())
         {
-            users.Add(MapUser(reader));
+            command.CommandText = UserSelectSql + " WHERE comp_id = @companyId ORDER BY name, username;";
+            command.Parameters.AddWithValue("@companyId", companyId);
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var user = MapUser(reader);
+                user.LocationIds = new List<int>();
+                user.DocumentTypeIds = new List<int>();
+                users.Add(user);
+                if (!string.IsNullOrEmpty(user.Username))
+                {
+                    usersByUsername[user.Username] = user;
+                }
+            }
+        }
+
+        if (usersByUsername.Count > 0)
+        {
+            await using (var locCommand = connection.CreateCommand())
+            {
+                locCommand.CommandText = "SELECT ul.username, ul.location_id FROM user_locations ul JOIN usersinfo u ON u.username = ul.username WHERE u.comp_id = @companyId;";
+                locCommand.Parameters.AddWithValue("@companyId", companyId);
+                await using var locReader = await locCommand.ExecuteReaderAsync(cancellationToken);
+                while (await locReader.ReadAsync(cancellationToken))
+                {
+                    var username = locReader.GetString(0);
+                    var locationId = locReader.GetInt32(1);
+                    if (usersByUsername.TryGetValue(username, out var user) && user.LocationIds != null)
+                    {
+                        ((List<int>)user.LocationIds).Add(locationId);
+                    }
+                }
+            }
+
+            await using (var docCommand = connection.CreateCommand())
+            {
+                docCommand.CommandText = "SELECT udt.username, udt.document_type_id FROM user_document_types udt JOIN usersinfo u ON u.username = udt.username WHERE u.comp_id = @companyId;";
+                docCommand.Parameters.AddWithValue("@companyId", companyId);
+                await using var docReader = await docCommand.ExecuteReaderAsync(cancellationToken);
+                while (await docReader.ReadAsync(cancellationToken))
+                {
+                    var username = docReader.GetString(0);
+                    var documentTypeId = docReader.GetInt32(1);
+                    if (usersByUsername.TryGetValue(username, out var user) && user.DocumentTypeIds != null)
+                    {
+                        ((List<int>)user.DocumentTypeIds).Add(documentTypeId);
+                    }
+                }
+            }
         }
 
         return users;
@@ -130,12 +176,69 @@ public sealed class UserRepository
             throw new InvalidOperationException($"Password must be at least {MinimumPasswordLength} characters.");
         }
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = exists
-            ? (passwordProvided ? UpdateSql : UpdateSqlWithoutPassword)
-            : InsertSql;
-        AddUpsertParameters(command, request, passwordToSave is not null ? HashPassword(passwordToSave) : null);
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            await using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = exists
+                    ? (passwordProvided ? UpdateSql : UpdateSqlWithoutPassword)
+                    : InsertSql;
+                AddUpsertParameters(command, request, passwordToSave is not null ? HashPassword(passwordToSave) : null);
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await using (var deleteLocCommand = connection.CreateCommand())
+            {
+                deleteLocCommand.Transaction = transaction;
+                deleteLocCommand.CommandText = "DELETE FROM user_locations WHERE username = @username;";
+                deleteLocCommand.Parameters.AddWithValue("@username", request.Username.Trim());
+                await deleteLocCommand.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            if (request.LocationIds != null)
+            {
+                foreach (var locationId in request.LocationIds)
+                {
+                    await using var insertLocCommand = connection.CreateCommand();
+                    insertLocCommand.Transaction = transaction;
+                    insertLocCommand.CommandText = "INSERT INTO user_locations (username, location_id) VALUES (@username, @locationId);";
+                    insertLocCommand.Parameters.AddWithValue("@username", request.Username.Trim());
+                    insertLocCommand.Parameters.AddWithValue("@locationId", locationId);
+                    await insertLocCommand.ExecuteNonQueryAsync(cancellationToken);
+                }
+            }
+
+            await using (var deleteDocCommand = connection.CreateCommand())
+            {
+                deleteDocCommand.Transaction = transaction;
+                deleteDocCommand.CommandText = "DELETE FROM user_document_types WHERE username = @username;";
+                deleteDocCommand.Parameters.AddWithValue("@username", request.Username.Trim());
+                await deleteDocCommand.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            if (request.DocumentTypeIds != null)
+            {
+                foreach (var documentTypeId in request.DocumentTypeIds)
+                {
+                    await using var insertDocCommand = connection.CreateCommand();
+                    insertDocCommand.Transaction = transaction;
+                    insertDocCommand.CommandText = "INSERT INTO user_document_types (username, document_type_id) VALUES (@username, @documentTypeId);";
+                    insertDocCommand.Parameters.AddWithValue("@username", request.Username.Trim());
+                    insertDocCommand.Parameters.AddWithValue("@documentTypeId", documentTypeId);
+                    await insertDocCommand.ExecuteNonQueryAsync(cancellationToken);
+                }
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
 
         var savedUser = await GetByUsernameAsync(request.Username.Trim(), cancellationToken)
             ?? throw new InvalidOperationException("User was saved but could not be loaded.");
@@ -148,11 +251,51 @@ public sealed class UserRepository
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM usersinfo WHERE username = @username AND comp_id = @companyId;";
-        command.Parameters.AddWithValue("@username", username.Trim());
-        command.Parameters.AddWithValue("@companyId", companyId);
-        return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            var trimmedUsername = username.Trim();
+
+            await using (var locCommand = connection.CreateCommand())
+            {
+                locCommand.Transaction = transaction;
+                locCommand.CommandText = "DELETE FROM user_locations WHERE username = @username;";
+                locCommand.Parameters.AddWithValue("@username", trimmedUsername);
+                await locCommand.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await using (var docCommand = connection.CreateCommand())
+            {
+                docCommand.Transaction = transaction;
+                docCommand.CommandText = "DELETE FROM user_document_types WHERE username = @username;";
+                docCommand.Parameters.AddWithValue("@username", trimmedUsername);
+                await docCommand.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = "DELETE FROM usersinfo WHERE username = @username AND comp_id = @companyId;";
+                command.Parameters.AddWithValue("@username", trimmedUsername);
+                command.Parameters.AddWithValue("@companyId", companyId);
+                var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
+
+                if (rowsAffected > 0)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                    return true;
+                }
+
+                await transaction.RollbackAsync(cancellationToken);
+                return false;
+            }
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task<bool> ChangePasswordAsync(string username, string? currentPassword, string? newPassword, CancellationToken cancellationToken = default)
@@ -192,12 +335,49 @@ public sealed class UserRepository
         await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = UserSelectSql + " WHERE username = @username;";
-        command.Parameters.AddWithValue("@username", username);
+        UserDto? user = null;
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = UserSelectSql + " WHERE username = @username;";
+            command.Parameters.AddWithValue("@username", username);
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? MapUser(reader) : null;
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                user = MapUser(reader);
+            }
+        }
+
+        if (user != null)
+        {
+            var locs = new List<int>();
+            await using (var locCommand = connection.CreateCommand())
+            {
+                locCommand.CommandText = "SELECT location_id FROM user_locations WHERE username = @username;";
+                locCommand.Parameters.AddWithValue("@username", username);
+                await using var locReader = await locCommand.ExecuteReaderAsync(cancellationToken);
+                while (await locReader.ReadAsync(cancellationToken))
+                {
+                    locs.Add(locReader.GetInt32(0));
+                }
+            }
+            user.LocationIds = locs;
+
+            var docs = new List<int>();
+            await using (var docCommand = connection.CreateCommand())
+            {
+                docCommand.CommandText = "SELECT document_type_id FROM user_document_types WHERE username = @username;";
+                docCommand.Parameters.AddWithValue("@username", username);
+                await using var docReader = await docCommand.ExecuteReaderAsync(cancellationToken);
+                while (await docReader.ReadAsync(cancellationToken))
+                {
+                    docs.Add(docReader.GetInt32(0));
+                }
+            }
+            user.DocumentTypeIds = docs;
+        }
+
+        return user;
     }
 
     private static void AddUpsertParameters(SqlCommand command, UserUpsertRequest request, string? passwordHash)
@@ -544,3 +724,4 @@ public sealed class UserRepository
         WHERE username = @username;
         """;
 }
+

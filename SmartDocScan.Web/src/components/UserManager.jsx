@@ -1,6 +1,6 @@
 import { Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { deleteUser, listUsers, saveUser } from "../api/client";
+import { deleteUser, listUsers, saveUser, listLocations, listDocumentTypes } from "../api/client";
 
 const permissionFields = [
   ["uploadDocument", "Upload"],
@@ -36,10 +36,14 @@ const blankUser = {
   superUser: false,
   isAdmin: false,
   disabled: false,
+  locationIds: [],
+  documentTypeIds: [],
 };
 
 export function UserManager({ companyId, onNotice }) {
   const [users, setUsers] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [documentTypes, setDocumentTypes] = useState([]);
   const [form, setForm] = useState(blankUser);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,10 +51,16 @@ export function UserManager({ companyId, onNotice }) {
   useEffect(() => {
     let ignore = false;
     setLoading(true);
-    listUsers({ companyId })
-      .then((data) => {
+    Promise.all([
+      listUsers({ companyId }),
+      listLocations({ companyId }),
+      listDocumentTypes({ companyId }),
+    ])
+      .then(([usersData, locsData, docsData]) => {
         if (!ignore) {
-          setUsers(data);
+          setUsers(usersData);
+          setLocations(locsData);
+          setDocumentTypes(docsData);
         }
       })
       .catch((error) => {
@@ -161,6 +171,36 @@ export function UserManager({ companyId, onNotice }) {
             placeholder="Only needed when setting password"
             autoComplete="new-password"
           />
+        </label>
+
+        <label>
+          Allowed Locations
+          <select
+            multiple
+            size={4}
+            value={form.locationIds || []}
+            onChange={(event) => updateField("locationIds", Array.from(event.target.selectedOptions, (option) => Number(option.value)))}
+          >
+            {locations.map((loc) => (
+              <option key={loc.locationId} value={loc.locationId}>{loc.name}</option>
+            ))}
+          </select>
+          <div className="help-text">Leave empty to grant access to ALL locations (or NO locations if not admin, depending on backend policy). Hold Ctrl/Cmd to select multiple.</div>
+        </label>
+
+        <label>
+          Allowed Document Types
+          <select
+            multiple
+            size={4}
+            value={form.documentTypeIds || []}
+            onChange={(event) => updateField("documentTypeIds", Array.from(event.target.selectedOptions, (option) => Number(option.value)))}
+          >
+            {documentTypes.map((dt) => (
+              <option key={dt.documentTypeId} value={dt.documentTypeId}>{dt.name}</option>
+            ))}
+          </select>
+          <div className="help-text">Leave empty to grant access to ALL document types.</div>
         </label>
 
         <div className="permission-grid">
