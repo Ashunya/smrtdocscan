@@ -5,7 +5,7 @@
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[user_locations]') AND type in (N'U'))
 BEGIN
     CREATE TABLE [dbo].[user_locations](
-        [username] [varchar](320) NOT NULL,
+        [username] [varchar](50) NOT NULL,
         [location_id] [int] NOT NULL,
         CONSTRAINT [PK_user_locations] PRIMARY KEY CLUSTERED 
         (
@@ -20,7 +20,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[user_document_types]') AND type in (N'U'))
 BEGIN
     CREATE TABLE [dbo].[user_document_types](
-        [username] [varchar](320) NOT NULL,
+        [username] [varchar](50) NOT NULL,
         [document_type_id] [int] NOT NULL,
         CONSTRAINT [PK_user_document_types] PRIMARY KEY CLUSTERED 
         (
