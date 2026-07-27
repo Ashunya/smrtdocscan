@@ -1,17 +1,16 @@
 using System;
-using System.Data.SqlClient;
+using System.IO;
 
-var connStr = Environment.GetEnvironmentVariable("SMARTDOCSCAN_CONNECTION_STRING") ?? "Server=localhost;Database=smartdocscan;User Id=sa;Password=Your_password123;TrustServerCertificate=True";
-using var conn = new SqlConnection(connStr);
-conn.Open();
-using var cmd = conn.CreateCommand();
-cmd.CommandText = "SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'usersinfo' AND COLUMN_NAME = 'username'";
-using var reader = cmd.ExecuteReader();
-if (reader.Read())
+var lines = File.ReadAllLines(@"C:\Users\RakeshReddy\.gemini\antigravity\brain\1892dbd9-1602-40c9-ba10-bb2a9f07474e\walkthrough.md");
+for (int i = 0; i < lines.Length; i++)
 {
-    Console.WriteLine($"{reader["DATA_TYPE"]}({reader["CHARACTER_MAXIMUM_LENGTH"]})");
-}
-else
-{
-    Console.WriteLine("Not found");
+    var line = lines[i];
+    if (line.Contains("sys.objects"))
+    {
+        Console.WriteLine($"Line {i+1}:");
+        foreach (var c in line)
+        {
+            if (c > 127 || c < 32) Console.WriteLine($"Char: {(int)c}");
+        }
+    }
 }
