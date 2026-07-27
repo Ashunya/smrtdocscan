@@ -420,7 +420,7 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
           () => {}, 
           (id) => deleteLocation(id, companyId).then(() => loadMetadata()).catch(e => onNotice({type:"error", text: e.message}))
         )}
-      </div>
+      </Box>
 
       {/* Upload Modal */}
       <UploadModal 
@@ -438,7 +438,6 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
         }}
         onNotice={onNotice}
       />
-      </Box>
     </Box>
   );
 }
