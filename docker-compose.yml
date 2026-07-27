@@ -39,7 +39,7 @@ services:
       - "--api-port=3000"
 
   tika:
-    image: apache/tika
+    image: apache/tika:latest-full
     container_name: smrtdocscan-tika
     restart: unless-stopped
     ports:
