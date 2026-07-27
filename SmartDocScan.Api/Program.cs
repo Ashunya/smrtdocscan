@@ -995,7 +995,7 @@ app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, C
             return Results.BadRequest(new { message = "Could not read image or PDF." });
         }
 
-        var prompt = "Extract the following details from this document and return strictly a JSON object: {\"VendorName\": \"(string or null)\", \"Amount\": (number or null), \"DocumentDate\": \"(YYYY-MM-DD or null)\", \"SuggestedCategoryName\": \"(string, e.g., Invoices, Receipts, Contracts, or null)\"}. Only output the raw JSON object, no markdown blocks, no other text.";
+        var prompt = "Extract the following details from this document and return strictly a JSON object: {\"VendorName\": \"(string or null)\", \"Amount\": \"(string or null)\", \"DocumentDate\": \"(YYYY-MM-DD or null)\", \"SuggestedCategoryName\": \"(string, e.g., Invoices, Receipts, Contracts, or null)\"}. Only output the raw JSON object, no markdown blocks, no other text.";
 
         var modelName = configuration["Ai:OllamaModel"] ?? "minicpm-v";
         var payload = new
@@ -1035,10 +1035,35 @@ app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, C
             return Results.Ok(new SmartDocScan.Api.Models.AiDocumentAnalysisResponse());
         }
 
-        var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var analysis = System.Text.Json.JsonSerializer.Deserialize<SmartDocScan.Api.Models.AiDocumentAnalysisResponse>(responseText, options);
+        var analysis = new SmartDocScan.Api.Models.AiDocumentAnalysisResponse();
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(responseText);
+            var root = doc.RootElement;
+            
+            if (root.TryGetProperty("VendorName", out var vendorProp) && vendorProp.ValueKind != System.Text.Json.JsonValueKind.Null)
+                analysis.VendorName = vendorProp.ToString();
 
-        return Results.Ok(analysis ?? new SmartDocScan.Api.Models.AiDocumentAnalysisResponse());
+            if (root.TryGetProperty("Amount", out var amountProp) && amountProp.ValueKind != System.Text.Json.JsonValueKind.Null)
+            {
+                var amountStr = amountProp.ToString().Replace("$", "").Replace(",", "").Trim();
+                if (decimal.TryParse(amountStr, out var amt))
+                    analysis.Amount = amt;
+            }
+
+            if (root.TryGetProperty("DocumentDate", out var dateProp) && dateProp.ValueKind != System.Text.Json.JsonValueKind.Null)
+                analysis.DocumentDate = dateProp.ToString();
+
+            if (root.TryGetProperty("SuggestedCategoryName", out var catProp) && catProp.ValueKind != System.Text.Json.JsonValueKind.Null)
+                analysis.SuggestedCategoryName = catProp.ToString();
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            // If the AI didn't output valid JSON, just return empty rather than crashing
+            app.Logger.LogWarning(ex, "Failed to parse AI JSON response: {Response}", responseText);
+        }
+
+        return Results.Ok(analysis);
     }
     catch (Exception ex)
     {
