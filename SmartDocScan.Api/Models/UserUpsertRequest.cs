@@ -21,4 +21,6 @@ public sealed class UserUpsertRequest
     public bool SuperUser { get; set; }
     public bool Disabled { get; set; }
     public bool IsAdmin { get; set; }
+    public List<int>? LocationIds { get; set; }
+    public List<int>? DocumentTypeIds { get; set; }
 }

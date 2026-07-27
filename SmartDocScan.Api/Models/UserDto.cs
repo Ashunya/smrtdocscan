@@ -22,6 +22,13 @@ public sealed class UserDto
     public bool SuperUser { get; set; }
     public bool Disabled { get; set; }
     public bool IsAdmin { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? LocationIds { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? DocumentTypeIds { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? GeneratedPassword { get; set; }
 }

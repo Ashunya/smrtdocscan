@@ -80,6 +80,7 @@ public sealed class BusinessDocumentRepository
         int? correspondentId = null,
         decimal? amount = null,
         List<int>? tagIds = null,
+        string? extractedText = null,
         CancellationToken cancellationToken = default)
     {
         await EnsureSchemaAsync(cancellationToken);
@@ -88,9 +89,9 @@ public sealed class BusinessDocumentRepository
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO business_documents (comp_id, location_id, doc_type_id, doc_name, url, num_pages, date, document_date, amount, uploaded_by, deleted, corresp_id)
+            INSERT INTO business_documents (comp_id, location_id, doc_type_id, doc_name, url, num_pages, date, document_date, amount, uploaded_by, deleted, corresp_id, extracted_text)
             OUTPUT INSERTED.doc_id
-            VALUES (@companyId, @locationId, @documentTypeId, @documentName, @url, @pages, @date, @documentDate, @amount, @uploadedBy, 0, @correspId);
+            VALUES (@companyId, @locationId, @documentTypeId, @documentName, @url, @pages, @date, @documentDate, @amount, @uploadedBy, 0, @correspId, @extractedText);
             """;
         command.Parameters.AddWithValue("@companyId", companyId);
         command.Parameters.AddWithValue("@locationId", locationId.HasValue ? locationId.Value : DBNull.Value);
@@ -103,6 +104,7 @@ public sealed class BusinessDocumentRepository
         command.Parameters.AddWithValue("@amount", amount.HasValue ? amount.Value : DBNull.Value);
         command.Parameters.AddWithValue("@uploadedBy", string.IsNullOrWhiteSpace(uploadedBy) ? DBNull.Value : uploadedBy.Trim());
         command.Parameters.AddWithValue("@correspId", correspondentId.HasValue ? correspondentId.Value : DBNull.Value);
+        command.Parameters.AddWithValue("@extractedText", string.IsNullOrWhiteSpace(extractedText) ? DBNull.Value : extractedText);
 
         var id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
 

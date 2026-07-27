@@ -53,6 +53,12 @@ builder.Services.AddSingleton<TagRepository>();
 builder.Services.AddSingleton<CorrespondentRepository>();
 builder.Services.AddSingleton<DocumentTypeRepository>();
 builder.Services.AddSingleton<IEmailSender, EmailSender>();
+
+builder.Services.AddHttpClient<GotenbergClient>(client => 
+    client.BaseAddress = new Uri(builder.Configuration["Gotenberg:Url"] ?? "http://gotenberg:3000"));
+builder.Services.AddHttpClient<TikaClient>(client => 
+    client.BaseAddress = new Uri(builder.Configuration["Tika:Url"] ?? "http://tika:9998"));
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -804,7 +810,7 @@ app.MapGet("/api/business-documents", async (int companyId, int? locationId, int
     return Results.Ok(documents);
 }).RequireAuthorization();
 
-app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPrincipal principal, BusinessDocumentRepository repository, DocumentTypeRepository documentTypeRepository, LocationRepository locationRepository, AuditRepository auditRepository, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPrincipal principal, BusinessDocumentRepository repository, DocumentTypeRepository documentTypeRepository, LocationRepository locationRepository, AuditRepository auditRepository, SmartDocScan.Api.Services.GotenbergClient gotenbergClient, SmartDocScan.Api.Services.TikaClient tikaClient, IConfiguration configuration, CancellationToken cancellationToken) =>
 {
     if (!httpRequest.HasFormContentType)
     {
@@ -866,10 +872,38 @@ app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPri
     Directory.CreateDirectory(targetFolder);
 
     var targetPath = Path.Combine(targetFolder, safeName);
+    using var ms = new MemoryStream();
+    await file.CopyToAsync(ms, cancellationToken);
+    ms.Position = 0;
+    
+    Stream finalStream = ms;
+    var ext = Path.GetExtension(safeName).ToLowerInvariant();
+    bool isPdf = ext == ".pdf";
+    if (!isPdf && ext != ".tiff" && ext != ".tif" && ext != ".jpg" && ext != ".png")
+    {
+        var pdfStream = await gotenbergClient.ConvertToPdfAsync(file.FileName, ms, cancellationToken);
+        if (pdfStream != null)
+        {
+            finalStream = pdfStream;
+            safeName = Path.ChangeExtension(safeName, ".pdf");
+            targetPath = Path.Combine(targetFolder, safeName);
+            isPdf = true;
+        }
+    }
+    
+    finalStream.Position = 0;
     await using (var stream = File.Create(targetPath))
     {
-        await file.CopyToAsync(stream, cancellationToken);
+        await finalStream.CopyToAsync(stream, cancellationToken);
     }
+    
+    string? extractedText = null;
+    if (isPdf)
+    {
+        await using var readStream = File.OpenRead(targetPath);
+        extractedText = await tikaClient.ExtractTextAsync(safeName, readStream, cancellationToken);
+    }
+    
     var relativeUrl = Path.Combine(relativeFolder, safeName).Replace('\\', '/');
 
     var pages = int.TryParse(form["pages"], out var parsedPages) ? Math.Max(parsedPages, 1) : 1;
@@ -915,6 +949,7 @@ app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPri
         correspondentId,
         amount,
         tagIds,
+        extractedText,
         cancellationToken);
 
     await AuditAsync(auditRepository, "business_document.upload", GetActor(principal), companyId, "business_document", document.DocumentId.ToString(), "success", httpRequest.HttpContext);
