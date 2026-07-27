@@ -7,7 +7,8 @@ import { useEffect, useState, useMemo } from "react";
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, IconButton, Tooltip, Box, Typography, CircularProgress,
-  TextField, Select, MenuItem, FormControl, InputLabel, Chip
+  TextField, Select, MenuItem, FormControl, InputLabel, Chip,
+  List, ListItemButton, ListItemIcon, ListItemText, Paper, Divider, useTheme
 } from "@mui/material";
 
 import {
@@ -23,40 +24,43 @@ import {
 
 // --- UI Components ---
 const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
-  <div 
+  <ListItemButton 
+    selected={active} 
     onClick={onClick}
-    style={{
-      display: "flex", alignItems: "center", gap: "12px",
-      padding: "12px 16px", cursor: "pointer",
-      backgroundColor: active ? "#e2e8f0" : "transparent",
-      color: active ? "#0f172a" : "#475569",
-      fontWeight: active ? "600" : "400",
-      borderRadius: "8px", margin: "4px 8px",
-      transition: "all 0.2s"
+    sx={{ 
+      borderRadius: 1.5, 
+      mb: 0.5,
+      mx: 1,
+      "&.Mui-selected": {
+        color: "primary.main",
+      }
     }}
   >
-    <Icon size={20} />
-    <span style={{ fontSize: "15px" }}>{label}</span>
-  </div>
+    <ListItemIcon sx={{ minWidth: 40, color: active ? "primary.main" : "inherit" }}>
+      <Icon size={20} />
+    </ListItemIcon>
+    <ListItemText 
+      primary={label} 
+      primaryTypographyProps={{ 
+        fontSize: 14, 
+        fontWeight: active ? 600 : 500 
+      }} 
+    />
+  </ListItemButton>
 );
 
-const ModernButton = ({ icon: Icon, label, onClick, primary, color = "#2563eb", disabled }) => (
-  <button
+const ModernButton = ({ icon: Icon, label, onClick, primary, color, disabled }) => (
+  <Button
+    variant={primary ? "contained" : "outlined"}
+    color={color === "#ef4444" ? "error" : "primary"}
     onClick={onClick}
     disabled={disabled}
-    style={{
-      display: "flex", alignItems: "center", gap: "8px",
-      padding: "10px 16px",
-      backgroundColor: disabled ? "#cbd5e1" : (primary ? color : "transparent"),
-      color: disabled ? "#94a3b8" : (primary ? "white" : color),
-      border: `1px solid ${disabled ? "#cbd5e1" : color}`,
-      borderRadius: "6px", cursor: disabled ? "not-allowed" : "pointer",
-      fontWeight: "500", fontSize: "14px", transition: "all 0.2s"
-    }}
+    startIcon={Icon && <Icon size={18} />}
+    disableElevation
+    sx={{ textTransform: 'none', fontWeight: 600 }}
   >
-    {Icon && <Icon size={18} />}
     {label}
-  </button>
+  </Button>
 );
 
 // --- Main Component ---
@@ -351,29 +355,33 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
   );
 
   return (
-    <div style={{ display: "flex", height: "100vh", backgroundColor: "#f1f5f9", overflow: "hidden" }}>
+    <Box sx={{ display: "flex", height: "calc(100vh - 72px)", bgcolor: "background.default", overflow: "hidden" }}>
       {/* Sidebar */}
-      <div style={{ width: "260px", background: "#ffffff", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", zIndex: 20 }}>
-        <div style={{ padding: "24px 16px", borderBottom: "1px solid #e2e8f0" }}>
-          <Typography variant="h6" style={{ fontWeight: "800", color: "#2563eb", letterSpacing: "-0.5px" }}>
+      <Paper elevation={0} square sx={{ width: 260, display: "flex", flexDirection: "column", borderRight: 1, borderColor: "divider", zIndex: 20 }}>
+        <Box sx={{ p: 3, borderBottom: 1, borderColor: "divider" }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: "primary.main", letterSpacing: "-0.5px" }}>
             Paperless Admin
           </Typography>
-        </div>
-        <div style={{ padding: "16px 0", flex: 1, overflowY: "auto" }}>
-          <Typography variant="overline" style={{ padding: "0 24px", color: "#94a3b8", fontWeight: "700" }}>Views</Typography>
-          <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeView === "dashboard"} onClick={() => setActiveView("dashboard")} />
-          <SidebarItem icon={FileText} label="Documents" active={activeView === "documents"} onClick={() => setActiveView("documents")} />
+        </Box>
+        <Box sx={{ py: 2, flex: 1, overflowY: "auto" }}>
+          <Typography variant="overline" sx={{ px: 3, color: "text.secondary", fontWeight: 700, display: "block" }}>Views</Typography>
+          <List disablePadding>
+            <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeView === "dashboard"} onClick={() => setActiveView("dashboard")} />
+            <SidebarItem icon={FileText} label="Documents" active={activeView === "documents"} onClick={() => setActiveView("documents")} />
+          </List>
           
-          <Typography variant="overline" style={{ padding: "0 24px", color: "#94a3b8", fontWeight: "700", display: "block", marginTop: "24px" }}>Manage</Typography>
-          <SidebarItem icon={Tag} label="Tags" active={activeView === "tags"} onClick={() => setActiveView("tags")} />
-          <SidebarItem icon={FileType} label="Document Types" active={activeView === "types"} onClick={() => setActiveView("types")} />
-          <SidebarItem icon={Building2} label="Correspondents" active={activeView === "correspondents"} onClick={() => setActiveView("correspondents")} />
-          <SidebarItem icon={Folder} label="Storage Paths" active={activeView === "locations"} onClick={() => setActiveView("locations")} />
-        </div>
-      </div>
+          <Typography variant="overline" sx={{ px: 3, color: "text.secondary", fontWeight: 700, display: "block", mt: 2 }}>Manage</Typography>
+          <List disablePadding>
+            <SidebarItem icon={Tag} label="Tags" active={activeView === "tags"} onClick={() => setActiveView("tags")} />
+            <SidebarItem icon={FileType} label="Document Types" active={activeView === "types"} onClick={() => setActiveView("types")} />
+            <SidebarItem icon={Building2} label="Correspondents" active={activeView === "correspondents"} onClick={() => setActiveView("correspondents")} />
+            <SidebarItem icon={Folder} label="Storage Paths" active={activeView === "locations"} onClick={() => setActiveView("locations")} />
+          </List>
+        </Box>
+      </Paper>
 
       {/* Main Content */}
-      <div style={{ flex: 1, position: "relative" }}>
+      <Box sx={{ flex: 1, position: "relative" }}>
         {activeView === "dashboard" && renderDashboard()}
         {activeView === "documents" && renderDocuments()}
         
@@ -430,7 +438,8 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
         }}
         onNotice={onNotice}
       />
-    </div>
+      </Box>
+    </Box>
   );
 }
 

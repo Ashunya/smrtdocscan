@@ -7,7 +7,7 @@ import {
   listCorrespondents, 
   listTags 
 } from "../api/client";
-import { TextField, MenuItem, Select, FormControl, InputLabel, Chip, Box, OutlinedInput } from "@mui/material";
+import { TextField, MenuItem, Select, FormControl, InputLabel, Chip, Box, OutlinedInput, Button } from "@mui/material";
 
 export function BusinessScannerManager({ companyId, onNotice, onSaved }) {
   const webTwainRef = useRef(null);
@@ -396,26 +396,21 @@ export function BusinessScannerManager({ companyId, onNotice, onSaved }) {
             <div className="scanner-count-pill" aria-live="polite">
               {pageCount} {pageCount === 1 ? "page" : "pages"}
             </div>
-            <button className="primary-button" type="button" onClick={acquireImage} disabled={!ready || saving || acquiring}>
-              <ScanLine size={18} />
+            <Button variant="contained" type="button" onClick={acquireImage} disabled={!ready || saving || acquiring} startIcon={<ScanLine size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
               {acquiring ? "Starting..." : "Scan"}
-            </button>
-            <button className="secondary-button" type="button" onClick={changeScanner} disabled={!ready || saving || acquiring}>
-              <Settings2 size={18} />
+            </Button>
+            <Button variant="outlined" type="button" onClick={changeScanner} disabled={!ready || saving || acquiring} startIcon={<Settings2 size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
               Change scanner
-            </button>
-            <button className="secondary-button danger-text" type="button" onClick={deleteCurrentPage} disabled={!ready || pageCount === 0 || saving}>
-              <Trash2 size={18} />
+            </Button>
+            <Button variant="outlined" color="error" type="button" onClick={deleteCurrentPage} disabled={!ready || pageCount === 0 || saving} startIcon={<Trash2 size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
               Delete Page
-            </button>
-            <button className="secondary-button" type="button" onClick={clearPages} disabled={!ready || pageCount === 0 || saving}>
-              <XCircle size={18} />
+            </Button>
+            <Button variant="outlined" type="button" onClick={clearPages} disabled={!ready || pageCount === 0 || saving} startIcon={<XCircle size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
               Clear
-            </button>
-            <button className="secondary-button" type="button" onClick={handleSave} disabled={!ready || pageCount === 0 || saving}>
-              <Upload size={18} />
+            </Button>
+            <Button variant="outlined" type="button" onClick={handleSave} disabled={!ready || pageCount === 0 || saving} startIcon={<Upload size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
               {saving ? "Saving..." : "Save Document"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

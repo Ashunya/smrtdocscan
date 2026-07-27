@@ -1,6 +1,7 @@
 import { ScanLine, Settings2, Trash2, Upload, XCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { listCategories, uploadDocument } from "../api/client";
+import { Button } from "@mui/material";
 
 export function ScannerManager({ companyId, patient, initialCategoryId, onNotice, onSaved }) {
   const webTwainRef = useRef(null);
@@ -364,30 +365,24 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
           <div className="scanner-count-pill" aria-live="polite">
             {pageCount} {pageCount === 1 ? "page" : "pages"}
           </div>
-          <button className="primary-button" type="button" onClick={acquireImage} disabled={!ready || !patient || !categoryId || saving || acquiring}>
-            <ScanLine size={18} />
-            {acquiring ? "Starting..." : "Scan"}
-          </button>
-          <button className="secondary-button" type="button" onClick={changeScanner} disabled={!ready || saving || acquiring}>
-            <Settings2 size={18} />
-            Change scanner
-          </button>
-          <button className="secondary-button danger-text" type="button" onClick={deleteCurrentPage} disabled={!ready || !patient || pageCount === 0 || saving}>
-            <Trash2 size={18} />
-            Delete Page
-          </button>
-          <button className="secondary-button" type="button" onClick={clearPages} disabled={!ready || !patient || pageCount === 0 || saving}>
-            <XCircle size={18} />
-            Clear
-          </button>
-          <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("pdf")} disabled={!ready || !patient || pageCount === 0 || saving}>
-            <Upload size={18} />
-            {saving ? "Saving..." : "Save as PDF"}
-          </button>
-          <button className="secondary-button" type="button" onClick={() => uploadScannedDocument("tif")} disabled={!ready || !patient || pageCount === 0 || saving}>
-            <Upload size={18} />
-            {saving ? "Saving..." : "Save as TIF"}
-          </button>
+            <Button variant="contained" type="button" onClick={acquireImage} disabled={!ready || saving || acquiring} startIcon={<ScanLine size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
+              {acquiring ? "Starting..." : "Scan"}
+            </Button>
+            <Button variant="outlined" type="button" onClick={changeScanner} disabled={!ready || saving || acquiring} startIcon={<Settings2 size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
+              Change scanner
+            </Button>
+            <Button variant="outlined" color="error" type="button" onClick={deleteCurrentPage} disabled={!ready || pageCount === 0 || saving} startIcon={<Trash2 size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
+              Delete Page
+            </Button>
+            <Button variant="outlined" type="button" onClick={clearPages} disabled={!ready || pageCount === 0 || saving} startIcon={<XCircle size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
+              Clear
+            </Button>
+            <Button variant="outlined" type="button" onClick={() => uploadScannedDocument("pdf")} disabled={!ready || !patient || pageCount === 0 || saving} startIcon={<Upload size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
+              {saving ? "Saving..." : "Save as PDF"}
+            </Button>
+            <Button variant="outlined" type="button" onClick={() => uploadScannedDocument("tif")} disabled={!ready || !patient || pageCount === 0 || saving} startIcon={<Upload size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
+              {saving ? "Saving..." : "Save as TIF"}
+            </Button>
         </div>
       </div>
       <div className="scan-review-note">
