@@ -7,7 +7,7 @@ import {
   listCorrespondents, 
   listTags 
 } from "../api/client";
-import { TextField, MenuItem, Select, FormControl, InputLabel, Chip, Box, OutlinedInput, Button } from "@mui/material";
+import { TextField, MenuItem, Select, FormControl, InputLabel, Chip, Box, OutlinedInput, Button, Paper, Typography } from "@mui/material";
 
 export function BusinessScannerManager({ companyId, onNotice, onSaved }) {
   const webTwainRef = useRef(null);
@@ -301,15 +301,10 @@ export function BusinessScannerManager({ companyId, onNotice, onSaved }) {
   }
 
   return (
-    <section className="panel">
-      <div className="panel-header">
-        <div>
-          <h2>Scan Document</h2>
-        </div>
-      </div>
-      <div className="scanner-toolbar">
-        <div className="scanner-form">
-          <div className="scanner-form-row">
+    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
+      <Paper elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 2, mb: 3 }}>
+          <Box>
             <TextField
               label="Document Name"
               value={documentName}
@@ -319,8 +314,8 @@ export function BusinessScannerManager({ companyId, onNotice, onSaved }) {
               fullWidth
               size="small"
             />
-          </div>
-          <div className="scanner-form-row">
+          </Box>
+          <Box>
             <TextField
               label="Title"
               value={title}
@@ -329,8 +324,8 @@ export function BusinessScannerManager({ companyId, onNotice, onSaved }) {
               fullWidth
               size="small"
             />
-          </div>
-          <div className="scanner-form-row">
+          </Box>
+          <Box>
             <FormControl size="small" fullWidth disabled={saving}>
               <InputLabel>Document Type</InputLabel>
               <Select value={documentTypeId} onChange={e => setDocumentTypeId(e.target.value)} label="Document Type">
@@ -338,8 +333,8 @@ export function BusinessScannerManager({ companyId, onNotice, onSaved }) {
                 {documentTypes.map(t => <MenuItem key={t.documentTypeId} value={t.documentTypeId}>{t.name}</MenuItem>)}
               </Select>
             </FormControl>
-          </div>
-          <div className="scanner-form-row">
+          </Box>
+          <Box>
             <FormControl size="small" fullWidth disabled={saving}>
               <InputLabel>Correspondent</InputLabel>
               <Select value={correspondentId} onChange={e => setCorrespondentId(e.target.value)} label="Correspondent">
@@ -347,8 +342,8 @@ export function BusinessScannerManager({ companyId, onNotice, onSaved }) {
                 {correspondents.map(c => <MenuItem key={c.correspondentId} value={c.correspondentId}>{c.name}</MenuItem>)}
               </Select>
             </FormControl>
-          </div>
-          <div className="scanner-form-row">
+          </Box>
+          <Box>
             <FormControl size="small" fullWidth disabled={saving}>
               <InputLabel>Storage Path (Location)</InputLabel>
               <Select value={locationId} onChange={e => setLocationId(e.target.value)} label="Storage Path (Location)">
@@ -356,8 +351,8 @@ export function BusinessScannerManager({ companyId, onNotice, onSaved }) {
                 {locations.map(l => <MenuItem key={l.locationId} value={l.locationId}>{l.locationName}</MenuItem>)}
               </Select>
             </FormControl>
-          </div>
-          <div className="scanner-form-row">
+          </Box>
+          <Box>
             <FormControl size="small" fullWidth disabled={saving}>
               <InputLabel>Tags</InputLabel>
               <Select
@@ -379,8 +374,8 @@ export function BusinessScannerManager({ companyId, onNotice, onSaved }) {
                 ))}
               </Select>
             </FormControl>
-          </div>
-          <div className="scanner-form-row">
+          </Box>
+          <Box>
             <TextField
               label="Document Date"
               type="date"
@@ -391,8 +386,9 @@ export function BusinessScannerManager({ companyId, onNotice, onSaved }) {
               fullWidth
               size="small"
             />
-          </div>
-          <div className="scanner-form-actions">
+          </Box>
+        </Box>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', justifyContent: 'flex-end', borderTop: 1, borderColor: 'divider', pt: 2 }}>
             <div className="scanner-count-pill" aria-live="polite">
               {pageCount} {pageCount === 1 ? "page" : "pages"}
             </div>
@@ -411,14 +407,13 @@ export function BusinessScannerManager({ companyId, onNotice, onSaved }) {
             <Button variant="outlined" type="button" onClick={handleSave} disabled={!ready || pageCount === 0 || saving} startIcon={<Upload size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
               {saving ? "Saving..." : "Save Document"}
             </Button>
-          </div>
-        </div>
-      </div>
+        </Box>
+      </Paper>
       <div className="scan-review-note">
         {pageCount > 0 ? `${pageCount} page(s) ready for review. Delete unwanted pages before saving.` : "Scan pages will appear below for review before saving."}
       </div>
-      <div className="scanner-frame" id="dwtcontrolContainer" />
-    </section>
+      <Box sx={{ minHeight: 600, border: 1, borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', overflow: 'hidden' }} id="dwtcontrolContainer" />
+    </Box>
   );
 }
 

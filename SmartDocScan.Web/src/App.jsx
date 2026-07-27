@@ -370,6 +370,9 @@ export default function App() {
     if (activeView === "scan") {
       return "Scan Document";
     }
+    if (activeView === "business-scan") {
+      return "Scan Document";
+    }
     if (activeView === "barcode") {
       return "Barcode Generator";
     }

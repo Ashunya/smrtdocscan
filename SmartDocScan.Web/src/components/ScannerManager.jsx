@@ -1,7 +1,7 @@
 import { ScanLine, Settings2, Trash2, Upload, XCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { listCategories, uploadDocument } from "../api/client";
-import { Button } from "@mui/material";
+import { Button, Box, Paper, Typography, FormControl, InputLabel, Select, MenuItem, TextField } from "@mui/material";
 
 export function ScannerManager({ companyId, patient, initialCategoryId, onNotice, onSaved }) {
   const webTwainRef = useRef(null);
@@ -313,55 +313,68 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
   }
 
   return (
-    <section className="panel">
-      <div className="panel-header">
-        <div>
-          <h2>Scan Document</h2>
-          <p>{patient ? `Scanning for ${patient.lastName}, ${patient.firstName}` : "Select a patient from Find Patient first."}</p>
-        </div>
-      </div>
-      <div className="scanner-toolbar">
-        <div className="scanner-fields">
-          <label>
-            Category
-            <select value={categoryId} onChange={(event) => changeCategory(event.target.value)} disabled={categories.length === 0 || saving || acquiring}>
-              {categories.length === 0 ? (
-                <option value="">No categories</option>
-              ) : (
-                <>
-                  <option value="">Select Category...</option>
-                  {formattedCategoryOptions.map((item, idx) => {
-                    if (item.type === "group") {
-                      return (
-                        <optgroup key={idx} label={item.label}>
-                          {item.options.map((opt) => (
-                            <option key={opt.categoryId} value={opt.categoryId}>
+    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
+      <Paper elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+        <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+          {patient ? `Scanning for ${patient.lastName}, ${patient.firstName}` : "Select a patient from Find Patient first."}
+        </Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 2, mb: 3 }}>
+          <Box>
+            <FormControl size="small" fullWidth disabled={categories.length === 0 || saving || acquiring}>
+              <InputLabel>Category</InputLabel>
+              <Select value={categoryId} onChange={(event) => changeCategory(event.target.value)} label="Category">
+                {categories.length === 0 ? (
+                  <MenuItem value=""><em>No categories</em></MenuItem>
+                ) : (
+                  [
+                    <MenuItem key="none" value=""><em>Select Category...</em></MenuItem>,
+                    ...formattedCategoryOptions.map((item, idx) => {
+                      if (item.type === "group") {
+                        return [
+                          <MenuItem key={`group-${idx}`} disabled sx={{ opacity: 1, fontWeight: 'bold' }}>{item.label}</MenuItem>,
+                          ...item.options.map((opt) => (
+                            <MenuItem key={opt.categoryId} value={opt.categoryId} sx={{ pl: 4 }}>
                               {opt.categoryName}
-                            </option>
-                          ))}
-                        </optgroup>
+                            </MenuItem>
+                          ))
+                        ];
+                      }
+                      return (
+                        <MenuItem key={item.categoryId} value={item.categoryId}>
+                          {item.categoryName}
+                        </MenuItem>
                       );
-                    }
-                    return (
-                      <option key={item.categoryId} value={item.categoryId}>
-                        {item.categoryName}
-                      </option>
-                    );
-                  })}
-                </>
-              )}
-            </select>
-          </label>
-          <label>
-            Document Name
-            <input type="text" value={documentName} onChange={(event) => setDocumentName(event.target.value)} placeholder="Optional name" />
-          </label>
-          <label>
-            Date of Service
-            <input type="date" value={dateOfService} onChange={(event) => setDateOfService(event.target.value)} />
-          </label>
-        </div>
-        <div className="scanner-actions">
+                    }).flat()
+                  ]
+                )}
+              </Select>
+            </FormControl>
+          </Box>
+          <Box>
+            <TextField
+              label="Document Name"
+              value={documentName}
+              onChange={(event) => setDocumentName(event.target.value)}
+              placeholder="Optional name"
+              disabled={saving}
+              fullWidth
+              size="small"
+            />
+          </Box>
+          <Box>
+            <TextField
+              label="Date of Service"
+              type="date"
+              value={dateOfService}
+              onChange={(event) => setDateOfService(event.target.value)}
+              InputLabelProps={{ shrink: true }}
+              disabled={saving}
+              fullWidth
+              size="small"
+            />
+          </Box>
+        </Box>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', justifyContent: 'flex-end', borderTop: 1, borderColor: 'divider', pt: 2 }}>
           <div className="scanner-count-pill" aria-live="polite">
             {pageCount} {pageCount === 1 ? "page" : "pages"}
           </div>
@@ -383,13 +396,13 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
             <Button variant="outlined" type="button" onClick={() => uploadScannedDocument("tif")} disabled={!ready || !patient || pageCount === 0 || saving} startIcon={<Upload size={18} />} sx={{ textTransform: 'none', fontWeight: 600 }}>
               {saving ? "Saving..." : "Save as TIF"}
             </Button>
-        </div>
-      </div>
+        </Box>
+      </Paper>
       <div className="scan-review-note">
         {pageCount > 0 ? `${pageCount} page(s) ready for review. Delete unwanted pages before saving.` : "Scan pages will appear below for review before saving."}
       </div>
-      <div className="scanner-frame" id="dwtcontrolContainer" />
-    </section>
+      <Box sx={{ minHeight: 600, border: 1, borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', overflow: 'hidden' }} id="dwtcontrolContainer" />
+    </Box>
   );
 }
 
