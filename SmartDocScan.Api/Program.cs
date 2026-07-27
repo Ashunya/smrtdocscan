@@ -956,7 +956,7 @@ app.MapPost("/api/business-documents", async (HttpRequest httpRequest, ClaimsPri
     return Results.Created($"/api/business-documents/{document.DocumentId}", document);
 }).RequireAuthorization();
 
-app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, ClaimsPrincipal principal, IConfiguration configuration, CancellationToken cancellationToken) =>
+app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, ClaimsPrincipal principal, SmartDocScan.Api.Services.TikaClient tikaClient, CorrespondentRepository correspondentRepo, DocumentTypeRepository documentTypeRepo, CancellationToken cancellationToken) =>
 {
     if (!httpRequest.HasFormContentType)
     {
@@ -970,97 +970,65 @@ app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, C
         return Results.BadRequest(new { message = "Please select a document to analyze." });
     }
 
+    if (!int.TryParse(httpRequest.Query["companyId"], out var companyId))
+    {
+        // Fallback to 0 if not provided, though it won't match company-specific data
+        companyId = 0;
+    }
+
+    var analysis = new SmartDocScan.Api.Models.AiDocumentAnalysisResponse();
+
     try
     {
-        using var stream = new MemoryStream();
-        await file.CopyToAsync(stream, cancellationToken);
-        stream.Position = 0;
+        using var stream = file.OpenReadStream();
+        var extractedText = await tikaClient.ExtractTextAsync(file.FileName, stream, cancellationToken);
 
-        string base64Image = "";
-        using (var collection = new ImageMagick.MagickImageCollection())
+        if (!string.IsNullOrWhiteSpace(extractedText))
         {
-            var readSettings = new ImageMagick.MagickReadSettings { Density = new ImageMagick.Density(150, 150) };
-            collection.Read(stream, readSettings);
-            if (collection.Count > 0)
+            var textToSearch = extractedText.Replace("\n", " ").Replace("\r", " ");
+
+            // Try to match Correspondents (Vendors)
+            if (companyId > 0)
             {
-                var image = collection[0];
-                image.Format = ImageMagick.MagickFormat.Jpeg;
-                image.Quality = 80;
-                base64Image = image.ToBase64();
-            }
-        }
+                var correspondents = await correspondentRepo.GetByCompanyAsync(companyId, cancellationToken);
+                foreach (var corr in correspondents)
+                {
+                    if (textToSearch.Contains(corr.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        analysis.VendorName = corr.Name;
+                        break;
+                    }
+                }
 
-        if (string.IsNullOrEmpty(base64Image))
-        {
-            return Results.BadRequest(new { message = "Could not read image or PDF." });
-        }
-
-        var prompt = "Extract the following details from this document and return strictly a JSON object: {\"VendorName\": \"(string or null)\", \"Amount\": \"(string or null)\", \"DocumentDate\": \"(YYYY-MM-DD or null)\", \"SuggestedCategoryName\": \"(string, e.g., Invoices, Receipts, Contracts, or null)\"}. Only output the raw JSON object, no markdown blocks, no other text.";
-
-        var modelName = configuration["Ai:OllamaModel"] ?? "minicpm-v";
-        var payload = new
-        {
-            model = modelName,
-            prompt = prompt,
-            images = new[] { base64Image },
-            stream = false,
-            format = "json"
-        };
-
-        using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
-        var ollamaUrl = configuration["Ai:OllamaUrl"] ?? "http://host.docker.internal:11434/api/generate";
-        
-        HttpResponseMessage response;
-        try 
-        {
-            response = await client.PostAsJsonAsync(ollamaUrl, payload, cancellationToken);
-        } 
-        catch (HttpRequestException)
-        {
-            // Fallback for local testing outside of Docker if host.docker.internal fails
-            response = await client.PostAsJsonAsync("http://localhost:11434/api/generate", payload, cancellationToken);
-        }
-        
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            return Results.BadRequest(new { message = $"Ollama AI Error ({response.StatusCode}): {errorBody}" });
-        }
-
-        var ollamaResult = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(cancellationToken: cancellationToken);
-        var responseText = ollamaResult.GetProperty("response").GetString();
-
-        if (string.IsNullOrWhiteSpace(responseText))
-        {
-            return Results.Ok(new SmartDocScan.Api.Models.AiDocumentAnalysisResponse());
-        }
-
-        var analysis = new SmartDocScan.Api.Models.AiDocumentAnalysisResponse();
-        try
-        {
-            using var doc = System.Text.Json.JsonDocument.Parse(responseText);
-            var root = doc.RootElement;
-            
-            if (root.TryGetProperty("VendorName", out var vendorProp) && vendorProp.ValueKind != System.Text.Json.JsonValueKind.Null)
-                analysis.VendorName = vendorProp.ToString();
-
-            if (root.TryGetProperty("Amount", out var amountProp) && amountProp.ValueKind != System.Text.Json.JsonValueKind.Null)
-            {
-                var amountStr = amountProp.ToString().Replace("$", "").Replace(",", "").Trim();
-                if (decimal.TryParse(amountStr, out var amt))
-                    analysis.Amount = amt;
+                // Try to match Document Types (Categories)
+                var docTypes = await documentTypeRepo.GetByCompanyAsync(companyId, cancellationToken);
+                foreach (var dt in docTypes)
+                {
+                    if (textToSearch.Contains(dt.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        analysis.SuggestedCategoryName = dt.Name;
+                        break;
+                    }
+                }
             }
 
-            if (root.TryGetProperty("DocumentDate", out var dateProp) && dateProp.ValueKind != System.Text.Json.JsonValueKind.Null)
-                analysis.DocumentDate = dateProp.ToString();
+            // Try to match Date (Basic MM/DD/YYYY or YYYY-MM-DD)
+            var dateMatch = System.Text.RegularExpressions.Regex.Match(textToSearch, @"\b(?:(?:19|20)\d\d[-/](?:0[1-9]|1[012])[-/](?:0[1-9]|[12][0-9]|3[01])|(?:0[1-9]|1[012])[-/](?:0[1-9]|[12][0-9]|3[01])[-/](?:19|20)\d\d)\b");
+            if (dateMatch.Success)
+            {
+                analysis.DocumentDate = dateMatch.Value;
+            }
 
-            if (root.TryGetProperty("SuggestedCategoryName", out var catProp) && catProp.ValueKind != System.Text.Json.JsonValueKind.Null)
-                analysis.SuggestedCategoryName = catProp.ToString();
-        }
-        catch (System.Text.Json.JsonException ex)
-        {
-            // If the AI didn't output valid JSON, just return empty rather than crashing
-            app.Logger.LogWarning(ex, "Failed to parse AI JSON response: {Response}", responseText);
+            // Try to match Amount (Basic $X.XX or Total X.XX)
+            var amountMatch = System.Text.RegularExpressions.Regex.Match(textToSearch, @"(?:Total|Amount|Balance Due|Total Due|Pay)[^\d\$]{0,10}?\$?\s*([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!amountMatch.Success)
+            {
+                amountMatch = System.Text.RegularExpressions.Regex.Match(textToSearch, @"\$\s*([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})\b");
+            }
+            if (amountMatch.Success && decimal.TryParse(amountMatch.Groups[1].Value, out var amt))
+            {
+                analysis.Amount = amt;
+            }
         }
 
         return Results.Ok(analysis);

@@ -366,10 +366,10 @@ export function moveBusinessDocument(documentId, categoryId) {
   });
 }
 
-export function analyzeBusinessDocument(file) {
+export function analyzeBusinessDocument(companyId, file) {
   const formData = new FormData();
   formData.set("file", file);
-  return requestForm("/business-documents/analyze", formData);
+  return requestForm(`/business-documents/analyze?companyId=${companyId}`, formData);
 }
 
 export function getBusinessDocumentDownloadUrl(documentId) {

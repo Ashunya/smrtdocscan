@@ -529,7 +529,7 @@ function UploadModal({ open, onClose, companyId, locations, documentTypes, corre
     if (!file) return;
     let ignore = false;
     setAnalyzing(true);
-    analyzeBusinessDocument(file).then(data => {
+    analyzeBusinessDocument(companyId, file).then(data => {
       if (!ignore) {
         if (data.vendorName && correspondents.length > 0) {
           const matchedCorr = correspondents.find(c => c.name.toLowerCase() === data.vendorName.toLowerCase());
