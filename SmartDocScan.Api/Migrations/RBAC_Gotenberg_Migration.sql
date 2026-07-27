@@ -11,7 +11,13 @@ BEGIN
         (
             [username] ASC,
             [location_id] ASC
-        )
+        ),
+        CONSTRAINT [FK_user_locations_location] FOREIGN KEY([location_id])
+        REFERENCES [dbo].[company_location] ([location_id])
+        ON DELETE CASCADE,
+        CONSTRAINT [FK_user_locations_username] FOREIGN KEY([username])
+        REFERENCES [dbo].[usersinfo] ([username])
+        ON DELETE CASCADE
     )
 END
 GO
@@ -26,7 +32,13 @@ BEGIN
         (
             [username] ASC,
             [document_type_id] ASC
-        )
+        ),
+        CONSTRAINT [FK_user_doc_types_doctype] FOREIGN KEY([document_type_id])
+        REFERENCES [dbo].[business_document_types] ([doc_type_id])
+        ON DELETE CASCADE,
+        CONSTRAINT [FK_user_doc_types_username] FOREIGN KEY([username])
+        REFERENCES [dbo].[usersinfo] ([username])
+        ON DELETE CASCADE
     )
 END
 GO
