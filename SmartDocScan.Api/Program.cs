@@ -1012,11 +1012,24 @@ app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, C
                 }
             }
 
-            // Try to match Date (Basic MM/DD/YYYY or YYYY-MM-DD)
-            var dateMatch = System.Text.RegularExpressions.Regex.Match(textToSearch, @"\b(?:(?:19|20)\d\d[-/](?:0[1-9]|1[012])[-/](?:0[1-9]|[12][0-9]|3[01])|(?:0[1-9]|1[012])[-/](?:0[1-9]|[12][0-9]|3[01])[-/](?:19|20)\d\d)\b");
-            if (dateMatch.Success)
+            // Try to match Date (Broad formats)
+            var dateRegex = @"\b(?:" +
+                @"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\.,-]*\d{1,2}(?:st|nd|rd|th)?[\s\.,-]*\d{2,4}|" +
+                @"\d{1,2}[\s\.,-]*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\.,-]*\d{2,4}|" +
+                @"(?:19|20)\d\d[-/]\d{1,2}[-/]\d{1,2}|" +
+                @"\d{1,2}[-/]\d{1,2}[-/](?:19|20)\d\d" +
+                @")\b";
+            var dateMatches = System.Text.RegularExpressions.Regex.Matches(textToSearch, dateRegex, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            foreach (System.Text.RegularExpressions.Match match in dateMatches)
             {
-                analysis.DocumentDate = dateMatch.Value;
+                if (DateTime.TryParse(match.Value, out var parsedDate))
+                {
+                    if (parsedDate.Year >= 1990 && parsedDate.Year <= DateTime.Now.Year + 5)
+                    {
+                        analysis.DocumentDate = parsedDate.ToString("yyyy-MM-dd");
+                        break; // Stop at the first valid date found
+                    }
+                }
             }
 
             // Try to match Amount (Basic $X.XX or Total X.XX)
