@@ -1,5 +1,5 @@
 import { Lock, LogIn, User } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { getMicrosoftSignInUrl, login } from "../api/client";
 
 export function SignIn({ onSignedIn, logoUrl }) {
@@ -7,56 +7,19 @@ export function SignIn({ onSignedIn, logoUrl }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [passwordSettling, setPasswordSettling] = useState(false);
-  const usernameInputRef = useRef(null);
-  const passwordInputRef = useRef(null);
-  const passwordSettleUntilRef = useRef(0);
-  const passwordSettleTimerRef = useRef(null);
-
-  useEffect(() => {
-    return () => {
-      if (passwordSettleTimerRef.current) {
-        window.clearTimeout(passwordSettleTimerRef.current);
-      }
-    };
-  }, []);
 
   async function handleSubmit(event) {
     event.preventDefault();
     setLoading(true);
     setError("");
     try {
-      await waitForPasswordPasteToSettle(passwordSettleUntilRef);
-      const result = await login({
-        username: usernameInputRef.current?.value ?? username,
-        password: passwordInputRef.current?.value ?? password,
-      });
+      const result = await login({ username, password });
       onSignedIn(result.user);
     } catch {
       setError("Invalid username or password.");
     } finally {
       setLoading(false);
     }
-  }
-
-  function handlePasswordInput(event) {
-    setPassword(event.target.value);
-    markPasswordAsSettling();
-  }
-
-  function markPasswordAsSettling() {
-    passwordSettleUntilRef.current = Date.now() + 350;
-    setPasswordSettling(true);
-
-    if (passwordSettleTimerRef.current) {
-      window.clearTimeout(passwordSettleTimerRef.current);
-    }
-
-    passwordSettleTimerRef.current = window.setTimeout(() => {
-      if (Date.now() >= passwordSettleUntilRef.current) {
-        setPasswordSettling(false);
-      }
-    }, 375);
   }
 
   return (
@@ -80,19 +43,19 @@ export function SignIn({ onSignedIn, logoUrl }) {
           <form onSubmit={handleSubmit}>
             <label className="signin-input">
               <User size={18} />
-              <input ref={usernameInputRef} name="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="User Name" autoComplete="username" required />
+              <input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="User Name" required />
             </label>
             <label className="signin-input">
               <Lock size={18} />
-              <input ref={passwordInputRef} name="password" type="password" value={password} onChange={handlePasswordInput} onPaste={markPasswordAsSettling} placeholder="Password" autoComplete="current-password" required />
+              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" required />
             </label>
             <label className="signin-remember">
               <input type="checkbox" />
               Remember me
             </label>
-            <button className="primary-button signin-button" type="submit" disabled={loading || passwordSettling}>
+            <button className="primary-button signin-button" type="submit" disabled={loading}>
               <LogIn size={18} />
-              {loading ? "Signing in..." : passwordSettling ? "Reading password..." : "Login"}
+              {loading ? "Signing in..." : "Login"}
             </button>
           </form>
           <a className="signin-sso-button" href={getMicrosoftSignInUrl("/")}>
@@ -105,12 +68,6 @@ export function SignIn({ onSignedIn, logoUrl }) {
       </section>
     </main>
   );
-}
-
-async function waitForPasswordPasteToSettle(passwordSettleUntilRef) {
-  while (Date.now() < passwordSettleUntilRef.current) {
-    await new Promise((resolve) => window.setTimeout(resolve, Math.min(passwordSettleUntilRef.current - Date.now(), 75)));
-  }
 }
 
 function MicrosoftLogo() {
