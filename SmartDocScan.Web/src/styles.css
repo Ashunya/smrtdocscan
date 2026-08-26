@@ -293,6 +293,7 @@ select {
 }
 
 .patient-search-controls {
+  width: min(610px, 100%);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -300,30 +301,36 @@ select {
   flex-wrap: wrap;
 }
 
-.dob-search-box {
-  min-width: 190px;
+.patient-search-controls .search-box {
+  flex: 1 1 340px;
+}
+
+.dob-picker {
+  flex: 0 0 205px;
+}
+
+.dob-picker .MuiInputBase-root {
   height: 42px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 0 10px;
   background: #fff;
+  font-family: inherit;
+  font-size: 13px;
 }
 
-.dob-search-box span {
-  color: var(--muted);
-  font-size: 12px;
+.dob-picker .MuiInputBase-input {
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+.dob-picker .MuiInputLabel-root {
+  font-family: inherit;
+  font-size: 13px;
   font-weight: 700;
+  color: var(--muted);
 }
 
-.dob-search-box input {
-  min-width: 120px;
-  height: 38px;
-  border: 0;
-  outline: 0;
-  font: inherit;
+.dob-picker .MuiSvgIcon-root {
+  font-size: 18px;
 }
 
 .search-box input {
@@ -1173,7 +1180,6 @@ tbody tr:nth-child(odd) {
 
 .topbar-meta input,
 .search-box,
-.dob-search-box,
 .form-grid input,
 .form-grid select,
 .box-form input,
@@ -1195,7 +1201,6 @@ tbody tr:nth-child(odd) {
 
 .topbar-meta input:focus,
 .search-box:focus-within,
-.dob-search-box:focus-within,
 .form-grid input:focus,
 .form-grid select:focus,
 .box-form input:focus,
@@ -1924,10 +1929,17 @@ tbody tr:nth-child(odd) {
   color: var(--text);
 }
 
-:root[data-theme="dark"] .dob-search-box {
+:root[data-theme="dark"] .dob-picker .MuiInputBase-root {
   background-color: #071421;
-  border-color: var(--border);
   color: var(--text);
+}
+
+:root[data-theme="dark"] .dob-picker .MuiOutlinedInput-notchedOutline {
+  border-color: var(--border);
+}
+
+:root[data-theme="dark"] .dob-picker .MuiSvgIcon-root {
+  color: var(--muted);
 }
 
 :root[data-theme="dark"] input:not([type="checkbox"]),
@@ -2282,12 +2294,12 @@ tbody tr:nth-child(odd) {
   }
 
   .patient-search-controls,
-  .dob-search-box {
+  .dob-picker {
     width: 100%;
   }
 
-  .dob-search-box input {
-    width: 100%;
+  .dob-picker {
+    flex-basis: 100%;
   }
 
   .table-wrap,

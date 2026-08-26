@@ -1,8 +1,13 @@
-import { CalendarDays, Edit2, FileText, Search, Trash2 } from "lucide-react";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
+import { Edit2, FileText, Search, Trash2 } from "lucide-react";
 
 export function PatientSearch({ patients, search, onSearchChange, dateOfBirthSearch, onDateOfBirthSearchChange, loading, onEdit, onDocuments, onDelete, user }) {
   const canDelete = Boolean(user?.isAdmin || user?.superUser);
   const canEdit = Boolean(user?.addPatients || user?.isAdmin || user?.superUser);
+  const selectedDateOfBirth = dateOfBirthSearch ? dayjs(dateOfBirthSearch) : null;
 
   return (
     <section className="panel patient-search">
@@ -21,16 +26,21 @@ export function PatientSearch({ patients, search, onSearchChange, dateOfBirthSea
               aria-label="Search patients"
             />
           </label>
-          <label className="dob-search-box">
-            <CalendarDays size={18} />
-            <span>DOB</span>
-            <input
-              type="date"
-              value={dateOfBirthSearch}
-              onChange={(e) => onDateOfBirthSearchChange(e.target.value)}
-              aria-label="Search by date of birth"
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <DatePicker
+              className="dob-picker"
+              label="DOB"
+              value={selectedDateOfBirth}
+              onChange={(value) => onDateOfBirthSearchChange(value?.isValid() ? value.format("YYYY-MM-DD") : "")}
+              slotProps={{
+                field: { clearable: true },
+                textField: {
+                  size: "small",
+                  "aria-label": "Search by date of birth",
+                },
+              }}
             />
-          </label>
+          </LocalizationProvider>
         </div>
       </div>
 
