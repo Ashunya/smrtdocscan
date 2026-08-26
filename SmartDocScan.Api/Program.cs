@@ -244,14 +244,14 @@ app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-app.MapGet("/api/patients", async (int companyId, string? search, int? take, ClaimsPrincipal principal, PatientRepository repository, CancellationToken cancellationToken) =>
+app.MapGet("/api/patients", async (int companyId, string? search, DateTime? dateOfBirth, int? take, ClaimsPrincipal principal, PatientRepository repository, CancellationToken cancellationToken) =>
 {
     if (!CanAccessCompany(principal, companyId))
     {
         return Results.Forbid();
     }
 
-    var patients = await repository.SearchAsync(companyId, search, take ?? 100, cancellationToken);
+    var patients = await repository.SearchAsync(companyId, search, dateOfBirth, take ?? 100, cancellationToken);
     return Results.Ok(patients);
 }).RequireAuthorization();
 

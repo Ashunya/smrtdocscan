@@ -14,16 +14,20 @@ public sealed class PatientRepository
             ?? throw new InvalidOperationException("Connection string 'SmartDocScan' is missing.");
     }
 
-    public async Task<IReadOnlyList<PatientDto>> SearchAsync(int companyId, string? search, int take = 100, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PatientDto>> SearchAsync(int companyId, string? search, DateTime? dateOfBirth, int take = 100, CancellationToken cancellationToken = default)
     {
         var patients = new List<PatientDto>();
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = BuildSearchSql(search);
+        command.CommandText = BuildSearchSql(search, dateOfBirth);
         command.Parameters.AddWithValue("@companyId", companyId);
         command.Parameters.AddWithValue("@take", Math.Clamp(take, 1, 250));
+        if (dateOfBirth.HasValue)
+        {
+            command.Parameters.AddWithValue("@dateOfBirth", NpgsqlDbType.Date, DateOnly.FromDateTime(dateOfBirth.Value.Date));
+        }
 
         var terms = SplitSearch(search);
         for (var i = 0; i < terms.Count; i++)
@@ -156,10 +160,15 @@ public sealed class PatientRepository
         }
     }
 
-    private static string BuildSearchSql(string? search)
+    private static string BuildSearchSql(string? search, DateTime? dateOfBirth)
     {
         var terms = SplitSearch(search);
         var where = " WHERE p.comp_id = @companyId";
+        if (dateOfBirth.HasValue)
+        {
+            where += " AND p.dob::date = @dateOfBirth";
+        }
+
         for (var i = 0; i < terms.Count; i++)
         {
             var hasNumeric = int.TryParse(terms[i], out _);

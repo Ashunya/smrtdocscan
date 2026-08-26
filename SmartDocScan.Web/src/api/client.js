@@ -53,13 +53,16 @@ async function requestForm(path, formData) {
   return response.json();
 }
 
-export function searchPatients({ companyId, search, take = 100 }) {
+export function searchPatients({ companyId, search, dateOfBirth, take = 100 }) {
   const params = new URLSearchParams({
     companyId: String(companyId),
     take: String(take),
   });
   if (search) {
     params.set("search", search);
+  }
+  if (dateOfBirth) {
+    params.set("dateOfBirth", dateOfBirth);
   }
   return request(`/patients?${params.toString()}`);
 }

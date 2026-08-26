@@ -1,6 +1,6 @@
-import { Edit2, FileText, Search, Trash2 } from "lucide-react";
+import { CalendarDays, Edit2, FileText, Search, Trash2 } from "lucide-react";
 
-export function PatientSearch({ patients, search, onSearchChange, loading, onEdit, onDocuments, onDelete, user }) {
+export function PatientSearch({ patients, search, onSearchChange, dateOfBirthSearch, onDateOfBirthSearchChange, loading, onEdit, onDocuments, onDelete, user }) {
   const canDelete = Boolean(user?.isAdmin || user?.superUser);
   const canEdit = Boolean(user?.addPatients || user?.isAdmin || user?.superUser);
 
@@ -9,17 +9,29 @@ export function PatientSearch({ patients, search, onSearchChange, loading, onEdi
       <div className="panel-header">
         <div>
           <h2>Find Patient</h2>
-          <p>Search by patient ID, name, or internal record ID.</p>
+          <p>Search by patient ID, name, date of birth, or internal record ID.</p>
         </div>
-        <label className="search-box">
-          <Search size={18} />
-          <input
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search patients"
-            aria-label="Search patients"
-          />
-        </label>
+        <div className="patient-search-controls">
+          <label className="search-box">
+            <Search size={18} />
+            <input
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Search patients"
+              aria-label="Search patients"
+            />
+          </label>
+          <label className="dob-search-box">
+            <CalendarDays size={18} />
+            <span>DOB</span>
+            <input
+              type="date"
+              value={dateOfBirthSearch}
+              onChange={(e) => onDateOfBirthSearchChange(e.target.value)}
+              aria-label="Search by date of birth"
+            />
+          </label>
+        </div>
       </div>
 
       <div className="table-wrap">

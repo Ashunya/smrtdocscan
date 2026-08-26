@@ -55,6 +55,7 @@ export default function App() {
   const [activeView, setActiveView] = useState("find");
   const [companyId, setCompanyId] = useState(DEFAULT_COMPANY_ID);
   const [search, setSearch] = useState("");
+  const [dateOfBirthSearch, setDateOfBirthSearch] = useState("");
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [documentPatient, setDocumentPatient] = useState(null);
@@ -125,7 +126,7 @@ export default function App() {
     }
     let ignore = false;
     setLoading(true);
-    searchPatients({ companyId, search: debouncedSearch })
+    searchPatients({ companyId, search: debouncedSearch, dateOfBirth: dateOfBirthSearch })
       .then((data) => {
         if (!ignore) {
           setPatients(data);
@@ -144,7 +145,7 @@ export default function App() {
     return () => {
       ignore = true;
     };
-  }, [companyId, debouncedSearch, currentUser]);
+  }, [companyId, debouncedSearch, dateOfBirthSearch, currentUser]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -236,7 +237,7 @@ export default function App() {
       }
       setSelectedPatient(null);
       setActiveView("documents");
-      setPatients(await searchPatients({ companyId, search }));
+      setPatients(await searchPatients({ companyId, search, dateOfBirth: dateOfBirthSearch }));
     } catch (error) {
       setNotice({ type: "error", text: error.message });
     } finally {
@@ -389,6 +390,8 @@ export default function App() {
       patients={patients}
       search={search}
       onSearchChange={setSearch}
+      dateOfBirthSearch={dateOfBirthSearch}
+      onDateOfBirthSearchChange={setDateOfBirthSearch}
       loading={loading}
       onEdit={editPatient}
       onDocuments={viewDocuments}
