@@ -24,6 +24,7 @@ public sealed class TikaClient
             var content = new StreamContent(fileStream);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
             content.Headers.Add("file-name", fileName);
+            content.Headers.Add("X-Tika-PDFOcrStrategy", "ocr_and_text_extraction");
             // Request text format
             _httpClient.DefaultRequestHeaders.Accept.Clear();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));

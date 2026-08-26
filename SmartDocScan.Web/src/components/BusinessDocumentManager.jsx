@@ -1,7 +1,7 @@
 import {
   Folder, Upload, Download, Trash2, Eye, Plus, X, 
   Search, Tag, Building2, FileType, Inbox, LayoutDashboard, Settings,
-  AlertCircle, ChevronRight, FileText, Calendar, DollarSign, Scan
+  AlertCircle, ChevronRight, FileText, Calendar, DollarSign, Scan, Layers
 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { 
@@ -86,7 +86,9 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
 
   // Document Selection
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [selectedDocuments, setSelectedDocuments] = useState(new Set());
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isManagePagesOpen, setIsManagePagesOpen] = useState(false);
 
   const loadMetadata = async () => {
     try {
@@ -177,8 +179,36 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px", overflowY: "auto", background: "#f8fafc" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
           <Typography variant="h4" style={{ fontWeight: "700", color: "#1e293b" }}>Documents</Typography>
+
           <div style={{ display: "flex", gap: "8px" }}>
+            {selectedDocuments.size > 1 && (
+              <ModernButton 
+                icon={Layers} 
+                label={`Merge ${selectedDocuments.size} Documents`} 
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    await fetch('/api/business-documents/merge', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                      },
+                      body: JSON.stringify({ documentIds: Array.from(selectedDocuments) })
+                    });
+                    setSelectedDocuments(new Set());
+                    setSelectedDocument(null);
+                    onNotice({ type: "success", text: "Documents merged successfully" });
+                    loadDocuments();
+                  } catch (e) {
+                    onNotice({ type: "error", text: "Failed to merge: " + e.message });
+                    setLoading(false);
+                  }
+                }} 
+              />
+            )}
             <ModernButton icon={Upload} label="Upload Document" primary onClick={() => setIsUploadModalOpen(true)} />
+
             {onScan && <ModernButton icon={Scan} label="Scan" onClick={() => onScan()} />}
           </div>
         </div>
@@ -231,10 +261,22 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
             {documents.map(doc => (
               <div 
                 key={doc.documentId}
-                onClick={() => setSelectedDocument(doc)}
+                onClick={(e) => {
+                  if (e.shiftKey || e.metaKey || e.ctrlKey) {
+                    const next = new Set(selectedDocuments);
+                    if (next.has(doc.documentId)) next.delete(doc.documentId);
+                    else next.add(doc.documentId);
+                    setSelectedDocuments(next);
+                    if (next.size === 1) setSelectedDocument(documents.find(d => d.documentId === Array.from(next)[0]));
+                    else setSelectedDocument(null);
+                  } else {
+                    setSelectedDocument(doc);
+                    setSelectedDocuments(new Set([doc.documentId]));
+                  }
+                }}
                 style={{
                   background: "white", borderRadius: "12px", overflow: "hidden", 
-                  boxShadow: selectedDocument?.documentId === doc.documentId ? "0 0 0 3px #2563eb" : "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                  boxShadow: selectedDocuments.has(doc.documentId) ? "0 0 0 3px #2563eb" : "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                   cursor: "pointer", transition: "transform 0.2s",
                   transform: "scale(1.0)",
                   border: "1px solid #e2e8f0"
@@ -279,7 +321,7 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
             <IconButton onClick={() => setSelectedDocument(null)}><X size={20} /></IconButton>
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
-            <DocumentEditor 
+            <DocumentEditor setIsManagePagesOpen={setIsManagePagesOpen} 
               document={selectedDocument} 
               locations={locations}
               documentTypes={documentTypes}
@@ -362,7 +404,17 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
           <Typography variant="h6" sx={{ fontWeight: 800, color: "primary.main", letterSpacing: "-0.5px" }}>
             Paperless Admin
           </Typography>
-        </Box>
+          <ManagePagesModal 
+        open={isManagePagesOpen} 
+        onClose={() => setIsManagePagesOpen(false)}
+        document={selectedDocument}
+        onNotice={onNotice}
+        onSuccess={() => {
+          setIsManagePagesOpen(false);
+          loadDocuments();
+        }}
+      />
+    </Box>
         <Box sx={{ py: 2, flex: 1, overflowY: "auto" }}>
           <Typography variant="overline" sx={{ px: 3, color: "text.secondary", fontWeight: 700, display: "block" }}>Views</Typography>
           <List disablePadding>
@@ -377,7 +429,17 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
             <SidebarItem icon={Building2} label="Correspondents" active={activeView === "correspondents"} onClick={() => setActiveView("correspondents")} />
             <SidebarItem icon={Folder} label="Storage Paths" active={activeView === "locations"} onClick={() => setActiveView("locations")} />
           </List>
-        </Box>
+          <ManagePagesModal 
+        open={isManagePagesOpen} 
+        onClose={() => setIsManagePagesOpen(false)}
+        document={selectedDocument}
+        onNotice={onNotice}
+        onSuccess={() => {
+          setIsManagePagesOpen(false);
+          loadDocuments();
+        }}
+      />
+    </Box>
       </Paper>
 
       {/* Main Content */}
@@ -420,7 +482,17 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
           () => {}, 
           (id) => deleteLocation(id, companyId).then(() => loadMetadata()).catch(e => onNotice({type:"error", text: e.message}))
         )}
-      </Box>
+        <ManagePagesModal 
+        open={isManagePagesOpen} 
+        onClose={() => setIsManagePagesOpen(false)}
+        document={selectedDocument}
+        onNotice={onNotice}
+        onSuccess={() => {
+          setIsManagePagesOpen(false);
+          loadDocuments();
+        }}
+      />
+    </Box>
 
       {/* Upload Modal */}
       <UploadModal 
@@ -438,12 +510,22 @@ export function BusinessDocumentManager({ companyId, user, onNotice, onScan }) {
         }}
         onNotice={onNotice}
       />
+      <ManagePagesModal 
+        open={isManagePagesOpen} 
+        onClose={() => setIsManagePagesOpen(false)}
+        document={selectedDocument}
+        onNotice={onNotice}
+        onSuccess={() => {
+          setIsManagePagesOpen(false);
+          loadDocuments();
+        }}
+      />
     </Box>
   );
 }
 
 // --- Document Editor Component ---
-function DocumentEditor({ document, locations, documentTypes, correspondents, tags, onSave, onDelete }) {
+function DocumentEditor({ document, locations, documentTypes, correspondents, tags, onSave, onDelete, setIsManagePagesOpen }) {
   const [title, setTitle] = useState(document.title || document.documentName || "");
   const [asn, setAsn] = useState(document.asn || "");
   const [documentDate, setDocumentDate] = useState(document.documentDate ? document.documentDate.split('T')[0] : "");
@@ -495,7 +577,17 @@ function DocumentEditor({ document, locations, documentTypes, correspondents, ta
                 const tg = tags.find(t => t.tagId === value);
                 return <Chip key={value} label={tg ? tg.name : value} size="small" style={{ height: "20px" }} />;
               })}
-            </Box>
+              <ManagePagesModal 
+        open={isManagePagesOpen} 
+        onClose={() => setIsManagePagesOpen(false)}
+        document={selectedDocument}
+        onNotice={onNotice}
+        onSuccess={() => {
+          setIsManagePagesOpen(false);
+          loadDocuments();
+        }}
+      />
+    </Box>
           )}
         >
           {tags.map(t => <MenuItem key={t.tagId} value={t.tagId}>{t.name}</MenuItem>)}
@@ -611,7 +703,17 @@ function UploadModal({ open, onClose, companyId, locations, documentTypes, corre
                   const tg = tags.find(t => t.tagId === value);
                   return <Chip key={value} label={tg ? tg.name : value} size="small" style={{ height: "20px" }} />;
                 })}
-              </Box>
+                <ManagePagesModal 
+        open={isManagePagesOpen} 
+        onClose={() => setIsManagePagesOpen(false)}
+        document={selectedDocument}
+        onNotice={onNotice}
+        onSuccess={() => {
+          setIsManagePagesOpen(false);
+          loadDocuments();
+        }}
+      />
+    </Box>
             )}
           >
             {tags.map(t => <MenuItem key={t.tagId} value={t.tagId}>{t.name}</MenuItem>)}

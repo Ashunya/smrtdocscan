@@ -1016,8 +1016,8 @@ app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, C
             var dateRegex = @"\b(?:" +
                 @"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\.,-]*\d{1,2}(?:st|nd|rd|th)?[\s\.,-]*\d{2,4}|" +
                 @"\d{1,2}[\s\.,-]*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\.,-]*\d{2,4}|" +
-                @"(?:19|20)\d\d[-/]\d{1,2}[-/]\d{1,2}|" +
-                @"\d{1,2}[-/]\d{1,2}[-/](?:19|20)\d\d" +
+                @"(?:19|20)\d\d[-/\.]\d{1,2}[-/\.]\d{1,2}|" +
+                @"\d{1,2}[-/\.]\d{1,2}[-/\.](?:19|20)\d\d" +
                 @")\b";
             var dateMatches = System.Text.RegularExpressions.Regex.Matches(textToSearch, dateRegex, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             foreach (System.Text.RegularExpressions.Match match in dateMatches)
@@ -1050,6 +1050,239 @@ app.MapPost("/api/business-documents/analyze", async (HttpRequest httpRequest, C
     {
         return Results.BadRequest(new { message = "Failed to analyze document: " + ex.Message });
     }
+}).RequireAuthorization();
+
+
+app.MapPost("/api/business-documents/merge", async (HttpRequest httpRequest, ClaimsPrincipal principal, BusinessDocumentRepository repository, SmartDocScan.Api.Services.PdfDocumentService pdfService, IConfiguration configuration, CancellationToken cancellationToken) =>
+{
+    using var document = await System.Text.Json.JsonDocument.ParseAsync(httpRequest.Body, cancellationToken: cancellationToken);
+    var root = document.RootElement;
+    if (!root.TryGetProperty("documentIds", out var docIdsProp) || docIdsProp.ValueKind != System.Text.Json.JsonValueKind.Array)
+    {
+        return Results.BadRequest(new { message = "documentIds array is required." });
+    }
+
+    var documentIds = new System.Collections.Generic.List<int>();
+    foreach (var el in docIdsProp.EnumerateArray())
+    {
+        if (el.TryGetInt32(out var id)) documentIds.Add(id);
+    }
+
+    if (documentIds.Count < 2) return Results.BadRequest(new { message = "Select at least 2 documents to merge." });
+
+    var documents = new System.Collections.Generic.List<BusinessDocumentDto>();
+    foreach (var id in documentIds)
+    {
+        var doc = await repository.GetAsync(id, cancellationToken);
+        if (doc is null || doc.Url is null || !CanAccessCompany(principal, doc.CompanyId)) return Results.Forbid();
+        documents.Add(doc);
+    }
+
+    var firstDoc = documents[0];
+    var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
+
+    var sourceFilePaths = new System.Collections.Generic.List<string>();
+    foreach (var doc in documents)
+    {
+        var path = Path.GetFullPath(Path.Combine(storeRoot, doc.Url.Replace('/', Path.DirectorySeparatorChar)));
+        if (System.IO.File.Exists(path)) sourceFilePaths.Add(path);
+    }
+
+    var safeName = BuildStoredDocumentName("Merged Document.pdf", "Merged Document.pdf");
+    var relativeFolder = Path.Combine(firstDoc.CompanyId.ToString(), "business", firstDoc.LocationId?.ToString() ?? "global");
+    var targetFolder = Path.Combine(storeRoot, relativeFolder);
+    System.IO.Directory.CreateDirectory(targetFolder);
+    var targetPath = Path.Combine(targetFolder, safeName);
+
+    await pdfService.MergeToPdfAsync(sourceFilePaths.ToArray(), targetPath);
+
+    int pageCount = 0;
+    try {
+        using var pdfDoc = PdfSharpCore.Pdf.IO.PdfReader.Open(targetPath, PdfSharpCore.Pdf.IO.PdfDocumentOpenMode.InformationOnly);
+        pageCount = pdfDoc.PageCount;
+    } catch {}
+
+    var relativeUrl = Path.Combine(relativeFolder, safeName).Replace('\\', '/');
+
+    var newDoc = await repository.CreateAsync(
+        firstDoc.CompanyId,
+        firstDoc.LocationId,
+        firstDoc.DocumentTypeId,
+        "Merged Document.pdf",
+        relativeUrl,
+        pageCount,
+        principal.Identity?.Name ?? "system",
+        firstDoc.DocumentDate,
+        firstDoc.CorrespondentId,
+        firstDoc.Amount,
+        null,
+        null,
+        cancellationToken
+    );
+
+    foreach (var oldDoc in documents)
+    {
+        await repository.DeleteAsync(oldDoc.DocumentId, oldDoc.CompanyId, principal.Identity?.Name ?? "system", cancellationToken);
+    }
+
+    return Results.Ok(newDoc);
+}).RequireAuthorization();
+
+
+app.MapGet("/api/business-documents/{documentId:int}/pages", async (int documentId, ClaimsPrincipal principal, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+{
+    var document = await repository.GetAsync(documentId, cancellationToken);
+    if (document?.Url is null || !CanAccessCompany(principal, document.CompanyId)) return Results.Forbid();
+
+    var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
+    var fullPath = Path.GetFullPath(Path.Combine(storeRoot, document.Url.Replace('/', Path.DirectorySeparatorChar)));
+    if (!System.IO.File.Exists(fullPath)) return Results.NotFound();
+
+    var pageCount = document.NumberOfPages > 0 ? document.NumberOfPages : 1;
+    var ext = Path.GetExtension(fullPath).ToLowerInvariant();
+    if (ext == ".pdf")
+    {
+        try {
+            using var pdfDoc = PdfSharpCore.Pdf.IO.PdfReader.Open(fullPath, PdfSharpCore.Pdf.IO.PdfDocumentOpenMode.InformationOnly);
+            pageCount = pdfDoc.PageCount;
+        } catch {}
+    }
+
+    var pages = new System.Collections.Generic.List<object>();
+    for (int i = 0; i < pageCount; i++)
+    {
+        pages.Add(new { pageIndex = i, thumbnailUrl = $"/api/business-documents/{documentId}/pages/{i}/thumbnail" });
+    }
+    return Results.Ok(pages);
+}).RequireAuthorization();
+
+app.MapGet("/api/business-documents/{documentId:int}/pages/{pageIndex:int}/thumbnail", async (int documentId, int pageIndex, ClaimsPrincipal principal, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
+{
+    var document = await repository.GetAsync(documentId, cancellationToken);
+    if (document?.Url is null || !CanAccessCompany(principal, document.CompanyId)) return Results.Forbid();
+
+    var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
+    var fullPath = Path.GetFullPath(Path.Combine(storeRoot, document.Url.Replace('/', Path.DirectorySeparatorChar)));
+    if (!System.IO.File.Exists(fullPath)) return Results.NotFound();
+
+    var ext = Path.GetExtension(fullPath).ToLowerInvariant();
+    if (ext != ".pdf")
+    {
+        // For non-pdfs, just return the preview
+        var ms = new System.IO.MemoryStream();
+        using (var image = new ImageMagick.MagickImage(fullPath))
+        {
+            image.Resize(300, 300);
+            image.Format = ImageMagick.MagickFormat.Jpeg;
+            image.Write(ms);
+        }
+        ms.Position = 0;
+        return Results.File(ms, "image/jpeg");
+    }
+
+    var msPdf = new System.IO.MemoryStream();
+    var readSettings = new ImageMagick.MagickReadSettings { Density = new ImageMagick.Density(72), FrameIndex = (uint)pageIndex, FrameCount = 1 };
+    using (var collection = new ImageMagick.MagickImageCollection())
+    {
+        collection.Read(fullPath, readSettings);
+        if (collection.Count > 0)
+        {
+            var image = collection[0];
+            image.Resize(300, 300);
+            image.Format = ImageMagick.MagickFormat.Jpeg;
+            image.Write(msPdf);
+        }
+    }
+    msPdf.Position = 0;
+    return Results.File(msPdf, "image/jpeg");
+}).RequireAuthorization();
+
+app.MapPut("/api/business-documents/{documentId:int}/reorder", async (int documentId, HttpRequest httpRequest, ClaimsPrincipal principal, BusinessDocumentRepository repository, SmartDocScan.Api.Services.PdfDocumentService pdfService, IConfiguration configuration, CancellationToken cancellationToken) =>
+{
+    using var bodyDoc = await System.Text.Json.JsonDocument.ParseAsync(httpRequest.Body, cancellationToken: cancellationToken);
+    var root = bodyDoc.RootElement;
+    var newOrder = new System.Collections.Generic.List<int>();
+    foreach (var el in root.EnumerateArray())
+    {
+        if (el.TryGetInt32(out var idx)) newOrder.Add(idx);
+    }
+
+    var document = await repository.GetAsync(documentId, cancellationToken);
+    if (document?.Url is null || !CanAccessCompany(principal, document.CompanyId)) return Results.Forbid();
+
+    var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
+    var fullPath = Path.GetFullPath(Path.Combine(storeRoot, document.Url.Replace('/', Path.DirectorySeparatorChar)));
+    if (!System.IO.File.Exists(fullPath)) return Results.NotFound();
+
+    var safeName = BuildStoredDocumentName(document.DocumentName, document.DocumentName);
+    var targetPath = Path.Combine(Path.GetDirectoryName(fullPath)!, safeName);
+
+    await pdfService.ReorderPagesAsync(fullPath, newOrder.ToArray(), targetPath);
+
+    System.IO.File.Delete(fullPath);
+    var relativeUrl = Path.Combine(document.CompanyId.ToString(), "business", document.LocationId?.ToString() ?? "global", safeName).Replace('\\', '/');
+    
+    // Update document URL in DB (lazy way: create new, delete old, but easier to just update URL if we had an update method)
+    // Since we don't have UpdateUrl, we'll create new and delete old
+    var newDoc = await repository.CreateAsync(
+        document.CompanyId, document.LocationId, document.DocumentTypeId, document.DocumentName, relativeUrl, newOrder.Count,
+        principal.Identity?.Name ?? "system", document.DocumentDate, document.CorrespondentId, document.Amount, null, null, cancellationToken
+    );
+    await repository.DeleteAsync(document.DocumentId, document.CompanyId, principal.Identity?.Name ?? "system", cancellationToken);
+
+    return Results.Ok(newDoc);
+}).RequireAuthorization();
+
+app.MapPost("/api/business-documents/{documentId:int}/extract", async (int documentId, HttpRequest httpRequest, ClaimsPrincipal principal, BusinessDocumentRepository repository, SmartDocScan.Api.Services.PdfDocumentService pdfService, IConfiguration configuration, CancellationToken cancellationToken) =>
+{
+    using var bodyDoc = await System.Text.Json.JsonDocument.ParseAsync(httpRequest.Body, cancellationToken: cancellationToken);
+    var root = bodyDoc.RootElement;
+    var pageIndices = new System.Collections.Generic.List<int>();
+    foreach (var el in root.EnumerateArray())
+    {
+        if (el.TryGetInt32(out var idx)) pageIndices.Add(idx);
+    }
+
+    var document = await repository.GetAsync(documentId, cancellationToken);
+    if (document?.Url is null || !CanAccessCompany(principal, document.CompanyId)) return Results.Forbid();
+
+    var storeRoot = configuration["Store:RootPath"] ?? Path.Combine(AppContext.BaseDirectory, "Store");
+    var fullPath = Path.GetFullPath(Path.Combine(storeRoot, document.Url.Replace('/', Path.DirectorySeparatorChar)));
+    
+    var safeName1 = BuildStoredDocumentName("Extracted " + document.DocumentName, "Extracted " + document.DocumentName);
+    var safeName2 = BuildStoredDocumentName("Remaining " + document.DocumentName, "Remaining " + document.DocumentName);
+    var targetPath1 = Path.Combine(Path.GetDirectoryName(fullPath)!, safeName1);
+    var targetPath2 = Path.Combine(Path.GetDirectoryName(fullPath)!, safeName2);
+
+    await pdfService.ExtractPagesAsync(fullPath, pageIndices.ToArray(), targetPath1);
+
+    var allIndices = new System.Collections.Generic.List<int>();
+    try {
+        using var pdfDoc = PdfSharpCore.Pdf.IO.PdfReader.Open(fullPath, PdfSharpCore.Pdf.IO.PdfDocumentOpenMode.InformationOnly);
+        for(int i=0; i<pdfDoc.PageCount; i++) allIndices.Add(i);
+    } catch {}
+    
+    var remainingIndices = new System.Collections.Generic.List<int>();
+    foreach (var idx in allIndices) { if (!pageIndices.Contains(idx)) remainingIndices.Add(idx); }
+
+    await pdfService.ExtractPagesAsync(fullPath, remainingIndices.ToArray(), targetPath2);
+
+    var relativeUrl1 = Path.Combine(document.CompanyId.ToString(), "business", document.LocationId?.ToString() ?? "global", safeName1).Replace('\\', '/');
+    var relativeUrl2 = Path.Combine(document.CompanyId.ToString(), "business", document.LocationId?.ToString() ?? "global", safeName2).Replace('\\', '/');
+
+    var newDoc1 = await repository.CreateAsync(
+        document.CompanyId, document.LocationId, document.DocumentTypeId, "Extracted " + document.DocumentName, relativeUrl1, pageIndices.Count,
+        principal.Identity?.Name ?? "system", document.DocumentDate, document.CorrespondentId, document.Amount, null, null, cancellationToken
+    );
+    var newDoc2 = await repository.CreateAsync(
+        document.CompanyId, document.LocationId, document.DocumentTypeId, "Remaining " + document.DocumentName, relativeUrl2, remainingIndices.Count,
+        principal.Identity?.Name ?? "system", document.DocumentDate, document.CorrespondentId, document.Amount, null, null, cancellationToken
+    );
+
+    System.IO.File.Delete(fullPath);
+    await repository.DeleteAsync(document.DocumentId, document.CompanyId, principal.Identity?.Name ?? "system", cancellationToken);
+
+    return Results.Ok(new[] { newDoc1, newDoc2 });
 }).RequireAuthorization();
 
 app.MapGet("/api/business-documents/{documentId:int}/download", async (int documentId, ClaimsPrincipal principal, BusinessDocumentRepository repository, IConfiguration configuration, CancellationToken cancellationToken) =>
@@ -1491,28 +1724,41 @@ app.MapGet("/api/auth/sso-success", (string? redirectUri, HttpContext httpContex
 {
     var sessionCookie = httpContext.Request.Cookies["smartdocscan.session"];
 
-    string targetUrl = redirectUri ?? "/";
-    if (!string.IsNullOrWhiteSpace(redirectUri) && Uri.TryCreate(redirectUri, UriKind.Absolute, out var uri) && uri.IsLoopback)
+    if (string.IsNullOrWhiteSpace(redirectUri) || !Uri.TryCreate(redirectUri, UriKind.Absolute, out var uri) || !uri.IsLoopback)
     {
-        var separator = redirectUri.Contains('?') ? "&" : "?";
-        targetUrl = $"{redirectUri}{separator}session={Uri.EscapeDataString(sessionCookie ?? "")}";
+        var config = httpContext.RequestServices.GetRequiredService<IConfiguration>();
+        var allowedOrigins = config.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        var webOrigin = allowedOrigins.FirstOrDefault(origin => Uri.TryCreate(origin, UriKind.Absolute, out _));
+        var fallback = string.IsNullOrWhiteSpace(webOrigin) ? "/" : webOrigin;
+        
+        var fallbackHtml = $$"""
+            <!DOCTYPE html>
+            <html>
+            <head><meta http-equiv="refresh" content="0;url={{fallback}}" /></head>
+            <body><script>window.location.href = "{{fallback}}";</script></body>
+            </html>
+            """;
+        return Results.Content(fallbackHtml, "text/html");
     }
 
-    var html = $"""
+    var separator = redirectUri.Contains('?') ? "&" : "?";
+    var targetUrl = $"{redirectUri}{separator}session={Uri.EscapeDataString(sessionCookie ?? "")}";
+
+    var html = $$"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="utf-8" />
             <title>Completing Sign-In...</title>
-            <meta http-equiv="refresh" content="0;url={System.Net.WebUtility.HtmlEncode(targetUrl)}" />
+            <meta http-equiv="refresh" content="0;url={{System.Net.WebUtility.HtmlEncode(targetUrl)}}" />
         </head>
         <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 80px; background-color: #f4f6f9;">
             <div style="background: white; max-width: 450px; margin: 0 auto; padding: 35px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
                 <h3 style="color: #0078d4; margin-top: 0;">&#10004; Authentication Successful!</h3>
-                <p style="color: #555; font-size: 14px;">Transferring session to SmartDocScan Desktop. If not redirected automatically, <a href="{System.Net.WebUtility.HtmlEncode(targetUrl)}" style="color: #0078d4; font-weight: 600;">click here</a>.</p>
+                <p style="color: #555; font-size: 14px;">Transferring session to SmartDocScan Desktop. If not redirected automatically, <a href="{{System.Net.WebUtility.HtmlEncode(targetUrl)}}" style="color: #0078d4; font-weight: 600;">click here</a>.</p>
             </div>
             <script>
-                window.location.href = {System.Text.Json.JsonSerializer.Serialize(targetUrl)};
+                window.location.href = {{System.Text.Json.JsonSerializer.Serialize(targetUrl)}};
             </script>
         </body>
         </html>

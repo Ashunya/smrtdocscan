@@ -32,6 +32,10 @@ public sealed class PatientRepository
             {
                 command.Parameters.AddWithValue("@patientId" + i, patientId);
             }
+            if (DateTime.TryParse(terms[i], out var date))
+            {
+                command.Parameters.AddWithValue("@dob" + i, date.Date);
+            }
         }
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -160,9 +164,25 @@ public sealed class PatientRepository
         for (var i = 0; i < terms.Count; i++)
         {
             var hasNumeric = int.TryParse(terms[i], out _);
-            where += hasNumeric
-                ? $" AND (p.patient_id = @patientId{i} OR p.pext_id LIKE @term{i} OR p.first_name LIKE @term{i} OR p.last_name LIKE @term{i})"
-                : $" AND (p.pext_id LIKE @term{i} OR p.first_name LIKE @term{i} OR p.last_name LIKE @term{i})";
+            var isDate = DateTime.TryParse(terms[i], out _);
+            
+            var conditions = new List<string>
+            {
+                $"p.pext_id LIKE @term{i}",
+                $"p.first_name LIKE @term{i}",
+                $"p.last_name LIKE @term{i}"
+            };
+
+            if (hasNumeric)
+            {
+                conditions.Add($"p.patient_id = @patientId{i}");
+            }
+            if (isDate)
+            {
+                conditions.Add($"CAST(p.dob AS DATE) = @dob{i}");
+            }
+
+            where += $" AND ({string.Join(" OR ", conditions)})";
         }
 
         return PatientSearchSelectSql + where + " ORDER BY last_document_date DESC, patient_id DESC;";

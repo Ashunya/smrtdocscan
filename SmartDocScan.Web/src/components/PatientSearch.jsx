@@ -9,14 +9,14 @@ export function PatientSearch({ patients, search, onSearchChange, loading, onEdi
       <div className="panel-header">
         <div>
           <h2>Find Patient</h2>
-          <p>Search by patient ID, name, or internal record ID.</p>
+          <p>Search by patient ID, name, DOB, or internal record ID.</p>
         </div>
         <label className="search-box">
           <Search size={18} />
           <input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search patients"
+            placeholder="Search by name, ID, or DOB"
             aria-label="Search patients"
           />
         </label>
