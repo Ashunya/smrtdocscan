@@ -1606,7 +1606,7 @@ static byte[] RenderTiffPageAsJpeg(string fullPath, int page, int maxWidth, int 
     using var image = (MagickImage)images[pageIndex].Clone();
     image.AutoOrient();
     image.BackgroundColor = MagickColors.White;
-    image.Alpha(AlphaOption.Remove);
+    image.Alpha(AlphaAction.Remove);
     image.ResetPage();
     if (maxWidth > 0 || maxHeight > 0)
     {
