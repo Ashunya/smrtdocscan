@@ -535,7 +535,7 @@ app.MapPost("/api/documents", async (HttpRequest httpRequest, ClaimsPrincipal pr
 
     var pages = int.TryParse(form["pages"], out var parsedPages) ? Math.Max(parsedPages, 1) : 1;
     var dateOfService = ParseDateOnly(form["dateOfService"]);
-    var document = await repository.CreateAsync(companyId, patientId, categoryId, savedDocument.SafeName, savedDocument.RelativeUrl, pages, form["uploadedBy"], dateOfService, cancellationToken);
+    var document = await repository.CreateAsync(companyId, patientId, categoryId, savedDocument.SafeName, savedDocument.RelativeUrl, pages, GetActor(principal) ?? form["uploadedBy"].ToString(), dateOfService, cancellationToken);
     await AuditAsync(auditRepository, "document.upload", GetActor(principal), companyId, "document", document.DocumentId.ToString(), "success", httpRequest.HttpContext);
     return Results.Created($"/api/documents/{document.DocumentId}", document);
 }).RequireAuthorization();
@@ -594,7 +594,7 @@ app.MapPost("/api/documents/scan", async (HttpRequest httpRequest, ClaimsPrincip
 
     var pages = int.TryParse(httpRequest.Query["pages"], out var parsedPages) ? Math.Max(parsedPages, 1) : 1;
     var dateOfService = ParseDateOnly(httpRequest.Query["dateOfService"]);
-    var document = await repository.CreateAsync(companyId, patientId, categoryId, savedDocument.SafeName, savedDocument.RelativeUrl, pages, "Scanner", dateOfService, cancellationToken);
+    var document = await repository.CreateAsync(companyId, patientId, categoryId, savedDocument.SafeName, savedDocument.RelativeUrl, pages, GetActor(principal) ?? "Scanner", dateOfService, cancellationToken);
     await AuditAsync(auditRepository, "document.scan", GetActor(principal), companyId, "document", document.DocumentId.ToString(), "success", httpRequest.HttpContext);
     return Results.Ok(document);
 }).RequireAuthorization();
@@ -731,6 +731,34 @@ app.MapGet("/api/reports/documents", async (int companyId, DateTime? fromDate, D
 
     var documents = await repository.GetReportAsync(companyId, fromDate, toDate, take ?? 500, cancellationToken);
     return Results.Ok(documents);
+}).RequireAuthorization();
+
+app.MapGet("/api/reports/scanned-pages", async (
+    int? companyId,
+    string? userName,
+    DateTime? fromDate,
+    DateTime? toDate,
+    string? groupBy,
+    ClaimsPrincipal principal,
+    DocumentRepository repository,
+    AuditRepository auditRepository,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    if (!ReadBoolClaim(principal, "super_user"))
+    {
+        await AuditForbiddenAsync(auditRepository, "report.scanned_pages", principal, ReadCompanyId(principal), "report", "scanned_pages", httpContext);
+        return Results.Forbid();
+    }
+
+    if (fromDate.HasValue && toDate.HasValue && fromDate.Value.Date > toDate.Value.Date)
+    {
+        return Results.BadRequest(new { message = "From date must be on or before To date." });
+    }
+
+    var groupByDay = string.Equals(groupBy, "day", StringComparison.OrdinalIgnoreCase);
+    var rows = await repository.GetScannedPagesReportAsync(companyId, userName, fromDate, toDate, groupByDay, cancellationToken);
+    return Results.Ok(rows);
 }).RequireAuthorization();
 
 app.MapGet("/api/audit-logs", async (

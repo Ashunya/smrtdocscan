@@ -14,6 +14,7 @@ import { Sidebar } from "./components/Sidebar";
 import { SignIn } from "./components/SignIn";
 import { UserManager } from "./components/UserManager";
 import { ReportManager } from "./components/ReportManager";
+import { ScannedPagesReport } from "./components/ScannedPagesReport";
 import { ScannerManager } from "./components/ScannerManager";
 import { SettingsManager } from "./components/SettingsManager";
 
@@ -382,6 +383,9 @@ export default function App() {
     if (activeView === "audit") {
       return "Audit Logs";
     }
+    if (activeView === "pageReport") {
+      return "Scanned Pages Report";
+    }
     return "Patient Directory";
   }, [activeView]);
 
@@ -537,6 +541,8 @@ export default function App() {
           <CategoryManager companyId={companyId} onNotice={setNotice} />
         ) : activeView === "reports" && canAccessView("reports", currentUser) ? (
           <ReportManager companyId={companyId} onNotice={setNotice} />
+        ) : activeView === "pageReport" && canAccessView("pageReport", currentUser) ? (
+          <ScannedPagesReport companies={companies} onNotice={setNotice} />
         ) : activeView === "settings" && canAccessView("settings", currentUser) ? (
           <SettingsManager onNotice={setNotice} onBrandingChange={(branding) => setLogoUrl(branding.logoDataUrl || "/smartdocscan-logo.svg")} />
         ) : activeView === "audit" && canAccessView("audit", currentUser) ? (
@@ -622,7 +628,7 @@ function canAccessView(view, user) {
     return Boolean(user.report || isElevatedUser(user));
   }
 
-  if (view === "settings" || view === "audit") {
+  if (view === "settings" || view === "audit" || view === "pageReport") {
     return Boolean(user.superUser);
   }
 

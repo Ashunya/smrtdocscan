@@ -129,12 +129,11 @@ export function listDocuments({ companyId, patientId }) {
   return request(`/documents?${params.toString()}`);
 }
 
-export function uploadDocument({ companyId, patientId, categoryId, file, documentName, dateOfService, pages, uploadedBy = "Miranda" }) {
+export function uploadDocument({ companyId, patientId, categoryId, file, documentName, dateOfService, pages }) {
   const formData = new FormData();
   formData.set("companyId", String(companyId));
   formData.set("patientId", String(patientId));
   formData.set("categoryId", String(categoryId));
-  formData.set("uploadedBy", uploadedBy);
   const safeDocumentName = String(documentName || "").trim();
   if (safeDocumentName) {
     formData.set("documentName", safeDocumentName);
@@ -258,6 +257,15 @@ export function getDocumentReport({ companyId, fromDate, toDate, take = 500 }) {
   if (fromDate) params.set("fromDate", fromDate);
   if (toDate) params.set("toDate", toDate);
   return request(`/reports/documents?${params.toString()}`);
+}
+
+export function getScannedPagesReport({ companyId, userName, fromDate, toDate, groupBy = "user" } = {}) {
+  const params = new URLSearchParams({ groupBy });
+  if (companyId) params.set("companyId", String(companyId));
+  if (userName) params.set("userName", userName);
+  if (fromDate) params.set("fromDate", fromDate);
+  if (toDate) params.set("toDate", toDate);
+  return request(`/reports/scanned-pages?${params.toString()}`);
 }
 
 export function getAuditLogs({ companyId, actor, action, outcome, fromDate, toDate, take = 200 } = {}) {
