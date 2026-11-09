@@ -220,7 +220,6 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
         documentName: uploadName,
         dateOfService,
         pages: currentPageCount,
-        uploadedBy: "Scanner",
         file,
       });
       clearScannerBuffer();

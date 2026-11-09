@@ -4,6 +4,7 @@ import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
+import InsertChartOutlinedIcon from "@mui/icons-material/InsertChartOutlined";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
@@ -18,6 +19,7 @@ export function Sidebar({ activeView, onNavigate, user, logoUrl, open = true, va
     { id: "users", label: "Users", icon: GroupOutlinedIcon, permission: "addUsers" },
     { id: "categories", label: "Categories", icon: CategoryOutlinedIcon, permission: "addCategory" },
     { id: "reports", label: "Reports", icon: BarChartOutlinedIcon, permission: "report" },
+    { id: "pageReport", label: "Scanned Pages", icon: InsertChartOutlinedIcon, superOnly: true },
     { id: "audit", label: "Audit Logs", icon: AssignmentOutlinedIcon, superOnly: true },
     { id: "settings", label: "Settings", icon: SettingsOutlinedIcon, superOnly: true },
   ].filter((item) => canShow(item, user));

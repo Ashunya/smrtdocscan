@@ -90,6 +90,78 @@ public sealed class DocumentRepository
         return documents;
     }
 
+    public async Task<IReadOnlyList<ScannedPagesReportRowDto>> GetScannedPagesReportAsync(int? companyId, string? userName, DateTime? fromDate, DateTime? toDate, bool groupByDay, CancellationToken cancellationToken = default)
+    {
+        await EnsureSchemaAsync(cancellationToken);
+        var rows = new List<ScannedPagesReportRowDto>();
+        await using var connection = new NpgsqlConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        // The person who added a document is taken from the audit log when available, because
+        // uploaded_by historically held placeholders ("Scanner", or a hardcoded client default).
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            WITH doc_actor AS (
+                SELECT DISTINCT ON (a.target_id) a.target_id, btrim(a.actor) AS actor
+                FROM audit_log a
+                WHERE a.action IN ('document.upload', 'document.scan')
+                  AND a.outcome = 'success'
+                  AND a.target_type = 'document'
+                  AND NULLIF(btrim(a.actor), '') IS NOT NULL
+                ORDER BY a.target_id, a.created_on
+            ),
+            docs AS (
+                SELECT d.comp_id,
+                       d.num_pages,
+                       d.date,
+                       COALESCE(
+                           da.actor,
+                           CASE WHEN COALESCE(btrim(d.uploaded_by), '') IN ('', 'Scanner') THEN NULL ELSE btrim(d.uploaded_by) END,
+                           'Unattributed') AS user_name
+                FROM documents d
+                LEFT JOIN doc_actor da ON da.target_id = d.doc_id::text
+                WHERE COALESCE(d.deleted, false) = false
+                  AND (@companyId IS NULL OR d.comp_id = @companyId)
+                  AND (@fromDate IS NULL OR d.date >= @fromDate)
+                  AND (@toDate IS NULL OR d.date < @toDate + INTERVAL '1 day')
+            )
+            SELECT docs.comp_id,
+                   c.comp_name,
+                   docs.user_name,
+                   CASE WHEN @groupByDay THEN docs.date::date END AS day,
+                   COUNT(*)::int AS documents,
+                   COALESCE(SUM(docs.num_pages), 0)::bigint AS pages
+            FROM docs
+            LEFT JOIN company c ON c.comp_id = docs.comp_id
+            WHERE (@userName IS NULL OR lower(docs.user_name) = lower(@userName))
+            GROUP BY 1, 2, 3, 4
+            ORDER BY day DESC NULLS LAST, c.comp_name, pages DESC, docs.user_name
+            LIMIT 5000;
+            """;
+        command.Parameters.AddWithValue("@companyId", NpgsqlDbType.Integer, companyId.HasValue ? companyId.Value : DBNull.Value);
+        command.Parameters.AddWithValue("@userName", NpgsqlDbType.Text, string.IsNullOrWhiteSpace(userName) ? DBNull.Value : userName.Trim());
+        command.Parameters.AddWithValue("@fromDate", NpgsqlDbType.Timestamp, fromDate.HasValue ? fromDate.Value.Date : DBNull.Value);
+        command.Parameters.AddWithValue("@toDate", NpgsqlDbType.Timestamp, toDate.HasValue ? toDate.Value.Date : DBNull.Value);
+        command.Parameters.AddWithValue("@groupByDay", NpgsqlDbType.Boolean, groupByDay);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var dayOrdinal = reader.GetOrdinal("day");
+            rows.Add(new ScannedPagesReportRowDto
+            {
+                CompanyId = reader.GetInt32(reader.GetOrdinal("comp_id")),
+                CompanyName = ReadString(reader, "comp_name"),
+                UserName = reader.GetString(reader.GetOrdinal("user_name")),
+                Day = reader.IsDBNull(dayOrdinal) ? null : reader.GetDateTime(dayOrdinal),
+                Documents = reader.GetInt32(reader.GetOrdinal("documents")),
+                Pages = reader.GetInt64(reader.GetOrdinal("pages"))
+            });
+        }
+
+        return rows;
+    }
+
     public async Task<DocumentDto> CreateAsync(int companyId, int patientId, int categoryId, string fileName, string relativeUrl, int pages, string? uploadedBy, DateTime? dateOfService = null, CancellationToken cancellationToken = default)
     {
         await EnsureSchemaAsync(cancellationToken);

@@ -676,6 +676,29 @@ tbody tr:nth-child(odd) {
   grid-template-columns: repeat(6, minmax(120px, 1fr)) auto;
 }
 
+.page-report-form {
+  grid-template-columns: repeat(5, minmax(130px, 1fr)) auto;
+}
+
+.page-report-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  padding: 14px 22px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.page-report-totals strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.numeric-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .settings-form {
   display: grid;
   gap: 22px;
