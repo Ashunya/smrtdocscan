@@ -38,7 +38,7 @@ const blankUser = {
   disabled: false,
 };
 
-export function UserManager({ companyId, onNotice }) {
+export function UserManager({ companyId, companyName, onNotice }) {
   const [users, setUsers] = useState([]);
   const [form, setForm] = useState(blankUser);
   const [loading, setLoading] = useState(false);
@@ -129,7 +129,7 @@ export function UserManager({ companyId, onNotice }) {
       <div className="panel-header compact">
         <div>
           <h2>Users</h2>
-          <p>Manage users and permissions for company {companyId}.</p>
+          <p>Manage users and permissions for {companyName || `company ${companyId}`}.</p>
         </div>
       </div>
 

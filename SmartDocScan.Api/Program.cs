@@ -238,6 +238,25 @@ app.Use(async (context, next) =>
 });
 
 app.UseCors();
+
+// Runs after CORS so an unhandled error still reaches the browser as a readable JSON 500
+// (Kestrel's default 500 drops the CORS headers, which browsers report only as "Failed to fetch").
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex) when (!context.Response.HasStarted && !context.RequestAborted.IsCancellationRequested)
+    {
+        context.RequestServices.GetRequiredService<ILogger<Program>>()
+            .LogError(ex, "Unhandled exception for {Method} {Path}", context.Request.Method, context.Request.Path);
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.Headers.CacheControl = "no-store";
+        await context.Response.WriteAsJsonAsync(new { message = "Something went wrong on the server. Please try again; if it keeps happening, contact your administrator." });
+    }
+});
+
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

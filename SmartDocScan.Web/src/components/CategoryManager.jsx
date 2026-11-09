@@ -2,7 +2,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createCategory, deleteCategory, listCategories } from "../api/client";
 
-export function CategoryManager({ companyId, onNotice }) {
+export function CategoryManager({ companyId, companyName, onNotice }) {
   const [categories, setCategories] = useState([]);
   const [categoryName, setCategoryName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -54,7 +54,7 @@ export function CategoryManager({ companyId, onNotice }) {
       <div className="panel-header compact">
         <div>
           <h2>Categories</h2>
-          <p>Manage document categories for company {companyId}.</p>
+          <p>Manage document categories for {companyName || `company ${companyId}`}.</p>
         </div>
       </div>
       <form className="category-form" onSubmit={handleSubmit}>

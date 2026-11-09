@@ -1,8 +1,9 @@
-import { ScanLine, Settings2, Trash2, Upload, XCircle } from "lucide-react";
+import { ArrowLeft, ScanLine, Settings2, Trash2, Upload, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { listCategories, uploadDocument } from "../api/client";
 
-export function ScannerManager({ companyId, patient, initialCategoryId, onNotice, onSaved }) {
+export function ScannerManager({ companyId, patient, initialCategoryId, onNotice, onSaved, onBack }) {
+  const mountedRef = useRef(true);
   const webTwainRef = useRef(null);
   const productKeyRef = useRef("");
   const lastPageCountRef = useRef(0);
@@ -31,11 +32,23 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
   }, [companyId, initialCategoryId, onNotice]);
 
   useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     loadScript("/Resources/dynamsoft.webtwain.config.js")
       .then(() => applyDynamsoftProductKey())
       .then(() => loadScript("/Resources/dynamsoft.webtwain.initiate.js"))
       .then(() => initializeViewer())
-      .catch(() => onNotice({ type: "error", text: "Dynamsoft resources could not be loaded." }));
+      .catch(() => {
+        // Scanner setup is slow; don't report its failure on whatever screen the user moved to.
+        if (mountedRef.current) {
+          onNotice({ type: "error", text: "Scanner components could not be loaded. Reload the page and try again." });
+        }
+      });
   }, [onNotice]);
 
   useEffect(() => {
@@ -69,6 +82,9 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
     dwt.ResourcesPath = "/Resources";
 
     const existing = await waitForWebTwain(dwt);
+    if (!mountedRef.current) {
+      return;
+    }
     if (existing) {
       webTwainRef.current = existing;
       registerScanEvents(existing);
@@ -78,7 +94,7 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
       return;
     }
 
-    onNotice({ type: "error", text: "Dynamsoft viewer could not be initialized." });
+    onNotice({ type: "error", text: "Scanner is not available on this computer. Install the Dynamic Web TWAIN service, then reload this page." });
   }
 
   function applyDynamsoftProductKey() {
@@ -292,6 +308,14 @@ export function ScannerManager({ companyId, patient, initialCategoryId, onNotice
           <h2>Scan Document</h2>
           <p>{patient ? `Scanning for ${patient.lastName}, ${patient.firstName}` : "Select a patient from Find Patient first."}</p>
         </div>
+        {onBack && (
+          <div className="panel-actions">
+            <button className="secondary-button" type="button" onClick={onBack} disabled={saving}>
+              <ArrowLeft size={17} />
+              Back to documents
+            </button>
+          </div>
+        )}
       </div>
       <div className="scanner-toolbar">
         <div className="scanner-fields">

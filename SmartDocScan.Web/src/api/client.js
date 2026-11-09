@@ -4,8 +4,21 @@ export function getApiBaseUrl() {
   return API_BASE_URL;
 }
 
+// fetch() rejects with a bare "Failed to fetch" when the server is unreachable or a server error
+// response lacks CORS headers; replace that with a message people can act on.
+async function fetchOrExplain(url, options) {
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error("Could not reach the SmartDocScan server. Check your connection and try again; if it keeps happening, contact your administrator.");
+    }
+    throw error;
+  }
+}
+
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetchOrExplain(`${API_BASE_URL}${path}`, {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
@@ -33,7 +46,7 @@ async function request(path, options = {}) {
 }
 
 async function requestForm(path, formData) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetchOrExplain(`${API_BASE_URL}${path}`, {
     method: "POST",
     credentials: "include",
     body: formData,

@@ -80,9 +80,10 @@ public sealed class AuditRepository
             """;
         command.Parameters.AddWithValue("@take", Math.Clamp(take, 1, 500));
         command.Parameters.AddWithValue("@companyId", NpgsqlDbType.Integer, companyId.HasValue ? companyId.Value : DBNull.Value);
-        command.Parameters.AddWithValue("@actor", DbValue(Trim(actor, 100)));
-        command.Parameters.AddWithValue("@action", DbValue(Trim(action, 80)));
-        command.Parameters.AddWithValue("@outcome", DbValue(Trim(outcome, 30)));
+        // Typed explicitly: PostgreSQL cannot infer a type for a NULL used only in "@x IS NULL".
+        command.Parameters.AddWithValue("@actor", NpgsqlDbType.Text, DbValue(Trim(actor, 100)));
+        command.Parameters.AddWithValue("@action", NpgsqlDbType.Text, DbValue(Trim(action, 80)));
+        command.Parameters.AddWithValue("@outcome", NpgsqlDbType.Text, DbValue(Trim(outcome, 30)));
         command.Parameters.AddWithValue("@fromDate", NpgsqlDbType.Timestamp, fromDate.HasValue ? fromDate.Value.Date : DBNull.Value);
         command.Parameters.AddWithValue("@toDate", NpgsqlDbType.Timestamp, toDate.HasValue ? toDate.Value.Date : DBNull.Value);
 

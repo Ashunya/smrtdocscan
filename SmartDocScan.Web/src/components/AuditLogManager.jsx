@@ -4,7 +4,7 @@ import { getAuditLogs } from "../api/client";
 
 const outcomeOptions = ["", "success", "failure"];
 
-export function AuditLogManager({ companyId, onNotice }) {
+export function AuditLogManager({ companyId, companies = [], onNotice }) {
   const [filters, setFilters] = useState({
     companyId: String(companyId || ""),
     actor: "",
@@ -60,8 +60,13 @@ export function AuditLogManager({ companyId, onNotice }) {
 
       <form className="audit-filter-form" onSubmit={loadLogs}>
         <label>
-          Company ID
-          <input type="number" min="1" value={filters.companyId} onChange={(event) => updateFilter("companyId", event.target.value)} />
+          Company
+          <select value={filters.companyId} onChange={(event) => updateFilter("companyId", event.target.value)}>
+            <option value="">All companies</option>
+            {companies.map((company) => (
+              <option key={company.companyId} value={String(company.companyId)}>{company.companyName || `Company ${company.companyId}`}</option>
+            ))}
+          </select>
         </label>
         <label>
           Actor
@@ -116,7 +121,7 @@ export function AuditLogManager({ companyId, onNotice }) {
                 <td>{log.action}</td>
                 <td><span className={`audit-outcome ${log.outcome === "success" ? "success" : "failure"}`}>{log.outcome}</span></td>
                 <td>{log.actor || ""}</td>
-                <td>{log.companyId || ""}</td>
+                <td>{log.companyId ? companies.find((company) => company.companyId === log.companyId)?.companyName || log.companyId : ""}</td>
                 <td>{[log.targetType, log.targetId].filter(Boolean).join(" / ")}</td>
                 <td>{log.ipAddress || ""}</td>
                 <td>{log.details || ""}</td>
