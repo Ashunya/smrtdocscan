@@ -457,6 +457,29 @@ tbody tr:nth-child(odd) {
   cursor: wait;
 }
 
+.secondary-button:disabled,
+.icon-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.panel-empty {
+  padding: 22px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Filter inputs must shrink with their grid column instead of overflowing into the next field. */
+.report-form input,
+.report-form select,
+.audit-filter-form input,
+.audit-filter-form select {
+  width: 100%;
+  min-width: 0;
+}
+
 .secondary-button {
   min-height: 38px;
   border: 1px solid #1a1a1a;

@@ -191,6 +191,7 @@ export default function App() {
 
     const handlePopState = (event) => {
       isHistoryPopRef.current = true;
+      setNotice(null);
       setActiveView(event.state?.smartdocscan ? event.state.activeView || "find" : "find");
     };
 
@@ -389,6 +390,11 @@ export default function App() {
     return "Patient Directory";
   }, [activeView]);
 
+  // Each screen renders its own heading, so the view title only names the browser tab.
+  useEffect(() => {
+    document.title = currentUser ? `${title} | SmartDocScan` : "SmartDocScan";
+  }, [title, currentUser]);
+
   const patientSearchView = (
     <PatientSearch
       patients={patients}
@@ -421,6 +427,7 @@ export default function App() {
         if (view === "add") {
           setSelectedPatient(null);
         }
+        setNotice(null);
         setActiveView(view);
         if (isMobile) {
           setSidebarOpen(false);
@@ -508,10 +515,6 @@ export default function App() {
           </DialogActions>
         </Dialog>
 
-        <section className="page-heading">
-          <h1>{title}</h1>
-        </section>
-
         {notice && <div className={`notice ${notice.type}`}>{notice.text}</div>}
 
         {activeView === "find" ? (
@@ -536,9 +539,9 @@ export default function App() {
             onCompanyChange={changeActiveCompany}
           />
         ) : activeView === "users" && canAccessView("users", currentUser) ? (
-          <UserManager companyId={companyId} onNotice={setNotice} />
+          <UserManager companyId={companyId} companyName={activeCompanyName} onNotice={setNotice} />
         ) : activeView === "categories" && canAccessView("categories", currentUser) ? (
-          <CategoryManager companyId={companyId} onNotice={setNotice} />
+          <CategoryManager companyId={companyId} companyName={activeCompanyName} onNotice={setNotice} />
         ) : activeView === "reports" && canAccessView("reports", currentUser) ? (
           <ReportManager companyId={companyId} onNotice={setNotice} />
         ) : activeView === "pageReport" && canAccessView("pageReport", currentUser) ? (
@@ -546,9 +549,9 @@ export default function App() {
         ) : activeView === "settings" && canAccessView("settings", currentUser) ? (
           <SettingsManager onNotice={setNotice} onBrandingChange={(branding) => setLogoUrl(branding.logoDataUrl || "/smartdocscan-logo.svg")} />
         ) : activeView === "audit" && canAccessView("audit", currentUser) ? (
-          <AuditLogManager companyId={companyId} onNotice={setNotice} />
+          <AuditLogManager companyId={companyId} companies={companies} onNotice={setNotice} />
         ) : activeView === "scan" && canAccessView("scan", currentUser) && documentPatient ? (
-          <ScannerManager companyId={companyId} patient={documentPatient} initialCategoryId={scanCategoryId} onNotice={setNotice} onSaved={() => setActiveView("documents")} />
+          <ScannerManager companyId={companyId} patient={documentPatient} initialCategoryId={scanCategoryId} onNotice={setNotice} onSaved={() => setActiveView("documents")} onBack={() => { setNotice(null); setActiveView("documents"); }} />
         ) : activeView === "barcode" && documentPatient ? (
           <BarcodeManager companyId={companyId} patient={documentPatient} onNotice={setNotice} onBack={() => setActiveView("documents")} />
         ) : activeView === "documents" && documentPatient ? (

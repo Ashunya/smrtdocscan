@@ -149,9 +149,9 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
       {canUpload && <form className="document-upload" onSubmit={handleUpload}>
         <label>
           Category
-          <select value={categoryId} onChange={(event) => changeCategory(event.target.value)}>
+          <select value={categoryId} onChange={(event) => changeCategory(event.target.value)} disabled={loading}>
             {categories.length === 0 ? (
-              <option value="">No categories</option>
+              <option value="">{loading ? "Loading..." : "No categories"}</option>
             ) : (
               categories.map((category) => (
                 <option key={category.categoryId} value={category.categoryId}>
@@ -255,7 +255,6 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
                     <th>Pages</th>
                     <th>Date of Service</th>
                     <th>Uploaded</th>
-                    <th>Path</th>
                     <th />
                   </tr>
                 </thead>
@@ -266,7 +265,6 @@ export function DocumentManager({ companyId, patient, user, onBack, onNotice, on
                       <td>{document.numberOfPages}</td>
                       <td>{formatShortDate(document.dateOfService)}</td>
                       <td>{formatDate(document.date)}</td>
-                      <td>{document.url}</td>
                       <td className="row-actions">
                         {canDownload && (
                           <a className="icon-button" href={getDocumentDownloadUrl(document.documentId)} onClick={(event) => event.stopPropagation()} aria-label="Download document">
